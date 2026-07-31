@@ -62,3 +62,26 @@ def test_reject_zero_quantity() -> None:
     )
 
     assert response.status_code == 422
+
+def test_reject_invalid_unit() -> None:
+    payload = {
+        "client_record_id": "record-invalid-unit",
+        "lot_code": "LO_A1",
+        "activity_code": "BON_PHAN",
+        "materials": [
+            {
+                "material_code": "NPK",
+                "quantity": 20,
+                "unit_code": "THUNG",
+            }
+        ],
+        "performed_at": "2026-07-31T07:00:00+07:00",
+        "confirmed": True,
+    }
+
+    response = client.post(
+        "/api/cultivation-logs/validate",
+        json=payload,
+    )
+
+    assert response.status_code == 422
