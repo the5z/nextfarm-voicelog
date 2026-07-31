@@ -3,6 +3,7 @@ import shutil
 import uuid
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from app.services.transcribe import transcribe_audio
 
 
 router = APIRouter(
@@ -48,6 +49,7 @@ async def upload_audio(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
     finally:
         await file.close()
+        transcript = transcribe_audio(file_path)
 
     return {
         "success": True,
@@ -55,4 +57,5 @@ async def upload_audio(file: UploadFile = File(...)):
         "stored_filename": stored_filename,
         "content_type": file.content_type,
         "path": str(file_path),
+        "transcript": transcript,
     }
