@@ -3,7 +3,9 @@ import shutil
 import uuid
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+
 from app.services.transcribe import transcribe_audio
+from app.services.llm_service import extract_activity
 
 
 router = APIRouter(
@@ -49,7 +51,12 @@ async def upload_audio(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
     finally:
         await file.close()
-        transcript = transcribe_audio(file_path)
+
+    # Speech-to-Text
+    transcript = transcribe_audio(file_path)
+
+    # Mock LLM (sẽ thay bằng LLM thật ở bước sau)
+    structured_data = extract_activity(transcript)
 
     return {
         "success": True,
@@ -58,4 +65,5 @@ async def upload_audio(file: UploadFile = File(...)):
         "content_type": file.content_type,
         "path": str(file_path),
         "transcript": transcript,
+        "structured_data": structured_data.model_dump(),
     }
