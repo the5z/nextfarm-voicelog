@@ -1,20 +1,17 @@
 from fastapi import FastAPI
 
-from app.routers.health import router as health_router
-from app.routers.audio import router as audio_router
+from app.core.config import settings
+from app.core.exceptions import register_exception_handlers
+from app.routers import audio, health
+
 
 app = FastAPI(
-    title="NextFarm VoiceLog AI Service",
-    description="AI Service for processing voice logs",
-    version="1.0.0",
+    title=settings.APP_NAME,
 )
 
-app.include_router(health_router)
-app.include_router(audio_router)
+# Register global exception handlers
+register_exception_handlers(app)
 
-
-@app.get("/", tags=["Root"])
-def root() -> dict[str, str]:
-    return {
-        "message": "Welcome to NextFarm VoiceLog AI Service"
-    }
+# Register routers
+app.include_router(health.router)
+app.include_router(audio.router)
