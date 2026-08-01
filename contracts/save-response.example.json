@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "status": "saved",
+  "data": {
+    "id": 1,
+    "schema_version": "1.0",
+    "client_record_id": "record-001",
+    "lot_code": "LO_A1",
+    "activity_code": "BON_PHAN",
+    "materials": [
+      {
+        "material_code": "NPK",
+        "quantity": 20,
+        "unit_code": "KG"
+      }
+    ],
+    "performed_at": "2026-08-01T07:00:00+07:00",
+    "performer_code": "NV001",
+    "source": "voice",
+    "confirmed": true,
+    "status": "saved"
+  }
+}
