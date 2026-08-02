@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "device_id": "android-device-001",
+  "summary": {
+    "total": 2,
+    "saved": 2,
+    "duplicated": 0,
+    "failed": 0
+  },
+  "results": [
+    {
+      "client_record_id": "offline-001",
+      "status": "saved",
+      "log_id": 1,
+      "errors": []
+    },
+    {
+      "client_record_id": "offline-002",
+      "status": "saved",
+      "log_id": 2,
+      "errors": []
+    }
+  ]
+}

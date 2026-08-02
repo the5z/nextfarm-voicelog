@@ -1,0 +1,38 @@
+{
+  "device_id": "android-device-001",
+  "synced_at": "2026-08-01T22:30:00+07:00",
+  "records": [
+    {
+      "schema_version": "1.0",
+      "client_record_id": "offline-001",
+      "transcript": "Bón 20 kg NPK cho lô A1 lúc 7 giờ",
+      "lot_code": "LO_A1",
+      "activity_code": "BON_PHAN",
+      "materials": [
+        {
+          "material_code": "NPK",
+          "quantity": 20,
+          "unit_code": "KG"
+        }
+      ],
+      "performed_at": "2026-08-01T07:00:00+07:00",
+      "performer_code": "NV001",
+      "notes": null,
+      "source": "voice",
+      "confirmed": true
+    },
+    {
+      "schema_version": "1.0",
+      "client_record_id": "offline-002",
+      "transcript": "Xịt thuốc cho lô A2",
+      "lot_code": "LO_A2",
+      "activity_code": "PHUN_THUOC",
+      "materials": [],
+      "performed_at": "2026-08-01T08:00:00+07:00",
+      "performer_code": "NV001",
+      "notes": null,
+      "source": "voice",
+      "confirmed": true
+    }
+  ]
+}
