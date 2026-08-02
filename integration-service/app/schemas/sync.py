@@ -1,64 +1,149 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from app.schemas.responses import IssueItem
-
 
 class SyncLogsRequest(BaseModel):
-    """Yêu cầu đồng bộ nhiều nhật ký từ một thiết bị."""
+    """
+    Dữ liệu đồng bộ nhật ký từ một thiết bị.
+
+    records được giữ ở dạng dictionary để từng bản ghi có thể
+    được kiểm tra độc lập trong sync_service.py.
+
+    Nhờ đó, một bản ghi lỗi không làm FastAPI từ chối toàn bộ
+    request với mã lỗi 422.
+    """
 
     device_id: str = Field(
         min_length=1,
-        max_length=100,
+        max_length=200,
         description="Mã định danh của thiết bị gửi dữ liệu",
     )
 
-    synced_at: datetime | None = Field(
-        default=None,
+    synced_at: datetime = Field(
         description="Thời điểm thiết bị bắt đầu đồng bộ",
     )
 
-    # Dùng dict thay vì CultivationLogInput để từng bản ghi
-    # được kiểm tra độc lập. Một bản ghi sai sẽ không làm
-    # toàn bộ request bị HTTP 422.
     records: list[dict[str, Any]] = Field(
-        min_length=1,
-        max_length=100,
+        default_factory=list,
         description="Danh sách nhật ký cần đồng bộ",
     )
 
 
-class SyncRecordResult(BaseModel):
-    """Kết quả xử lý một bản ghi trong lô đồng bộ."""
+class SyncIssue(BaseModel):
+    """
+    Chi tiết một lỗi xảy ra khi đồng bộ bản ghi.
+    """
 
-    client_record_id: str | None = None
+    field: str = Field(
+        description="Tên trường dữ liệu xảy ra lỗi",
+    )
+
+    code: str = Field(
+        description="Mã lỗi dùng cho frontend xử lý",
+    )
+
+    message: str = Field(
+        description="Nội dung mô tả lỗi",
+    )
+
+
+class SyncRecordResult(BaseModel):
+    """
+    Kết quả đồng bộ của một bản ghi riêng lẻ.
+    """
+
+    client_record_id: str = Field(
+        description=(
+            "Mã bản ghi do thiết bị tạo hoặc mã tạm "
+            "khi bản ghi thiếu client_record_id"
+        ),
+    )
+
+    success: bool = Field(
+        description=(
+            "True nếu bản ghi đã được lưu hoặc đã tồn tại; "
+            "False nếu bản ghi đồng bộ thất bại"
+        ),
+    )
 
     status: Literal[
         "saved",
         "already_exists",
         "failed",
-    ]
+    ] = Field(
+        description="Trạng thái xử lý của bản ghi",
+    )
 
-    log_id: int | None = None
+    data: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Dữ liệu đã lưu; bằng null khi bản ghi thất bại"
+        ),
+    )
 
-    errors: list[IssueItem] = Field(default_factory=list)
+    errors: list[SyncIssue] = Field(
+        default_factory=list,
+        description=(
+            "Danh sách lỗi; rỗng khi bản ghi thành công"
+        ),
+    )
 
 
 class SyncSummary(BaseModel):
-    """Thống kê kết quả đồng bộ."""
+    """
+    Thống kê kết quả của một lần đồng bộ.
+    """
 
-    total: int
-    saved: int
-    duplicated: int
-    failed: int
+    total: int = Field(
+        ge=0,
+        description="Tổng số bản ghi được gửi lên",
+    )
+
+    saved: int = Field(
+        ge=0,
+        description="Số bản ghi vừa được lưu mới",
+    )
+
+    duplicated: int = Field(
+        ge=0,
+        description="Số bản ghi đã tồn tại từ trước",
+    )
+
+    failed: int = Field(
+        ge=0,
+        description="Số bản ghi đồng bộ thất bại",
+    )
 
 
 class SyncLogsResponse(BaseModel):
-    """Phản hồi của API đồng bộ."""
+    """
+    Kết quả chung của API đồng bộ nhật ký.
+    """
 
-    success: bool
-    device_id: str
-    summary: SyncSummary
-    results: list[SyncRecordResult]
+    success: bool = Field(
+        description=(
+            "True khi không có bản ghi thất bại; "
+            "False khi có ít nhất một bản ghi lỗi"
+        ),
+    )
+
+    device_id: str = Field(
+        description="Mã thiết bị đã gửi dữ liệu",
+    )
+
+    synced_at: datetime = Field(
+        description="Thời điểm đồng bộ từ request",
+    )
+
+    summary: SyncSummary = Field(
+        description="Thống kê kết quả đồng bộ",
+    )
+
+    results: list[SyncRecordResult] = Field(
+        default_factory=list,
+        description="Kết quả xử lý chi tiết từng bản ghi",
+    )
