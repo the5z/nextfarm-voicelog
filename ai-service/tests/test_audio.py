@@ -64,18 +64,20 @@ def test_upload_audio_success(mocker) -> None:
 
     mocker.patch(
         "app.routers.audio.transcribe_audio",
-        return_value="Cho bò ăn 20 ký cám lúc 7 giờ sáng.",
+        return_value=(
+            "Cho bò ở lô A ăn 20 ký cám lúc 7 giờ sáng."
+        ),
     )
 
     mocker.patch(
         "app.routers.audio.extract_activity",
         return_value=ActivityData(
-            activity="feeding",
-            animal="cow",
+            lot="Lô A",
+            work="Cho bò ăn",
+            material="Cám",
             quantity=20,
             unit="kg",
             time="07:00",
-            note="ký cám",
         ),
     )
 
@@ -105,14 +107,61 @@ def test_upload_audio_success(mocker) -> None:
     assert data["stored_filename"].endswith(".m4a")
     assert data["content_type"] == "audio/x-m4a"
     assert data["transcript"] == (
-        "Cho bò ăn 20 ký cám lúc 7 giờ sáng."
+        "Cho bò ở lô A ăn 20 ký cám lúc 7 giờ sáng."
     )
 
     structured_data = data["structured_data"]
 
-    assert structured_data["activity"] == "feeding"
-    assert structured_data["animal"] == "cow"
+    assert structured_data["lot"] == "Lô A"
+    assert structured_data["work"] == "Cho bò ăn"
+    assert structured_data["material"] == "Cám"
     assert structured_data["quantity"] == 20
     assert structured_data["unit"] == "kg"
     assert structured_data["time"] == "07:00"
-    assert structured_data["note"] == "ký cám"
+
+
+def test_upload_audio_success_without_lot(mocker) -> None:
+    """
+    Should allow lot to be null when the transcript does not mention it.
+    """
+
+    mocker.patch(
+        "app.routers.audio.transcribe_audio",
+        return_value="Tưới cây xoài 100 lít nước lúc 6 giờ sáng.",
+    )
+
+    mocker.patch(
+        "app.routers.audio.extract_activity",
+        return_value=ActivityData(
+            lot=None,
+            work="Tưới cây xoài",
+            material="Nước",
+            quantity=100,
+            unit="liter",
+            time="06:00",
+        ),
+    )
+
+    fake_audio = BytesIO(b"fake audio content")
+
+    response = client.post(
+        "/api/v1/audio/upload",
+        files={
+            "file": (
+                "watering.m4a",
+                fake_audio,
+                "audio/x-m4a",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+
+    structured_data = response.json()["data"]["structured_data"]
+
+    assert structured_data["lot"] is None
+    assert structured_data["work"] == "Tưới cây xoài"
+    assert structured_data["material"] == "Nước"
+    assert structured_data["quantity"] == 100
+    assert structured_data["unit"] == "liter"
+    assert structured_data["time"] == "06:00"

@@ -12,7 +12,6 @@ if not settings.GEMINI_API_KEY:
     )
 
 
-# Initialize Gemini client
 client = genai.Client(
     api_key=settings.GEMINI_API_KEY
 )
@@ -20,7 +19,7 @@ client = genai.Client(
 
 def extract_activity(transcript: str) -> ActivityData:
     """
-    Analyze a livestock voice log and return structured activity data.
+    Analyze an agricultural voice log and return structured work data.
     """
 
     prompt = build_activity_prompt(transcript)
