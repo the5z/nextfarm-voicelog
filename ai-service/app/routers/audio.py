@@ -48,8 +48,7 @@ ALLOWED_EXTENSIONS = {
 )
 async def upload_audio(file: UploadFile = File(...)) -> ApiResponse:
     """
-    Upload an audio file, transcribe it with Whisper,
-    and extract structured agricultural work data using Gemini.
+    Upload audio -> Whisper -> Gemini -> AI Text Contract V2
     """
 
     original_filename = file.filename
@@ -130,15 +129,12 @@ async def upload_audio(file: UploadFile = File(...)) -> ApiResponse:
     logger.info(
         (
             "Gemini extraction completed | "
-            "lot=%s | work=%s | material=%s | "
-            "quantity=%s | unit=%s | time=%s"
+            "activity=%s | lot=%s | materials=%s | time=%s"
         ),
-        structured_data.lot,
-        structured_data.work,
-        structured_data.material,
-        structured_data.quantity,
-        structured_data.unit,
-        structured_data.time,
+        structured_data.activity_text,
+        structured_data.lot_text,
+        structured_data.materials,
+        structured_data.time_text,
     )
 
     logger.info(

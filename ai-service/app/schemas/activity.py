@@ -3,38 +3,14 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-class ActivityData(BaseModel):
+class MaterialData(BaseModel):
     """
-    Dữ liệu công việc nông nghiệp được AI trích xuất từ bản ghi âm.
-
-    Khớp với giao diện:
-    - Lô
-    - Công việc
-    - Vật tư
-    - Số lượng
-    - Đơn vị
-    - Thời gian
+    Dữ liệu vật tư được AI trích xuất từ câu nói.
     """
 
-    lot: Optional[str] = Field(
+    material_text: Optional[str] = Field(
         default=None,
-        description="Tên hoặc mã lô, ví dụ: Lô A, Lô B.",
-    )
-
-    work: Optional[str] = Field(
-        default=None,
-        description=(
-            "Công việc được thực hiện, ví dụ: "
-            "Cho bò ăn, tưới cây xoài, bón phân."
-        ),
-    )
-
-    material: Optional[str] = Field(
-        default=None,
-        description=(
-            "Vật tư sử dụng, ví dụ: "
-            "Cám, nước, phân NPK, thuốc bảo vệ thực vật."
-        ),
+        description="Tên vật tư dạng dễ hiểu, ví dụ: NPK, Nước, Cám.",
     )
 
     quantity: Optional[float] = Field(
@@ -43,15 +19,39 @@ class ActivityData(BaseModel):
         description="Số lượng vật tư được sử dụng.",
     )
 
-    unit: Optional[str] = Field(
+    unit_text: Optional[str] = Field(
+        default=None,
+        description="Đơn vị dạng văn bản, ví dụ: kg, lít, ml, bao, chai.",
+    )
+
+
+class ActivityData(BaseModel):
+    """
+    Dữ liệu nhật ký nông nghiệp được AI trích xuất từ bản ghi âm.
+
+    Contract này chỉ chứa dữ liệu gốc dễ hiểu.
+    Việc chuyển tên sang code sẽ do Integration Service xử lý.
+    """
+
+    activity_text: Optional[str] = Field(
         default=None,
         description=(
-            "Đơn vị chuẩn hóa: kg, g, liter, ml, "
-            "bag, bottle, piece hoặc other."
+            "Tên hoạt động dạng dễ hiểu, ví dụ: "
+            "Bón phân, Phun thuốc, Tưới nước, Làm cỏ, Thu hoạch."
         ),
     )
 
-    time: Optional[str] = Field(
+    lot_text: Optional[str] = Field(
         default=None,
-        description="Thời gian thực hiện theo định dạng HH:MM.",
+        description="Tên hoặc mã lô dạng văn bản, ví dụ: Lô A, Lô B.",
+    )
+
+    materials: list[MaterialData] = Field(
+        default_factory=list,
+        description="Danh sách vật tư, số lượng và đơn vị được sử dụng.",
+    )
+
+    time_text: Optional[str] = Field(
+        default=None,
+        description="Thời gian dạng HH:MM, ví dụ: 07:00.",
     )

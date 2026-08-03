@@ -3,7 +3,7 @@ from io import BytesIO
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.schemas.activity import ActivityData
+from app.schemas.activity import ActivityData, MaterialData
 
 
 client = TestClient(app)
@@ -41,7 +41,7 @@ def test_upload_rejects_invalid_file_type() -> None:
 
 def test_upload_requires_file() -> None:
     """
-    Should return validation error when file is missing.
+    Should return a validation error when the file is missing.
     """
 
     response = client.post(
@@ -59,25 +59,32 @@ def test_upload_requires_file() -> None:
 
 def test_upload_audio_success(mocker) -> None:
     """
-    Should upload audio successfully using mocked Whisper and Gemini.
+    Should upload and process an audio file successfully
+    using mocked Whisper and Gemini results.
     """
+
+    transcript = (
+        "Bón phân lô A 20 ký NPK lúc 7 giờ sáng."
+    )
 
     mocker.patch(
         "app.routers.audio.transcribe_audio",
-        return_value=(
-            "Cho bò ở lô A ăn 20 ký cám lúc 7 giờ sáng."
-        ),
+        return_value=transcript,
     )
 
     mocker.patch(
         "app.routers.audio.extract_activity",
         return_value=ActivityData(
-            lot="Lô A",
-            work="Cho bò ăn",
-            material="Cám",
-            quantity=20,
-            unit="kg",
-            time="07:00",
+            activity_text="Bón phân",
+            lot_text="Lô A",
+            materials=[
+                MaterialData(
+                    material_text="NPK",
+                    quantity=20,
+                    unit_text="kg",
+                )
+            ],
+            time_text="07:00",
         ),
     )
 
@@ -87,7 +94,7 @@ def test_upload_audio_success(mocker) -> None:
         "/api/v1/audio/upload",
         files={
             "file": (
-                "sample.m4a",
+                "fertilizing.m4a",
                 fake_audio,
                 "audio/x-m4a",
             )
@@ -103,42 +110,52 @@ def test_upload_audio_success(mocker) -> None:
 
     data = body["data"]
 
-    assert data["original_filename"] == "sample.m4a"
+    assert data["original_filename"] == "fertilizing.m4a"
     assert data["stored_filename"].endswith(".m4a")
     assert data["content_type"] == "audio/x-m4a"
-    assert data["transcript"] == (
-        "Cho bò ở lô A ăn 20 ký cám lúc 7 giờ sáng."
-    )
+    assert data["transcript"] == transcript
 
     structured_data = data["structured_data"]
 
-    assert structured_data["lot"] == "Lô A"
-    assert structured_data["work"] == "Cho bò ăn"
-    assert structured_data["material"] == "Cám"
-    assert structured_data["quantity"] == 20
-    assert structured_data["unit"] == "kg"
-    assert structured_data["time"] == "07:00"
+    assert structured_data["activity_text"] == "Bón phân"
+    assert structured_data["lot_text"] == "Lô A"
+    assert structured_data["time_text"] == "07:00"
+
+    materials = structured_data["materials"]
+
+    assert len(materials) == 1
+    assert materials[0]["material_text"] == "NPK"
+    assert materials[0]["quantity"] == 20
+    assert materials[0]["unit_text"] == "kg"
 
 
-def test_upload_audio_success_without_lot(mocker) -> None:
+def test_upload_audio_with_watering_activity(mocker) -> None:
     """
-    Should allow lot to be null when the transcript does not mention it.
+    Should return structured watering data.
     """
+
+    transcript = (
+        "Tưới cây lô B 100 lít nước lúc 6 giờ sáng."
+    )
 
     mocker.patch(
         "app.routers.audio.transcribe_audio",
-        return_value="Tưới cây xoài 100 lít nước lúc 6 giờ sáng.",
+        return_value=transcript,
     )
 
     mocker.patch(
         "app.routers.audio.extract_activity",
         return_value=ActivityData(
-            lot=None,
-            work="Tưới cây xoài",
-            material="Nước",
-            quantity=100,
-            unit="liter",
-            time="06:00",
+            activity_text="Tưới nước",
+            lot_text="Lô B",
+            materials=[
+                MaterialData(
+                    material_text="Nước",
+                    quantity=100,
+                    unit_text="lít",
+                )
+            ],
+            time_text="06:00",
         ),
     )
 
@@ -159,9 +176,104 @@ def test_upload_audio_success_without_lot(mocker) -> None:
 
     structured_data = response.json()["data"]["structured_data"]
 
-    assert structured_data["lot"] is None
-    assert structured_data["work"] == "Tưới cây xoài"
-    assert structured_data["material"] == "Nước"
-    assert structured_data["quantity"] == 100
-    assert structured_data["unit"] == "liter"
-    assert structured_data["time"] == "06:00"
+    assert structured_data["activity_text"] == "Tưới nước"
+    assert structured_data["lot_text"] == "Lô B"
+    assert structured_data["time_text"] == "06:00"
+
+    materials = structured_data["materials"]
+
+    assert len(materials) == 1
+    assert materials[0]["material_text"] == "Nước"
+    assert materials[0]["quantity"] == 100
+    assert materials[0]["unit_text"] == "lít"
+
+
+def test_upload_audio_without_materials(mocker) -> None:
+    """
+    Should return an empty materials list when no material
+    is mentioned in the transcript.
+    """
+
+    transcript = "Làm cỏ lô A lúc 8 giờ sáng."
+
+    mocker.patch(
+        "app.routers.audio.transcribe_audio",
+        return_value=transcript,
+    )
+
+    mocker.patch(
+        "app.routers.audio.extract_activity",
+        return_value=ActivityData(
+            activity_text="Làm cỏ",
+            lot_text="Lô A",
+            materials=[],
+            time_text="08:00",
+        ),
+    )
+
+    fake_audio = BytesIO(b"fake audio content")
+
+    response = client.post(
+        "/api/v1/audio/upload",
+        files={
+            "file": (
+                "weeding.m4a",
+                fake_audio,
+                "audio/x-m4a",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+
+    structured_data = response.json()["data"]["structured_data"]
+
+    assert structured_data["activity_text"] == "Làm cỏ"
+    assert structured_data["lot_text"] == "Lô A"
+    assert structured_data["materials"] == []
+    assert structured_data["time_text"] == "08:00"
+
+
+def test_upload_audio_without_lot_or_time(mocker) -> None:
+    """
+    Should allow lot_text and time_text to be null.
+    """
+
+    transcript = "Thu hoạch xoài."
+
+    mocker.patch(
+        "app.routers.audio.transcribe_audio",
+        return_value=transcript,
+    )
+
+    mocker.patch(
+        "app.routers.audio.extract_activity",
+        return_value=ActivityData(
+            activity_text="Thu hoạch",
+            lot_text=None,
+            materials=[],
+            time_text=None,
+        ),
+    )
+
+    fake_audio = BytesIO(b"fake audio content")
+
+    response = client.post(
+        "/api/v1/audio/upload",
+        files={
+            "file": (
+                "harvesting.m4a",
+                fake_audio,
+                "audio/x-m4a",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+
+    structured_data = response.json()["data"]["structured_data"]
+
+    assert structured_data["activity_text"] == "Thu hoạch"
+    assert structured_data["lot_text"] is None
+    assert structured_data["materials"] == []
+    assert structured_data["time_text"] is None

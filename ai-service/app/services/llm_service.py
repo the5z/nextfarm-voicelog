@@ -19,7 +19,10 @@ client = genai.Client(
 
 def extract_activity(transcript: str) -> ActivityData:
     """
-    Analyze an agricultural voice log and return structured work data.
+    Analyze an agricultural voice log and return structured text data.
+
+    This service only extracts human-readable values.
+    Business codes are resolved later by the Integration Service.
     """
 
     prompt = build_activity_prompt(transcript)
