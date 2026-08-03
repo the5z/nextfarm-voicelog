@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "client_record_id": "android-device-001-record-0001",
+  "transcript": "Bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
+  "lot_code": "LO_A1",
+  "activity_code": "BON_PHAN",
+  "materials": [
+    {
+      "material_code": "NPK",
+      "quantity": 20,
+      "unit_code": "KG"
+    }
+  ],
+  "performed_at": "2026-08-03T07:00:00+07:00",
+  "performer_code": "NV001",
+  "notes": null,
+  "source": "voice",
+  "confirmed": true
+}

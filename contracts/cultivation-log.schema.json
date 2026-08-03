@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nextfarm-voicelog:contract:cultivation-log:1.0",
+  "title": "NextFarm VoiceLog Cultivation Log",
+  "description": "Hợp đồng JSON cho nhật ký canh tác đã được người dùng kiểm tra và gửi từ Flutter tới Integration Service.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "client_record_id",
+    "lot_code",
+    "activity_code",
+    "materials",
+    "performed_at",
+    "source",
+    "confirmed"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Phiên bản hợp đồng dữ liệu."
+    },
+    "client_record_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "\\S",
+      "description": "Mã duy nhất do thiết bị tạo. Phải được giữ nguyên khi gửi lại hoặc đồng bộ."
+    },
+    "transcript": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Nội dung giọng nói đã được chuyển thành văn bản."
+    },
+    "lot_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "pattern": "\\S",
+      "description": "Mã lô hoặc khu vực canh tác. Backend chuẩn hóa thành chữ hoa."
+    },
+    "activity_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "pattern": "\\S",
+      "description": "Mã hoạt động canh tác, ví dụ BON_PHAN hoặc TUOI_NUOC."
+    },
+    "materials": {
+      "type": "array",
+      "description": "Danh sách vật tư sử dụng. Có thể là mảng rỗng đối với hoạt động không dùng vật tư.",
+      "items": {
+        "$ref": "#/$defs/material"
+      }
+    },
+    "performed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời điểm thực hiện theo ISO 8601, nên kèm múi giờ."
+    },
+    "performer_code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 50,
+      "description": "Mã người thực hiện, có thể để null."
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Ghi chú bổ sung, có thể để null."
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "voice",
+        "manual",
+        "sync"
+      ],
+      "description": "Nguồn tạo bản ghi."
+    },
+    "confirmed": {
+      "type": "boolean",
+      "description": "Cho biết người dùng đã kiểm tra và xác nhận dữ liệu hay chưa."
+    }
+  },
+  "$defs": {
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "material_code",
+        "quantity",
+        "unit_code"
+      ],
+      "properties": {
+        "material_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50,
+          "pattern": "\\S",
+          "description": "Mã vật tư. Backend chuẩn hóa thành chữ hoa."
+        },
+        "quantity": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Số lượng vật tư, bắt buộc lớn hơn 0."
+        },
+        "unit_code": {
+          "type": "string",
+          "enum": [
+            "KG",
+            "G",
+            "L",
+            "ML",
+            "BAG",
+            "BOTTLE"
+          ],
+          "description": "Đơn vị đo được Integration Service hỗ trợ."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.0",
+      "client_record_id": "android-device-001-record-0001",
+      "transcript": "Bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
+      "lot_code": "LO_A1",
+      "activity_code": "BON_PHAN",
+      "materials": [
+        {
+          "material_code": "NPK",
+          "quantity": 20,
+          "unit_code": "KG"
+        }
+      ],
+      "performed_at": "2026-08-03T07:00:00+07:00",
+      "performer_code": "NV001",
+      "notes": null,
+      "source": "voice",
+      "confirmed": true
+    }
+  ]
+}

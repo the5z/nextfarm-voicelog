@@ -1,6 +1,7 @@
 {
   "success": true,
   "device_id": "android-device-001",
+  "synced_at": "2026-08-03T15:30:00+07:00",
   "summary": {
     "total": 2,
     "saved": 2,
@@ -9,15 +10,51 @@
   },
   "results": [
     {
-      "client_record_id": "offline-001",
+      "client_record_id": "offline-record-0001",
+      "success": true,
       "status": "saved",
-      "log_id": 1,
+      "data": {
+        "id": 1,
+        "schema_version": "1.0",
+        "client_record_id": "offline-record-0001",
+        "transcript": "Bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
+        "lot_code": "LO_A1",
+        "activity_code": "BON_PHAN",
+        "materials": [
+          {
+            "material_code": "NPK",
+            "quantity": 20,
+            "unit_code": "KG"
+          }
+        ],
+        "performed_at": "2026-08-03T07:00:00+07:00",
+        "performer_code": "NV001",
+        "notes": null,
+        "source": "voice",
+        "confirmed": true,
+        "status": "saved"
+      },
       "errors": []
     },
     {
-      "client_record_id": "offline-002",
+      "client_record_id": "offline-record-0002",
+      "success": true,
       "status": "saved",
-      "log_id": 2,
+      "data": {
+        "id": 2,
+        "schema_version": "1.0",
+        "client_record_id": "offline-record-0002",
+        "transcript": "Tưới nước cho lô B2 lúc 8 giờ sáng",
+        "lot_code": "LO_B2",
+        "activity_code": "TUOI_NUOC",
+        "materials": [],
+        "performed_at": "2026-08-03T08:00:00+07:00",
+        "performer_code": "NV001",
+        "notes": "Tưới nước buổi sáng",
+        "source": "voice",
+        "confirmed": true,
+        "status": "saved"
+      },
       "errors": []
     }
   ]

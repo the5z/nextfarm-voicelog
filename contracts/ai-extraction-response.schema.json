@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nextfarm-voicelog:contract:ai-extraction-response:1.0",
+  "title": "NextFarm VoiceLog AI Extraction Response",
+  "description": "Hợp đồng JSON cho kết quả nhận dạng giọng nói và trích xuất thông tin canh tác từ Speech/AI Service.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "transcript",
+    "activity_code",
+    "lot_code",
+    "materials",
+    "performed_at",
+    "performer_code",
+    "notes",
+    "missing_fields",
+    "warnings",
+    "confidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Phiên bản hợp đồng dữ liệu giữa Speech/AI Service và Flutter."
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "\\S",
+      "description": "Mã yêu cầu nhận dạng, dùng để đối chiếu request và response."
+    },
+    "transcript": {
+      "type": "string",
+      "description": "Văn bản tiếng Việt được nhận dạng từ âm thanh."
+    },
+    "activity_code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 50,
+      "description": "Mã hoạt động trích xuất được, ví dụ BON_PHAN hoặc TUOI_NUOC. Null nếu chưa xác định."
+    },
+    "lot_code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 50,
+      "description": "Mã lô hoặc khu vực canh tác. Null nếu chưa xác định."
+    },
+    "materials": {
+      "type": "array",
+      "description": "Danh sách vật tư được AI trích xuất. Có thể là mảng rỗng.",
+      "items": {
+        "$ref": "#/$defs/extracted_material"
+      }
+    },
+    "performed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "Thời điểm thực hiện theo ISO 8601. Null nếu chưa xác định."
+    },
+    "performer_code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 50,
+      "description": "Mã người thực hiện nếu lời nói có đề cập hoặc hệ thống đã biết."
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Thông tin bổ sung được trích xuất từ lời nói."
+    },
+    "missing_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Tên các trường bắt buộc mà AI chưa xác định được.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "activity_code",
+          "lot_code",
+          "performed_at",
+          "materials.material_code",
+          "materials.quantity",
+          "materials.unit_code"
+        ]
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "description": "Các cảnh báo cần Flutter hiển thị để người dùng kiểm tra.",
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
+    },
+    "confidence": {
+      "$ref": "#/$defs/confidence"
+    }
+  },
+  "$defs": {
+    "extracted_material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "material_code",
+        "quantity",
+        "unit_code"
+      ],
+      "properties": {
+        "material_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Mã hoặc tên vật tư AI nhận dạng được."
+        },
+        "quantity": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "description": "Số lượng vật tư. Null nếu lời nói không nêu rõ."
+        },
+        "unit_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "KG",
+            "G",
+            "L",
+            "ML",
+            "BAG",
+            "BOTTLE",
+            null
+          ],
+          "description": "Đơn vị đã chuẩn hóa. Null nếu chưa xác định hoặc đơn vị mơ hồ."
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Trường dữ liệu liên quan đến cảnh báo."
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Mã cảnh báo để Flutter có thể xử lý theo chương trình."
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Nội dung cảnh báo tiếng Việt cho người dùng."
+        }
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "overall",
+        "transcript",
+        "activity_code",
+        "lot_code",
+        "materials",
+        "performed_at"
+      ],
+      "properties": {
+        "overall": {
+          "$ref": "#/$defs/confidence_value"
+        },
+        "transcript": {
+          "$ref": "#/$defs/confidence_value"
+        },
+        "activity_code": {
+          "$ref": "#/$defs/confidence_value"
+        },
+        "lot_code": {
+          "$ref": "#/$defs/confidence_value"
+        },
+        "materials": {
+          "$ref": "#/$defs/confidence_value"
+        },
+        "performed_at": {
+          "$ref": "#/$defs/confidence_value"
+        }
+      }
+    },
+    "confidence_value": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Độ tin cậy từ 0 đến 1. Null nếu mô hình không cung cấp được."
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.0",
+      "request_id": "speech-request-0001",
+      "transcript": "Bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
+      "activity_code": "BON_PHAN",
+      "lot_code": "LO_A1",
+      "materials": [
+        {
+          "material_code": "NPK",
+          "quantity": 20,
+          "unit_code": "KG"
+        }
+      ],
+      "performed_at": "2026-08-03T07:00:00+07:00",
+      "performer_code": null,
+      "notes": null,
+      "missing_fields": [],
+      "warnings": [],
+      "confidence": {
+        "overall": 0.93,
+        "transcript": 0.97,
+        "activity_code": 0.95,
+        "lot_code": 0.91,
+        "materials": 0.94,
+        "performed_at": 0.88
+      }
+    }
+  ]
+}
