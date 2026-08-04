@@ -6,6 +6,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.core.config import settings
 from app.responses.api_response import ApiResponse
+from app.services.audio_preprocessing import reduce_noise
 from app.services.llm_service import extract_activity
 from app.services.transcribe import transcribe_audio
 from app.utils.logger import logger
@@ -48,10 +49,12 @@ ALLOWED_EXTENSIONS = {
 )
 async def upload_audio(file: UploadFile = File(...)) -> ApiResponse:
     """
-    Upload audio -> Whisper -> Gemini -> AI Text Contract V2
+    Upload audio, reduce background noise, transcribe with Whisper,
+    and extract structured agricultural data using Gemini.
     """
 
     original_filename = file.filename
+    cleaned_audio_path: Path | None = None
 
     logger.info(
         "Audio upload started | filename=%s | content_type=%s",
@@ -107,50 +110,82 @@ async def upload_audio(file: UploadFile = File(...)) -> ApiResponse:
     finally:
         await file.close()
 
-    logger.info(
-        "Whisper transcription started | filename=%s",
-        stored_filename,
-    )
+    try:
+        logger.info(
+            "Audio preprocessing started | filename=%s",
+            stored_filename,
+        )
 
-    transcript = transcribe_audio(file_path)
+        cleaned_audio_path = reduce_noise(file_path)
 
-    logger.info(
-        "Whisper transcription completed | transcript=%s",
-        transcript,
-    )
+        logger.info(
+            "Audio preprocessing completed | cleaned_path=%s",
+            cleaned_audio_path,
+        )
 
-    logger.info(
-        "Gemini extraction started | filename=%s",
-        stored_filename,
-    )
+        logger.info(
+            "Whisper transcription started | filename=%s",
+            cleaned_audio_path.name,
+        )
 
-    structured_data = extract_activity(transcript)
+        transcript = transcribe_audio(cleaned_audio_path)
 
-    logger.info(
-        (
-            "Gemini extraction completed | "
-            "activity=%s | lot=%s | materials=%s | time=%s"
-        ),
-        structured_data.activity_text,
-        structured_data.lot_text,
-        structured_data.materials,
-        structured_data.time_text,
-    )
+        logger.info(
+            "Whisper transcription completed | transcript=%s",
+            transcript,
+        )
 
-    logger.info(
-        "Audio processing completed successfully | filename=%s",
-        stored_filename,
-    )
+        logger.info(
+            "Gemini extraction started | filename=%s",
+            stored_filename,
+        )
 
-    return ApiResponse(
-        success=True,
-        message="Audio processed successfully.",
-        data={
-            "original_filename": original_filename,
-            "stored_filename": stored_filename,
-            "content_type": file.content_type,
-            "path": str(file_path),
-            "transcript": transcript,
-            "structured_data": structured_data.model_dump(),
-        },
-    )
+        structured_data = extract_activity(transcript)
+
+        logger.info(
+            (
+                "Gemini extraction completed | "
+                "activity=%s | lot=%s | materials=%s | time=%s"
+            ),
+            structured_data.activity_text,
+            structured_data.lot_text,
+            structured_data.materials,
+            structured_data.time_text,
+        )
+
+        logger.info(
+            "Audio processing completed successfully | filename=%s",
+            stored_filename,
+        )
+
+        return ApiResponse(
+            success=True,
+            message="Audio processed successfully.",
+            data={
+                "original_filename": original_filename,
+                "stored_filename": stored_filename,
+                "content_type": file.content_type,
+                "path": str(file_path),
+                "transcript": transcript,
+                "structured_data": structured_data.model_dump(),
+            },
+        )
+
+    finally:
+        if (
+            cleaned_audio_path is not None
+            and cleaned_audio_path.exists()
+        ):
+            try:
+                cleaned_audio_path.unlink()
+
+                logger.info(
+                    "Temporary cleaned audio deleted | path=%s",
+                    cleaned_audio_path,
+                )
+
+            except OSError:
+                logger.exception(
+                    "Failed to delete temporary cleaned audio | path=%s",
+                    cleaned_audio_path,
+                )

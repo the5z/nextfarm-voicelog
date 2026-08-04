@@ -1,4 +1,5 @@
 from io import BytesIO
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -60,11 +61,18 @@ def test_upload_requires_file() -> None:
 def test_upload_audio_success(mocker) -> None:
     """
     Should upload and process an audio file successfully
-    using mocked Whisper and Gemini results.
+    using mocked FFmpeg, Whisper and Gemini results.
     """
 
     transcript = (
         "Bón phân lô A 20 ký NPK lúc 7 giờ sáng."
+    )
+
+    cleaned_path = Path("uploads/cleaned-fertilizing.wav")
+
+    mocker.patch(
+        "app.routers.audio.reduce_noise",
+        return_value=cleaned_path,
     )
 
     mocker.patch(
@@ -138,6 +146,13 @@ def test_upload_audio_with_watering_activity(mocker) -> None:
         "Tưới cây lô B 100 lít nước lúc 6 giờ sáng."
     )
 
+    cleaned_path = Path("uploads/cleaned-watering.wav")
+
+    mocker.patch(
+        "app.routers.audio.reduce_noise",
+        return_value=cleaned_path,
+    )
+
     mocker.patch(
         "app.routers.audio.transcribe_audio",
         return_value=transcript,
@@ -196,6 +211,13 @@ def test_upload_audio_without_materials(mocker) -> None:
 
     transcript = "Làm cỏ lô A lúc 8 giờ sáng."
 
+    cleaned_path = Path("uploads/cleaned-weeding.wav")
+
+    mocker.patch(
+        "app.routers.audio.reduce_noise",
+        return_value=cleaned_path,
+    )
+
     mocker.patch(
         "app.routers.audio.transcribe_audio",
         return_value=transcript,
@@ -240,6 +262,13 @@ def test_upload_audio_without_lot_or_time(mocker) -> None:
     """
 
     transcript = "Thu hoạch xoài."
+
+    cleaned_path = Path("uploads/cleaned-harvesting.wav")
+
+    mocker.patch(
+        "app.routers.audio.reduce_noise",
+        return_value=cleaned_path,
+    )
 
     mocker.patch(
         "app.routers.audio.transcribe_audio",
