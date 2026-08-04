@@ -279,7 +279,13 @@ performer_code
 material_code
 unit_code
 ```
+Lưu ý về hai giai đoạn dữ liệu:
 
+- Kết quả từ Speech/AI Service gửi Flutter sử dụng các trường dữ liệu thô:
+  `activity_text`, `lot_text`, `material_text`, `unit_text`.
+- Sau khi Flutter gọi Integration Service để resolve và người dùng xác nhận,
+  JSON cuối gửi backend sử dụng:
+  `activity_code`, `lot_code`, `material_code`, `unit_code`.
 Không dùng:
 
 ```text
@@ -372,10 +378,10 @@ sào
 
 Khi gặp đơn vị mơ hồ, Speech/AI Service phải:
 
-1. Để `unit_code` bằng `null`.
-2. Thêm trường liên quan vào `missing_fields`.
-3. Thêm cảnh báo vào `warnings`.
-4. Để người dùng chọn lại trên Flutter.
+1. Để `unit_text` bằng `null`.
+2. Thêm `materials.unit_text` vào `missing_fields`.
+3. Flutter hiển thị cảnh báo và yêu cầu người dùng chọn đơn vị chuẩn.
+4. Sau khi xác nhận, Flutter gọi API resolve để lấy `unit_code`.
 
 ### 4.6. Số lượng vật tư
 
@@ -413,6 +419,7 @@ Trong kết quả AI, `quantity` được phép là `null` khi chưa nhận dạ
 
 ---
 
+
 ## 5. Hợp đồng Speech/AI Response
 
 Schema:
@@ -421,70 +428,182 @@ Schema:
 contracts/ai-extraction-response.schema.json
 ```
 
-Cấu trúc chính:
+File ví dụ:
+
+```text
+contracts/examples/ai-extraction-response.json
+contracts/examples/ai-extraction-missing-fields.json
+```
+
+### 5.1. Trách nhiệm của Speech/AI Service
+
+Speech/AI Service thực hiện:
+
+1. Chuyển âm thanh thành transcript tiếng Việt.
+2. Trích xuất tên hoạt động, lô, vật tư, số lượng, đơn vị và thời gian.
+3. Giữ dữ liệu nghiệp vụ ở dạng văn bản dễ hiểu.
+4. Phát hiện trường còn thiếu hoặc chưa chắc chắn.
+5. Trả về cảnh báo và độ tin cậy nếu mô hình có hỗ trợ.
+
+Speech/AI Service không tự suy đoán các mã:
+
+```text
+activity_code
+lot_code
+material_code
+unit_code
+performer_code
+```
+
+Việc ánh xạ tên sang mã được thực hiện thông qua Master Data API của Integration Service.
+
+### 5.2. Cấu trúc response
 
 ```json
 {
   "schema_version": "1.0",
   "request_id": "speech-request-0001",
-  "transcript": "Bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
-  "activity_code": "BON_PHAN",
-  "lot_code": "LO_A1",
+  "transcript": "Ngày 3 tháng 8 năm 2026, bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
+  "activity_text": "Bón phân",
+  "lot_text": "Lô A1",
   "materials": [
     {
-      "material_code": "NPK",
+      "material_text": "Phân NPK",
       "quantity": 20,
-      "unit_code": "KG"
+      "unit_text": "kg"
     }
   ],
+  "time_text": "7 giờ sáng ngày 03/08/2026",
   "performed_at": "2026-08-03T07:00:00+07:00",
-  "performer_code": null,
   "notes": null,
   "missing_fields": [],
   "warnings": [],
   "confidence": {
     "overall": 0.93,
     "transcript": 0.97,
-    "activity_code": 0.95,
-    "lot_code": 0.91,
+    "activity_text": 0.95,
+    "lot_text": 0.91,
     "materials": 0.94,
     "performed_at": 0.88
   }
 }
 ```
 
-### `missing_fields`
+### 5.3. Ý nghĩa các trường chính
 
-Danh sách trường AI chưa xác định được.
+| Trường | Ý nghĩa |
+|---|---|
+| `schema_version` | Phiên bản hợp đồng dữ liệu |
+| `request_id` | Mã đối chiếu request và response |
+| `transcript` | Toàn bộ văn bản nhận dạng từ âm thanh |
+| `activity_text` | Tên hoạt động dạng văn bản |
+| `lot_text` | Tên lô hoặc khu vực dạng văn bản |
+| `materials` | Danh sách vật tư AI trích xuất |
+| `material_text` | Tên vật tư dạng văn bản |
+| `quantity` | Số lượng vật tư |
+| `unit_text` | Đơn vị nguyên bản từ lời nói |
+| `time_text` | Cụm từ thời gian nguyên bản |
+| `performed_at` | Thời điểm ISO 8601 nếu xác định chính xác |
+| `notes` | Thông tin bổ sung |
+| `missing_fields` | Danh sách trường còn thiếu |
+| `warnings` | Cảnh báo cho Flutter hiển thị |
+| `confidence` | Độ tin cậy từ 0 đến 1 hoặc `null` |
 
-Ví dụ:
+### 5.4. Trường hợp còn thiếu dữ liệu
 
 ```json
 {
+  "schema_version": "1.0",
+  "request_id": "speech-request-0002",
+  "transcript": "Sáng nay bón phân cho lô A1",
+  "activity_text": "Bón phân",
+  "lot_text": "Lô A1",
+  "materials": [
+    {
+      "material_text": null,
+      "quantity": null,
+      "unit_text": null
+    }
+  ],
+  "time_text": "Sáng nay",
+  "performed_at": null,
+  "notes": null,
   "missing_fields": [
     "performed_at",
+    "materials.material_text",
     "materials.quantity",
-    "materials.unit_code"
-  ]
+    "materials.unit_text"
+  ],
+  "warnings": [
+    {
+      "field": "materials",
+      "code": "INCOMPLETE_MATERIAL",
+      "message": "Chưa xác định được tên vật tư, số lượng và đơn vị."
+    },
+    {
+      "field": "performed_at",
+      "code": "MISSING_PERFORMED_AT",
+      "message": "Chưa xác định được ngày giờ thực hiện chính xác."
+    }
+  ],
+  "confidence": {
+    "overall": 0.62,
+    "transcript": 0.94,
+    "activity_text": 0.9,
+    "lot_text": 0.88,
+    "materials": 0.35,
+    "performed_at": null
+  }
 }
 ```
 
-### `warnings`
+Flutter phải hiển thị các trường thiếu và cảnh báo để người dùng bổ sung trước khi xác nhận.
 
-Mỗi cảnh báo gồm:
+### 5.5. Luồng ánh xạ sang mã
+
+```text
+Speech/AI Service
+→ trả activity_text, lot_text, material_text, unit_text
+→ Flutter hiển thị dữ liệu
+→ Flutter gọi POST /api/master-data/resolve
+→ Integration Service trả code tương ứng
+→ người dùng kiểm tra và xác nhận
+→ Flutter gửi Cultivation Log có các trường *_code
+```
+
+Master Data API hiện hỗ trợ:
+
+```text
+activity
+unit
+lot
+material
+```
+
+Ví dụ resolve:
 
 ```json
 {
-  "field": "materials.unit_code",
-  "code": "AMBIGUOUS_UNIT",
-  "message": "Đơn vị chưa rõ, vui lòng kiểm tra lại."
+  "data_type": "material",
+  "text": "Cám"
 }
 ```
 
-Flutter phải hiển thị cảnh báo cho người dùng, không được bỏ qua.
+Response:
 
----
+```json
+{
+  "matched": true,
+  "code": "CAM",
+  "name": "Cám",
+  "confidence": 1.0,
+  "requires_confirmation": false,
+  "normalized_text": "cám",
+  "message": "Đã chuẩn hóa chính xác."
+}
+```
 
+Nếu không tìm thấy hoặc chỉ khớp gần đúng, Flutter phải yêu cầu người dùng xác nhận; không tự động gửi mã chưa chắc chắn vào Cultivation Log.
 ## 6. Hợp đồng Cultivation Log
 
 Schema:

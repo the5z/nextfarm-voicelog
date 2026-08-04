@@ -1,6 +1,11 @@
 from fastapi import APIRouter
 
-from app.data.master_data import ACTIVITIES, UNITS
+from app.data.master_data import (
+    ACTIVITIES,
+    LOTS,
+    MATERIALS,
+    UNITS,
+)
 from app.schemas.master_data import (
     MasterDataItem,
     ResolveMasterDataRequest,
@@ -15,15 +20,21 @@ router = APIRouter(
 )
 
 
+def build_master_data_items(
+    records: list[dict[str, str | list[str]]],
+) -> list[MasterDataItem]:
+    return [
+        MasterDataItem(**record)
+        for record in records
+    ]
+
+
 @router.get(
     "/activities",
     response_model=list[MasterDataItem],
 )
 def get_activities() -> list[MasterDataItem]:
-    return [
-        MasterDataItem(**item)
-        for item in ACTIVITIES
-    ]
+    return build_master_data_items(ACTIVITIES)
 
 
 @router.get(
@@ -31,10 +42,23 @@ def get_activities() -> list[MasterDataItem]:
     response_model=list[MasterDataItem],
 )
 def get_units() -> list[MasterDataItem]:
-    return [
-        MasterDataItem(**item)
-        for item in UNITS
-    ]
+    return build_master_data_items(UNITS)
+
+
+@router.get(
+    "/lots",
+    response_model=list[MasterDataItem],
+)
+def get_lots() -> list[MasterDataItem]:
+    return build_master_data_items(LOTS)
+
+
+@router.get(
+    "/materials",
+    response_model=list[MasterDataItem],
+)
+def get_materials() -> list[MasterDataItem]:
+    return build_master_data_items(MATERIALS)
 
 
 @router.post(

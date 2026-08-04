@@ -61,6 +61,17 @@ ACTIVITIES: list[MasterDataRecord] = [
             "cắt trái",
         ],
     },
+    {
+        "code": "CHO_BO_AN",
+        "name": "Cho bò ăn",
+        "aliases": [
+            "cho bò ăn",
+            "cho gia súc ăn",
+            "cho bò ăn cám",
+            "cho bò ăn thức ăn",
+            "đổ cám cho bò",
+        ],
+    },
 ]
 
 
@@ -120,6 +131,65 @@ UNITS: list[MasterDataRecord] = [
         "aliases": [
             "chai",
             "lọ",
+        ],
+    },
+]
+
+
+LOTS: list[MasterDataRecord] = [
+    {
+        "code": "LO_A",
+        "name": "Lô A",
+        "aliases": [
+            "lô a",
+            "lô số a",
+            "khu a",
+            "khu vực a",
+        ],
+    },
+    {
+        "code": "LO_B",
+        "name": "Lô B",
+        "aliases": [
+            "lô b",
+            "lô số b",
+            "khu b",
+            "khu vực b",
+        ],
+    },
+]
+
+
+MATERIALS: list[MasterDataRecord] = [
+    {
+        "code": "CAM",
+        "name": "Cám",
+        "aliases": [
+            "cám",
+            "cám bò",
+            "thức ăn bò",
+            "thức ăn gia súc",
+            "thức ăn chăn nuôi",
+        ],
+    },
+    {
+        "code": "NPK",
+        "name": "Phân NPK",
+        "aliases": [
+            "npk",
+            "phân npk",
+            "phân bón npk",
+        ],
+    },
+    {
+        "code": "URE",
+        "name": "Phân urê",
+        "aliases": [
+            "urê",
+            "ure",
+            "phân urê",
+            "đạm urê",
+            "phân đạm",
         ],
     },
 ]

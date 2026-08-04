@@ -1,26 +1,26 @@
 {
   "schema_version": "1.0",
   "request_id": "speech-request-0001",
-  "transcript": "Bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
-  "activity_code": "BON_PHAN",
-  "lot_code": "LO_A1",
+  "transcript": "Ngày 3 tháng 8 năm 2026, bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
+  "activity_text": "Bón phân",
+  "lot_text": "Lô A1",
   "materials": [
     {
-      "material_code": "NPK",
+      "material_text": "Phân NPK",
       "quantity": 20,
-      "unit_code": "KG"
+      "unit_text": "kg"
     }
   ],
+  "time_text": "7 giờ sáng ngày 03/08/2026",
   "performed_at": "2026-08-03T07:00:00+07:00",
-  "performer_code": null,
   "notes": null,
   "missing_fields": [],
   "warnings": [],
   "confidence": {
     "overall": 0.93,
     "transcript": 0.97,
-    "activity_code": 0.95,
-    "lot_code": 0.91,
+    "activity_text": 0.95,
+    "lot_text": 0.91,
     "materials": 0.94,
     "performed_at": 0.88
   }

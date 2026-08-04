@@ -2,18 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:nextfarm-voicelog:contract:ai-extraction-response:1.0",
   "title": "NextFarm VoiceLog AI Extraction Response",
-  "description": "Hợp đồng JSON cho kết quả nhận dạng giọng nói và trích xuất thông tin canh tác từ Speech/AI Service.",
+  "description": "Hợp đồng JSON cho kết quả nhận dạng giọng nói và trích xuất dữ liệu thô từ Speech/AI Service gửi đến Flutter. Các mã nghiệp vụ sẽ được Flutter resolve thông qua Integration Service.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
     "request_id",
     "transcript",
-    "activity_code",
-    "lot_code",
+    "activity_text",
+    "lot_text",
     "materials",
+    "time_text",
     "performed_at",
-    "performer_code",
     "notes",
     "missing_fields",
     "warnings",
@@ -34,30 +34,42 @@
     },
     "transcript": {
       "type": "string",
-      "description": "Văn bản tiếng Việt được nhận dạng từ âm thanh."
+      "minLength": 1,
+      "description": "Toàn bộ văn bản tiếng Việt được nhận dạng từ âm thanh."
     },
-    "activity_code": {
+    "activity_text": {
       "type": [
         "string",
         "null"
       ],
-      "maxLength": 50,
-      "description": "Mã hoạt động trích xuất được, ví dụ BON_PHAN hoặc TUOI_NUOC. Null nếu chưa xác định."
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Tên hoạt động được AI trích xuất nguyên dạng dễ hiểu, ví dụ Bón phân hoặc Cho bò ăn. Null nếu chưa xác định."
     },
-    "lot_code": {
+    "lot_text": {
       "type": [
         "string",
         "null"
       ],
-      "maxLength": 50,
-      "description": "Mã lô hoặc khu vực canh tác. Null nếu chưa xác định."
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Tên lô hoặc khu vực được AI trích xuất, ví dụ Lô A. Null nếu chưa xác định."
     },
     "materials": {
       "type": "array",
-      "description": "Danh sách vật tư được AI trích xuất. Có thể là mảng rỗng.",
+      "description": "Danh sách vật tư được AI trích xuất. Có thể là mảng rỗng nếu lời nói không đề cập vật tư.",
       "items": {
         "$ref": "#/$defs/extracted_material"
       }
+    },
+    "time_text": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 150,
+      "description": "Cụm từ thời gian nguyên bản được trích xuất từ lời nói, ví dụ 7 giờ sáng hoặc sáng nay. Null nếu không có thông tin."
     },
     "performed_at": {
       "type": [
@@ -65,36 +77,29 @@
         "null"
       ],
       "format": "date-time",
-      "description": "Thời điểm thực hiện theo ISO 8601. Null nếu chưa xác định."
-    },
-    "performer_code": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "maxLength": 50,
-      "description": "Mã người thực hiện nếu lời nói có đề cập hoặc hệ thống đã biết."
+      "description": "Thời điểm được AI chuẩn hóa theo ISO 8601 khi có đủ ngày và giờ. Null nếu chưa thể xác định chính xác."
     },
     "notes": {
       "type": [
         "string",
         "null"
       ],
-      "description": "Thông tin bổ sung được trích xuất từ lời nói."
+      "description": "Thông tin bổ sung được AI trích xuất từ lời nói."
     },
     "missing_fields": {
       "type": "array",
       "uniqueItems": true,
-      "description": "Tên các trường bắt buộc mà AI chưa xác định được.",
+      "description": "Tên các trường mà AI chưa xác định được hoặc cần người dùng bổ sung.",
       "items": {
         "type": "string",
         "enum": [
-          "activity_code",
-          "lot_code",
+          "activity_text",
+          "lot_text",
+          "time_text",
           "performed_at",
-          "materials.material_code",
+          "materials.material_text",
           "materials.quantity",
-          "materials.unit_code"
+          "materials.unit_text"
         ]
       }
     },
@@ -114,18 +119,19 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "material_code",
+        "material_text",
         "quantity",
-        "unit_code"
+        "unit_text"
       ],
       "properties": {
-        "material_code": {
+        "material_text": {
           "type": [
             "string",
             "null"
           ],
-          "maxLength": 50,
-          "description": "Mã hoặc tên vật tư AI nhận dạng được."
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Tên vật tư nguyên dạng được AI nhận dạng, ví dụ Cám hoặc Phân NPK. Null nếu chưa xác định."
         },
         "quantity": {
           "type": [
@@ -135,21 +141,14 @@
           "exclusiveMinimum": 0,
           "description": "Số lượng vật tư. Null nếu lời nói không nêu rõ."
         },
-        "unit_code": {
+        "unit_text": {
           "type": [
             "string",
             "null"
           ],
-          "enum": [
-            "KG",
-            "G",
-            "L",
-            "ML",
-            "BAG",
-            "BOTTLE",
-            null
-          ],
-          "description": "Đơn vị đã chuẩn hóa. Null nếu chưa xác định hoặc đơn vị mơ hồ."
+          "minLength": 1,
+          "maxLength": 50,
+          "description": "Đơn vị nguyên dạng được AI nhận dạng, ví dụ kg, bao hoặc chai. Null nếu chưa xác định."
         }
       }
     },
@@ -170,6 +169,7 @@
         "code": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 100,
           "description": "Mã cảnh báo để Flutter có thể xử lý theo chương trình."
         },
         "message": {
@@ -185,8 +185,8 @@
       "required": [
         "overall",
         "transcript",
-        "activity_code",
-        "lot_code",
+        "activity_text",
+        "lot_text",
         "materials",
         "performed_at"
       ],
@@ -197,10 +197,10 @@
         "transcript": {
           "$ref": "#/$defs/confidence_value"
         },
-        "activity_code": {
+        "activity_text": {
           "$ref": "#/$defs/confidence_value"
         },
-        "lot_code": {
+        "lot_text": {
           "$ref": "#/$defs/confidence_value"
         },
         "materials": {
@@ -225,26 +225,26 @@
     {
       "schema_version": "1.0",
       "request_id": "speech-request-0001",
-      "transcript": "Bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
-      "activity_code": "BON_PHAN",
-      "lot_code": "LO_A1",
+      "transcript": "Ngày 3 tháng 8 năm 2026, bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
+      "activity_text": "Bón phân",
+      "lot_text": "Lô A1",
       "materials": [
         {
-          "material_code": "NPK",
+          "material_text": "Phân NPK",
           "quantity": 20,
-          "unit_code": "KG"
+          "unit_text": "kg"
         }
       ],
+      "time_text": "7 giờ sáng ngày 03/08/2026",
       "performed_at": "2026-08-03T07:00:00+07:00",
-      "performer_code": null,
       "notes": null,
       "missing_fields": [],
       "warnings": [],
       "confidence": {
         "overall": 0.93,
         "transcript": 0.97,
-        "activity_code": 0.95,
-        "lot_code": 0.91,
+        "activity_text": 0.95,
+        "lot_text": 0.91,
         "materials": 0.94,
         "performed_at": 0.88
       }

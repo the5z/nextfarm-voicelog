@@ -6,12 +6,19 @@ from typing import Literal
 from app.data.master_data import (
     ACTIVITIES,
     AMBIGUOUS_TERMS,
+    LOTS,
+    MATERIALS,
     UNITS,
     MasterDataRecord,
 )
 
 
-MasterDataType = Literal["activity", "unit"]
+MasterDataType = Literal[
+    "activity",
+    "unit",
+    "lot",
+    "material",
+]
 
 
 def normalize_text(value: str) -> str:
@@ -23,7 +30,12 @@ def normalize_text(value: str) -> str:
     """
     normalized = unicodedata.normalize("NFC", value)
     normalized = normalized.lower().strip()
-    normalized = re.sub(r"[^\w\s-]", " ", normalized, flags=re.UNICODE)
+    normalized = re.sub(
+        r"[^\w\s-]",
+        " ",
+        normalized,
+        flags=re.UNICODE,
+    )
     normalized = re.sub(r"\s+", " ", normalized)
 
     return normalized
@@ -38,12 +50,18 @@ def remove_vietnamese_accents(value: str) -> str:
     decomposed = unicodedata.normalize("NFD", value)
 
     without_marks = "".join(
-        char
-        for char in decomposed
-        if unicodedata.category(char) != "Mn"
+        character
+        for character in decomposed
+        if unicodedata.category(character) != "Mn"
     )
 
-    return without_marks.replace("đ", "d").replace("Đ", "D")
+    return without_marks.replace(
+        "đ",
+        "d",
+    ).replace(
+        "Đ",
+        "D",
+    )
 
 
 def create_lookup_key(value: str) -> str:
@@ -51,44 +69,57 @@ def create_lookup_key(value: str) -> str:
     return remove_vietnamese_accents(normalized)
 
 
-def get_records(data_type: MasterDataType) -> list[MasterDataRecord]:
-    if data_type == "activity":
-        return ACTIVITIES
+def get_records(
+    data_type: MasterDataType,
+) -> list[MasterDataRecord]:
+    records_by_type: dict[
+        MasterDataType,
+        list[MasterDataRecord],
+    ] = {
+        "activity": ACTIVITIES,
+        "unit": UNITS,
+        "lot": LOTS,
+        "material": MATERIALS,
+    }
 
-    return UNITS
+    return records_by_type[data_type]
 
 
 def resolve_master_data(
     data_type: MasterDataType,
     text: str,
-) -> dict:
+) -> dict[str, object]:
     """
     Tìm mã chuẩn từ một từ hoặc cụm từ địa phương.
 
-    Ưu tiên:
-    1. Khớp chính xác mã, tên hoặc alias.
-    2. Khớp gần đúng để gợi ý.
-    3. Không tự đổi các đơn vị mơ hồ.
+    Thứ tự xử lý:
+    1. Không tự quy đổi đơn vị mơ hồ.
+    2. Khớp chính xác mã, tên hoặc alias.
+    3. Khớp gần đúng để gợi ý.
+    4. Không tìm thấy thì yêu cầu người dùng xác nhận.
     """
     normalized_text = normalize_text(text)
     lookup_key = create_lookup_key(text)
 
-    ambiguous_message = AMBIGUOUS_TERMS.get(lookup_key)
+    if data_type == "unit":
+        ambiguous_message = AMBIGUOUS_TERMS.get(
+            lookup_key
+        )
 
-    if data_type == "unit" and ambiguous_message is not None:
-        return {
-            "matched": False,
-            "code": None,
-            "name": None,
-            "confidence": 0.0,
-            "requires_confirmation": True,
-            "normalized_text": normalized_text,
-            "message": ambiguous_message,
-        }
+        if ambiguous_message is not None:
+            return {
+                "matched": False,
+                "code": None,
+                "name": None,
+                "confidence": 0.0,
+                "requires_confirmation": True,
+                "normalized_text": normalized_text,
+                "message": ambiguous_message,
+            }
 
     records = get_records(data_type)
 
-    # Khớp chính xác.
+    # Khớp chính xác theo code, tên hoặc alias.
     for record in records:
         candidates = [
             record["code"],
@@ -112,7 +143,7 @@ def resolve_master_data(
                 "message": "Đã chuẩn hóa chính xác.",
             }
 
-    # Tìm kết quả gần giống nhất.
+    # Tìm giá trị gần giống nhất.
     best_record: MasterDataRecord | None = None
     best_score = 0.0
 
@@ -135,7 +166,10 @@ def resolve_master_data(
                 best_score = score
                 best_record = record
 
-    if best_record is not None and best_score >= 0.82:
+    if (
+        best_record is not None
+        and best_score >= 0.82
+    ):
         return {
             "matched": True,
             "code": best_record["code"],
@@ -143,7 +177,10 @@ def resolve_master_data(
             "confidence": round(best_score, 2),
             "requires_confirmation": True,
             "normalized_text": normalized_text,
-            "message": "Tìm thấy giá trị gần giống; cần người dùng xác nhận.",
+            "message": (
+                "Tìm thấy giá trị gần giống; "
+                "cần người dùng xác nhận."
+            ),
         }
 
     return {
@@ -153,5 +190,8 @@ def resolve_master_data(
         "confidence": round(best_score, 2),
         "requires_confirmation": True,
         "normalized_text": normalized_text,
-        "message": "Không tìm thấy giá trị phù hợp trong danh mục.",
+        "message": (
+            "Không tìm thấy giá trị phù hợp "
+            "trong danh mục."
+        ),
     }

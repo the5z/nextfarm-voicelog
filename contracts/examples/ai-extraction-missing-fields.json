@@ -2,23 +2,23 @@
   "schema_version": "1.0",
   "request_id": "speech-request-0002",
   "transcript": "Sáng nay bón phân cho lô A1",
-  "activity_code": "BON_PHAN",
-  "lot_code": "LO_A1",
+  "activity_text": "Bón phân",
+  "lot_text": "Lô A1",
   "materials": [
     {
-      "material_code": null,
+      "material_text": null,
       "quantity": null,
-      "unit_code": null
+      "unit_text": null
     }
   ],
+  "time_text": "Sáng nay",
   "performed_at": null,
-  "performer_code": null,
   "notes": null,
   "missing_fields": [
     "performed_at",
-    "materials.material_code",
+    "materials.material_text",
     "materials.quantity",
-    "materials.unit_code"
+    "materials.unit_text"
   ],
   "warnings": [
     {
@@ -29,14 +29,14 @@
     {
       "field": "performed_at",
       "code": "MISSING_PERFORMED_AT",
-      "message": "Chưa xác định được thời điểm thực hiện."
+      "message": "Chưa xác định được ngày giờ thực hiện chính xác."
     }
   ],
   "confidence": {
     "overall": 0.62,
     "transcript": 0.94,
-    "activity_code": 0.9,
-    "lot_code": 0.88,
+    "activity_text": 0.9,
+    "lot_text": 0.88,
     "materials": 0.35,
     "performed_at": null
   }
