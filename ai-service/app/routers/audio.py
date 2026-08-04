@@ -47,19 +47,28 @@ ALLOWED_EXTENSIONS = {
         },
     },
 )
-async def upload_audio(file: UploadFile = File(...)) -> ApiResponse:
+async def upload_audio(
+    file: UploadFile = File(...),
+    use_noise_reduction: bool = True,
+) -> ApiResponse:
     """
-    Upload audio, reduce background noise, transcribe with Whisper,
-    and extract structured agricultural data using Gemini.
+    Upload an audio file and process it with Whisper and Gemini.
+
+    Set use_noise_reduction=true to preprocess the audio with FFmpeg.
+    Set use_noise_reduction=false to send the original audio to Whisper.
     """
 
     original_filename = file.filename
     cleaned_audio_path: Path | None = None
 
     logger.info(
-        "Audio upload started | filename=%s | content_type=%s",
+        (
+            "Audio upload started | filename=%s | "
+            "content_type=%s | noise_reduction=%s"
+        ),
         original_filename,
         file.content_type,
+        use_noise_reduction,
     )
 
     if not original_filename:
@@ -111,24 +120,34 @@ async def upload_audio(file: UploadFile = File(...)) -> ApiResponse:
         await file.close()
 
     try:
-        logger.info(
-            "Audio preprocessing started | filename=%s",
-            stored_filename,
-        )
+        audio_path_for_whisper = file_path
 
-        cleaned_audio_path = reduce_noise(file_path)
+        if use_noise_reduction:
+            logger.info(
+                "Audio preprocessing started | filename=%s",
+                stored_filename,
+            )
 
-        logger.info(
-            "Audio preprocessing completed | cleaned_path=%s",
-            cleaned_audio_path,
-        )
+            cleaned_audio_path = reduce_noise(file_path)
+            audio_path_for_whisper = cleaned_audio_path
+
+            logger.info(
+                "Audio preprocessing completed | cleaned_path=%s",
+                cleaned_audio_path,
+            )
+
+        else:
+            logger.info(
+                "Audio preprocessing skipped | filename=%s",
+                stored_filename,
+            )
 
         logger.info(
             "Whisper transcription started | filename=%s",
-            cleaned_audio_path.name,
+            audio_path_for_whisper.name,
         )
 
-        transcript = transcribe_audio(cleaned_audio_path)
+        transcript = transcribe_audio(audio_path_for_whisper)
 
         logger.info(
             "Whisper transcription completed | transcript=%s",
@@ -154,8 +173,12 @@ async def upload_audio(file: UploadFile = File(...)) -> ApiResponse:
         )
 
         logger.info(
-            "Audio processing completed successfully | filename=%s",
+            (
+                "Audio processing completed successfully | "
+                "filename=%s | noise_reduction=%s"
+            ),
             stored_filename,
+            use_noise_reduction,
         )
 
         return ApiResponse(
@@ -166,6 +189,7 @@ async def upload_audio(file: UploadFile = File(...)) -> ApiResponse:
                 "stored_filename": stored_filename,
                 "content_type": file.content_type,
                 "path": str(file_path),
+                "noise_reduction_applied": use_noise_reduction,
                 "transcript": transcript,
                 "structured_data": structured_data.model_dump(),
             },

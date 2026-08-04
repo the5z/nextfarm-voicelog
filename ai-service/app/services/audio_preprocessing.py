@@ -23,8 +23,7 @@ def reduce_noise(audio_path: Path) -> Path:
 
     audio_filter = (
         "highpass=f=80,"
-        "lowpass=f=8000,"
-        "afftdn=nr=12"
+        "afftdn=nr=8"
     )
 
     command = [
