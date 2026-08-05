@@ -24,6 +24,7 @@ function VoiceLog() {
   const [aiData, setAiData] = useState(EMPTY_AI_DATA);
 
   const [isUploading, setIsUploading] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(false);
   const [message, setMessage] = useState("");
 
   // 1: Ghi âm
@@ -32,7 +33,7 @@ function VoiceLog() {
   // 4: Xác nhận
   const [currentStep, setCurrentStep] = useState(1);
 
-  const handleDelete = () => {
+  const resetVoiceLog = () => {
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl);
     }
@@ -41,16 +42,23 @@ function VoiceLog() {
     setAudioBlob(null);
     setTranscript("");
     setAiData(EMPTY_AI_DATA);
+    setIsUploading(false);
+    setIsConfirmed(false);
     setMessage("");
-
-    // Quay lại bước ghi âm
     setCurrentStep(1);
   };
 
-  const handleUpload = async () => {
-    if (!audioBlob || isUploading) return;
+  const handleDelete = () => {
+    resetVoiceLog();
+  };
 
-    // Chuyển sang bước AI xử lý
+  const handleCreateNew = () => {
+    resetVoiceLog();
+  };
+
+  const handleUpload = async () => {
+    if (!audioBlob || isUploading || isConfirmed) return;
+
     setCurrentStep(2);
     setIsUploading(true);
     setMessage("Đang gửi bản ghi đến AI Service...");
@@ -66,8 +74,6 @@ function VoiceLog() {
       });
 
       setMessage("Xử lý bản ghi thành công.");
-
-      // Có kết quả thì chuyển sang bước kiểm tra
       setCurrentStep(3);
     } catch (error) {
       console.error("Upload audio error:", error);
@@ -76,11 +82,21 @@ function VoiceLog() {
         "Không thể kết nối AI Service. Hãy kiểm tra backend tại cổng 8000."
       );
 
-      // Xử lý thất bại nhưng vẫn giữ bản ghi để người dùng gửi lại
       setCurrentStep(1);
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleConfirm = () => {
+    if (!transcript.trim()) {
+      setMessage("Vui lòng kiểm tra nội dung ghi âm trước khi xác nhận.");
+      return;
+    }
+
+    setIsConfirmed(true);
+    setCurrentStep(4);
+    setMessage("Nhật ký đã được xác nhận.");
   };
 
   return (
@@ -96,17 +112,30 @@ function VoiceLog() {
         setTranscript={setTranscript}
         setAiData={setAiData}
         setMessage={setMessage}
+        isConfirmed={isConfirmed}
       />
 
-      <TranscriptBox transcript={transcript} />
+      <TranscriptBox
+        transcript={transcript}
+        onTranscriptChange={setTranscript}
+        isConfirmed={isConfirmed}
+      />
 
-      <AIForm aiData={aiData} />
+      <AIForm
+        aiData={aiData}
+        onAiDataChange={setAiData}
+        isConfirmed={isConfirmed}
+      />
 
       <ActionButtons
         hasAudio={Boolean(audioBlob)}
+        hasResult={Boolean(transcript.trim())}
         isUploading={isUploading}
+        isConfirmed={isConfirmed}
         onRetry={handleDelete}
         onUpload={handleUpload}
+        onConfirm={handleConfirm}
+        onCreateNew={handleCreateNew}
       />
 
       {message && (
