@@ -73,35 +73,37 @@ body {
 }
 
 .transcript-box {
-  width: 100%;
-  margin-top: 35px;
+    margin-top: 30px;
 }
 
-.transcript-box h3 {
-  margin-bottom: 12px;
-  color: #2e7d32;
+.transcript-box h2 {
+    margin-bottom: 15px;
+    color: #2e7d32;
+    font-size: 22px;
 }
 
-.transcript-box textarea {
-  width: 100%;
-  min-height: 140px;
+.transcript-textarea {
+    width: 100%;
+    min-height: 160px;
 
-  padding: 15px;
+    padding: 16px;
 
-  border-radius: 12px;
-  border: 2px solid #d9d9d9;
+    border: 2px solid #ddd;
+    border-radius: 14px;
 
-  resize: none;
+    resize: none;
 
-  font-size: 16px;
+    font-size: 16px;
+    line-height: 1.6;
 
-  outline: none;
+    background: #fafafa;
+    color: #333;
 
-  transition: .2s;
+    outline: none;
 }
 
-.transcript-box textarea:focus {
-  border-color: #2e7d32;
+.transcript-textarea:focus {
+    border-color: #2e7d32;
 }
 
 .ai-form{
@@ -181,4 +183,205 @@ body {
 
 .record-btn.recording:hover {
   background: #b71c1c;
+}
+
+.record-status {
+    margin-top: 10px; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+
+    font-size: 22px;
+    font-weight: 500;
+}
+
+.audio-player {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.audio-player h3 {
+  margin-bottom: 12px;
+  color: #2e7d32;
+}
+
+.audio-actions {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.delete-btn,
+.upload-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: white;
+  font-size: 15px;
+}
+
+.delete-btn {
+  background: #e53935;
+}
+
+.delete-btn:hover {
+  background: #c62828;
+}
+
+.upload-btn {
+  background: #2e7d32;
+}
+
+.upload-btn:hover {
+  background: #1b5e20;
+}
+
+.action-buttons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.app-message {
+  margin-top: 16px;
+  padding: 12px 14px;
+
+  border-radius: 10px;
+
+  background: #e8f5e9;
+  color: #256428;
+
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.app-message.error {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* ===========================
+   Workflow Stepper
+=========================== */
+
+.workflow-stepper {
+  display: flex;
+  align-items: flex-start;
+
+  width: 100%;
+  margin-top: 28px;
+  margin-bottom: 28px;
+}
+
+.workflow-step-wrapper {
+  position: relative;
+
+  display: flex;
+  align-items: flex-start;
+
+  flex: 1;
+}
+
+.workflow-step {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  min-width: 58px;
+
+  color: #9e9e9e;
+  text-align: center;
+}
+
+.workflow-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+
+  border: 2px solid #d0d0d0;
+  border-radius: 50%;
+
+  background: #ffffff;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  transition: 0.25s ease;
+}
+
+.workflow-step-label {
+  margin-top: 8px;
+
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.workflow-step.active {
+  color: #2e7d32;
+}
+
+.workflow-step.active .workflow-step-number {
+  border-color: #2e7d32;
+  background: #2e7d32;
+  color: #ffffff;
+
+  box-shadow: 0 0 0 5px rgba(46, 125, 50, 0.12);
+}
+
+.workflow-step.completed {
+  color: #2e7d32;
+}
+
+.workflow-step.completed .workflow-step-number {
+  border-color: #2e7d32;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.workflow-step-line {
+  position: absolute;
+  top: 16px;
+  left: calc(50% + 20px);
+  right: calc(-50% + 20px);
+
+  height: 3px;
+
+  background: #dddddd;
+
+  transition: 0.25s ease;
+}
+
+.workflow-step-line.completed {
+  background: #2e7d32;
+}
+
+@media (max-width: 480px) {
+  .workflow-step-label {
+    font-size: 10px;
+  }
+
+  .workflow-step-number {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .workflow-step-line {
+    top: 14px;
+    left: calc(50% + 18px);
+    right: calc(-50% + 18px);
+  }
 }

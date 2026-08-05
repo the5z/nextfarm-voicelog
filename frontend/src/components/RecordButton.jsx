@@ -1,80 +1,158 @@
 import { useRef, useState } from "react";
+import AudioPlayer from "./AudioPlayer";
 
-function RecordButton() {
+const EMPTY_AI_DATA = {
+  lot: "",
+  work: "",
+  material: "",
+  quantity: "",
+  unit: "",
+  time: "",
+};
+
+function RecordButton({
+  audioUrl,
+  setAudioUrl,
+  setAudioBlob,
+  setTranscript,
+  setAiData,
+  setMessage,
+}) {
   const [isRecording, setIsRecording] = useState(false);
-  const [audioUrl, setAudioUrl] = useState(null);
+  const [recordTime, setRecordTime] = useState(0);
+  const [recordStatus, setRecordStatus] = useState("Nhấn để ghi âm");
 
   const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const timerRef = useRef(null);
 
-  const handleRecord = async () => {
-  if (!isRecording) {
+  const stopTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const stopMicrophone = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current
+        .getTracks()
+        .forEach((track) => track.stop());
+
+      mediaStreamRef.current = null;
+    }
+  };
+
+  const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
 
+      mediaStreamRef.current = stream;
+
       const mediaRecorder = new MediaRecorder(stream);
-
       mediaRecorderRef.current = mediaRecorder;
-
-      // Reset mảng lưu dữ liệu âm thanh
       audioChunksRef.current = [];
 
-      // Khi có dữ liệu âm thanh thì lưu lại
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+
+      setAudioUrl(null);
+      setAudioBlob(null);
+      setTranscript("");
+      setAiData(EMPTY_AI_DATA);
+      setMessage("");
+
       mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, {
-            type: "audio/webm",
+        const mimeType =
+          mediaRecorder.mimeType || "audio/webm;codecs=opus";
+
+        const recordedBlob = new Blob(audioChunksRef.current, {
+          type: mimeType,
         });
 
-        const url = URL.createObjectURL(audioBlob);
+        const recordedUrl = URL.createObjectURL(recordedBlob);
 
-        setAudioUrl(url);
+        setAudioBlob(recordedBlob);
+        setAudioUrl(recordedUrl);
+        setRecordStatus("Đã ghi âm");
+        setMessage("Bản ghi đã sẵn sàng để gửi AI.");
 
-        console.log(audioBlob);
+        stopMicrophone();
+
+        console.log("Recorded audio:", recordedBlob);
       };
 
       mediaRecorder.start();
 
-      console.log(mediaRecorder);
- 
-      console.log(stream);
-
+      setRecordTime(0);
+      setRecordStatus("Đang ghi âm...");
       setIsRecording(true);
+
+      timerRef.current = setInterval(() => {
+        setRecordTime((previousTime) => previousTime + 1);
+      }, 1000);
     } catch (error) {
-      alert("Không thể truy cập microphone!");
-      console.error(error);
+      console.error("Microphone error:", error);
+      setRecordStatus("Không thể truy cập microphone");
+      setMessage("Vui lòng cấp quyền sử dụng microphone.");
     }
-  } else {
-    mediaRecorderRef.current.stop();
+  };
+
+  const stopRecording = () => {
+    const mediaRecorder = mediaRecorderRef.current;
+
+    if (!mediaRecorder || mediaRecorder.state !== "recording") return;
+
+    stopTimer();
+    mediaRecorder.stop();
     setIsRecording(false);
-  }
-};
+  };
+
+  const handleRecord = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const minutes = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const remainingSeconds = String(seconds % 60).padStart(2, "0");
+
+    return `${minutes}:${remainingSeconds}`;
+  };
 
   return (
     <div className="record-section">
       <button
+        type="button"
         className={`record-btn ${isRecording ? "recording" : ""}`}
         onClick={handleRecord}
+        aria-label={isRecording ? "Dừng ghi âm" : "Bắt đầu ghi âm"}
       >
         {isRecording ? "⏹" : "🎤"}
       </button>
 
-      <p>
-        {isRecording
-          ? "Đang ghi âm..."
-          : "Nhấn để ghi âm"}
-      </p>
+      <div className="record-status">
+        <span>{recordStatus}</span>
 
-      {audioUrl && (
-        <div style={{ marginTop: "20px" }}>
-            <audio controls src={audioUrl}></audio>
-        </div>
-      )}
+        {isRecording && (
+          <strong>{formatTime(recordTime)}</strong>
+        )}
+      </div>
+
+      <AudioPlayer audioUrl={audioUrl} />
     </div>
   );
 }
