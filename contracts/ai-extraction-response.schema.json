@@ -2,120 +2,130 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:nextfarm-voicelog:contract:ai-extraction-response:1.0",
   "title": "NextFarm VoiceLog AI Extraction Response",
-  "description": "Hợp đồng JSON cho kết quả nhận dạng giọng nói và trích xuất dữ liệu thô từ Speech/AI Service gửi đến Flutter. Các mã nghiệp vụ sẽ được Flutter resolve thông qua Integration Service.",
+  "description": "Hợp đồng JSON cho kết quả xử lý audio, nhận dạng giọng nói và trích xuất dữ liệu thô từ Speech/AI Service gửi đến Flutter. AI chỉ trả dữ liệu dạng text; việc ánh xạ sang mã nghiệp vụ do Integration Service xử lý.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version",
-    "request_id",
-    "transcript",
-    "activity_text",
-    "lot_text",
-    "materials",
-    "time_text",
-    "performed_at",
-    "notes",
-    "missing_fields",
-    "warnings",
-    "confidence"
+    "success",
+    "message",
+    "data"
   ],
   "properties": {
     "schema_version": {
       "type": "string",
       "const": "1.0",
-      "description": "Phiên bản hợp đồng dữ liệu giữa Speech/AI Service và Flutter."
+      "description": "Phiên bản hợp đồng. Trường này là tùy chọn để không bắt buộc AI Service hiện tại phải thay đổi response."
     },
-    "request_id": {
+    "success": {
+      "type": "boolean",
+      "description": "Cho biết quá trình xử lý audio có thành công hay không."
+    },
+    "message": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 100,
-      "pattern": "\\S",
-      "description": "Mã yêu cầu nhận dạng, dùng để đối chiếu request và response."
+      "description": "Thông báo kết quả xử lý."
     },
-    "transcript": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Toàn bộ văn bản tiếng Việt được nhận dạng từ âm thanh."
-    },
-    "activity_text": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "minLength": 1,
-      "maxLength": 100,
-      "description": "Tên hoạt động được AI trích xuất nguyên dạng dễ hiểu, ví dụ Bón phân hoặc Cho bò ăn. Null nếu chưa xác định."
-    },
-    "lot_text": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "minLength": 1,
-      "maxLength": 100,
-      "description": "Tên lô hoặc khu vực được AI trích xuất, ví dụ Lô A. Null nếu chưa xác định."
-    },
-    "materials": {
-      "type": "array",
-      "description": "Danh sách vật tư được AI trích xuất. Có thể là mảng rỗng nếu lời nói không đề cập vật tư.",
-      "items": {
-        "$ref": "#/$defs/extracted_material"
-      }
-    },
-    "time_text": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "minLength": 1,
-      "maxLength": 150,
-      "description": "Cụm từ thời gian nguyên bản được trích xuất từ lời nói, ví dụ 7 giờ sáng hoặc sáng nay. Null nếu không có thông tin."
-    },
-    "performed_at": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "format": "date-time",
-      "description": "Thời điểm được AI chuẩn hóa theo ISO 8601 khi có đủ ngày và giờ. Null nếu chưa thể xác định chính xác."
-    },
-    "notes": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "description": "Thông tin bổ sung được AI trích xuất từ lời nói."
-    },
-    "missing_fields": {
-      "type": "array",
-      "uniqueItems": true,
-      "description": "Tên các trường mà AI chưa xác định được hoặc cần người dùng bổ sung.",
-      "items": {
-        "type": "string",
-        "enum": [
-          "activity_text",
-          "lot_text",
-          "time_text",
-          "performed_at",
-          "materials.material_text",
-          "materials.quantity",
-          "materials.unit_text"
-        ]
-      }
-    },
-    "warnings": {
-      "type": "array",
-      "description": "Các cảnh báo cần Flutter hiển thị để người dùng kiểm tra.",
-      "items": {
-        "$ref": "#/$defs/issue"
-      }
-    },
-    "confidence": {
-      "$ref": "#/$defs/confidence"
+    "data": {
+      "$ref": "#/$defs/audio_processing_data"
     }
   },
   "$defs": {
-    "extracted_material": {
+    "audio_processing_data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transcript",
+        "structured_data"
+      ],
+      "properties": {
+        "original_filename": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Tên file audio ban đầu."
+        },
+        "stored_filename": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Tên file audio sau khi được lưu trên AI Service."
+        },
+        "content_type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "MIME type của file audio."
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Đường dẫn file audio được lưu trên AI Service."
+        },
+        "noise_reduction_applied": {
+          "type": "boolean",
+          "description": "Cho biết audio đã được áp dụng bước giảm nhiễu hay chưa."
+        },
+        "transcript": {
+          "type": "string",
+          "description": "Văn bản tiếng Việt được nhận dạng từ audio."
+        },
+        "structured_data": {
+          "$ref": "#/$defs/activity_data"
+        }
+      }
+    },
+    "activity_data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "activity_text",
+        "lot_text",
+        "materials",
+        "time_text"
+      ],
+      "properties": {
+        "activity_text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Tên hoạt động dạng văn bản do AI trích xuất, ví dụ Bón phân hoặc Cho bò ăn. Null nếu chưa xác định."
+        },
+        "lot_text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Tên lô hoặc khu vực dạng văn bản, ví dụ Lô A. Null nếu chưa xác định."
+        },
+        "materials": {
+          "type": "array",
+          "description": "Danh sách vật tư AI trích xuất. Có thể là mảng rỗng nếu lời nói không đề cập hoặc AI chưa xác định được vật tư.",
+          "items": {
+            "$ref": "#/$defs/material_data"
+          }
+        },
+        "time_text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 150,
+          "description": "Thông tin thời gian dạng văn bản do AI trích xuất, ví dụ 07:00, 7 giờ sáng hoặc sáng nay. Null nếu chưa xác định."
+        }
+      }
+    },
+    "material_data": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -131,7 +141,7 @@
           ],
           "minLength": 1,
           "maxLength": 100,
-          "description": "Tên vật tư nguyên dạng được AI nhận dạng, ví dụ Cám hoặc Phân NPK. Null nếu chưa xác định."
+          "description": "Tên vật tư dạng văn bản, ví dụ Cám hoặc Phân NPK. Null nếu chưa xác định."
         },
         "quantity": {
           "type": [
@@ -139,7 +149,7 @@
             "null"
           ],
           "exclusiveMinimum": 0,
-          "description": "Số lượng vật tư. Null nếu lời nói không nêu rõ."
+          "description": "Số lượng vật tư. Null nếu chưa xác định."
         },
         "unit_text": {
           "type": [
@@ -148,105 +158,34 @@
           ],
           "minLength": 1,
           "maxLength": 50,
-          "description": "Đơn vị nguyên dạng được AI nhận dạng, ví dụ kg, bao hoặc chai. Null nếu chưa xác định."
+          "description": "Đơn vị dạng văn bản do AI nhận dạng, ví dụ kg, lít, bao hoặc xị. AI không tự chuyển sang unit_code."
         }
       }
-    },
-    "issue": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "field",
-        "code",
-        "message"
-      ],
-      "properties": {
-        "field": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Trường dữ liệu liên quan đến cảnh báo."
-        },
-        "code": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 100,
-          "description": "Mã cảnh báo để Flutter có thể xử lý theo chương trình."
-        },
-        "message": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Nội dung cảnh báo tiếng Việt cho người dùng."
-        }
-      }
-    },
-    "confidence": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "overall",
-        "transcript",
-        "activity_text",
-        "lot_text",
-        "materials",
-        "performed_at"
-      ],
-      "properties": {
-        "overall": {
-          "$ref": "#/$defs/confidence_value"
-        },
-        "transcript": {
-          "$ref": "#/$defs/confidence_value"
-        },
-        "activity_text": {
-          "$ref": "#/$defs/confidence_value"
-        },
-        "lot_text": {
-          "$ref": "#/$defs/confidence_value"
-        },
-        "materials": {
-          "$ref": "#/$defs/confidence_value"
-        },
-        "performed_at": {
-          "$ref": "#/$defs/confidence_value"
-        }
-      }
-    },
-    "confidence_value": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "minimum": 0,
-      "maximum": 1,
-      "description": "Độ tin cậy từ 0 đến 1. Null nếu mô hình không cung cấp được."
     }
   },
   "examples": [
     {
-      "schema_version": "1.0",
-      "request_id": "speech-request-0001",
-      "transcript": "Ngày 3 tháng 8 năm 2026, bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
-      "activity_text": "Bón phân",
-      "lot_text": "Lô A1",
-      "materials": [
-        {
-          "material_text": "Phân NPK",
-          "quantity": 20,
-          "unit_text": "kg"
+      "success": true,
+      "message": "Audio processed successfully.",
+      "data": {
+        "original_filename": "feeding.m4a",
+        "stored_filename": "example-feeding.m4a",
+        "content_type": "audio/x-m4a",
+        "path": "uploads/example-feeding.m4a",
+        "noise_reduction_applied": true,
+        "transcript": "Cho bò ăn 20 ký cám tại lô A lúc 7 giờ sáng.",
+        "structured_data": {
+          "activity_text": "Cho bò ăn",
+          "lot_text": "Lô A",
+          "materials": [
+            {
+              "material_text": "Cám",
+              "quantity": 20,
+              "unit_text": "kg"
+            }
+          ],
+          "time_text": "07:00"
         }
-      ],
-      "time_text": "7 giờ sáng ngày 03/08/2026",
-      "performed_at": "2026-08-03T07:00:00+07:00",
-      "notes": null,
-      "missing_fields": [],
-      "warnings": [],
-      "confidence": {
-        "overall": 0.93,
-        "transcript": 0.97,
-        "activity_text": 0.95,
-        "lot_text": 0.91,
-        "materials": 0.94,
-        "performed_at": 0.88
       }
     }
   ]

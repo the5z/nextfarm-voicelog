@@ -437,15 +437,21 @@ contracts/examples/ai-extraction-missing-fields.json
 
 ### 5.1. Trách nhiệm của Speech/AI Service
 
-Speech/AI Service thực hiện:
+Speech/AI Service chịu trách nhiệm:
 
-1. Chuyển âm thanh thành transcript tiếng Việt.
-2. Trích xuất tên hoạt động, lô, vật tư, số lượng, đơn vị và thời gian.
-3. Giữ dữ liệu nghiệp vụ ở dạng văn bản dễ hiểu.
-4. Phát hiện trường còn thiếu hoặc chưa chắc chắn.
-5. Trả về cảnh báo và độ tin cậy nếu mô hình có hỗ trợ.
+1. Nhận file audio từ Flutter.
+2. Tiền xử lý và giảm nhiễu audio nếu được yêu cầu.
+3. Chuyển giọng nói tiếng Việt thành `transcript`.
+4. Trích xuất các thông tin nghiệp vụ ở dạng văn bản:
+   - hoạt động;
+   - lô hoặc khu vực;
+   - vật tư;
+   - số lượng;
+   - đơn vị;
+   - thời gian.
+5. Trả kết quả cho Flutter để người dùng kiểm tra và tiếp tục chuẩn hóa dữ liệu.
 
-Speech/AI Service không tự suy đoán các mã:
+Speech/AI Service chỉ trích xuất dữ liệu dạng văn bản và không tự suy đoán các mã nghiệp vụ như:
 
 ```text
 activity_code
@@ -455,132 +461,333 @@ unit_code
 performer_code
 ```
 
-Việc ánh xạ tên sang mã được thực hiện thông qua Master Data API của Integration Service.
+Thay vào đó, AI trả các giá trị dạng text:
+
+```text
+activity_text
+lot_text
+material_text
+unit_text
+time_text
+```
+
+Việc ánh xạ từ dữ liệu dạng text sang mã nghiệp vụ được thực hiện thông qua Master Data API của Integration Service.
 
 ### 5.2. Cấu trúc response
 
+Response thành công từ Speech/AI Service có dạng:
+
 ```json
 {
-  "schema_version": "1.0",
-  "request_id": "speech-request-0001",
-  "transcript": "Ngày 3 tháng 8 năm 2026, bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
-  "activity_text": "Bón phân",
-  "lot_text": "Lô A1",
+  "success": true,
+  "message": "Audio processed successfully.",
+  "data": {
+    "original_filename": "feeding.m4a",
+    "stored_filename": "example-feeding.m4a",
+    "content_type": "audio/x-m4a",
+    "path": "uploads/example-feeding.m4a",
+    "noise_reduction_applied": true,
+    "transcript": "Cho bò ăn 20 ký cám tại lô A lúc 7 giờ sáng.",
+    "structured_data": {
+      "activity_text": "Cho bò ăn",
+      "lot_text": "Lô A",
+      "materials": [
+        {
+          "material_text": "Cám",
+          "quantity": 20,
+          "unit_text": "kg"
+        }
+      ],
+      "time_text": "07:00"
+    }
+  }
+}
+```
+
+Speech/AI Service có thể hỗ trợ thêm:
+
+```json
+{
+  "schema_version": "1.0"
+}
+```
+
+để xác định phiên bản hợp đồng dữ liệu. Tuy nhiên trường này hiện không bắt buộc để giữ tương thích với response hiện tại của AI Service.
+
+### 5.3. Ý nghĩa các trường
+
+| Trường | Ý nghĩa |
+| --- | --- |
+| `schema_version` | Phiên bản hợp đồng dữ liệu, hiện là trường tùy chọn |
+| `success` | Cho biết quá trình xử lý audio thành công hay không |
+| `message` | Thông báo kết quả xử lý |
+| `data` | Dữ liệu kết quả từ quá trình xử lý audio |
+| `original_filename` | Tên file audio ban đầu |
+| `stored_filename` | Tên file được lưu tại AI Service |
+| `content_type` | MIME type của file audio |
+| `path` | Đường dẫn file audio được lưu tại AI Service |
+| `noise_reduction_applied` | Cho biết audio có được áp dụng giảm nhiễu hay không |
+| `transcript` | Toàn bộ văn bản tiếng Việt được nhận dạng từ audio |
+| `structured_data` | Dữ liệu nghiệp vụ được AI trích xuất từ transcript |
+| `activity_text` | Tên hoạt động dạng văn bản |
+| `lot_text` | Tên lô hoặc khu vực dạng văn bản |
+| `materials` | Danh sách vật tư được AI trích xuất |
+| `material_text` | Tên vật tư dạng văn bản |
+| `quantity` | Số lượng vật tư |
+| `unit_text` | Đơn vị dạng văn bản được nhận dạng từ lời nói |
+| `time_text` | Thông tin thời gian được AI nhận dạng |
+
+### 5.4. Quy tắc dữ liệu AI
+
+Các trường nghiệp vụ do AI trích xuất không phải là mã master data.
+
+Ví dụ AI có thể trả:
+
+```json
+{
+  "activity_text": "Cho bò ăn",
+  "lot_text": "Lô A",
   "materials": [
     {
-      "material_text": "Phân NPK",
+      "material_text": "Cám",
       "quantity": 20,
       "unit_text": "kg"
     }
   ],
-  "time_text": "7 giờ sáng ngày 03/08/2026",
-  "performed_at": "2026-08-03T07:00:00+07:00",
-  "notes": null,
-  "missing_fields": [],
-  "warnings": [],
-  "confidence": {
-    "overall": 0.93,
-    "transcript": 0.97,
-    "activity_text": 0.95,
-    "lot_text": 0.91,
-    "materials": 0.94,
-    "performed_at": 0.88
-  }
+  "time_text": "07:00"
 }
 ```
 
-### 5.3. Ý nghĩa các trường chính
-
-| Trường | Ý nghĩa |
-|---|---|
-| `schema_version` | Phiên bản hợp đồng dữ liệu |
-| `request_id` | Mã đối chiếu request và response |
-| `transcript` | Toàn bộ văn bản nhận dạng từ âm thanh |
-| `activity_text` | Tên hoạt động dạng văn bản |
-| `lot_text` | Tên lô hoặc khu vực dạng văn bản |
-| `materials` | Danh sách vật tư AI trích xuất |
-| `material_text` | Tên vật tư dạng văn bản |
-| `quantity` | Số lượng vật tư |
-| `unit_text` | Đơn vị nguyên bản từ lời nói |
-| `time_text` | Cụm từ thời gian nguyên bản |
-| `performed_at` | Thời điểm ISO 8601 nếu xác định chính xác |
-| `notes` | Thông tin bổ sung |
-| `missing_fields` | Danh sách trường còn thiếu |
-| `warnings` | Cảnh báo cho Flutter hiển thị |
-| `confidence` | Độ tin cậy từ 0 đến 1 hoặc `null` |
-
-### 5.4. Trường hợp còn thiếu dữ liệu
+AI không được tự chuyển thành:
 
 ```json
 {
-  "schema_version": "1.0",
-  "request_id": "speech-request-0002",
-  "transcript": "Sáng nay bón phân cho lô A1",
-  "activity_text": "Bón phân",
-  "lot_text": "Lô A1",
+  "activity_code": "CHO_BO_AN",
+  "lot_code": "LO_A",
   "materials": [
     {
-      "material_text": null,
-      "quantity": null,
-      "unit_text": null
+      "material_code": "CAM",
+      "quantity": 20,
+      "unit_code": "KG"
     }
-  ],
-  "time_text": "Sáng nay",
-  "performed_at": null,
-  "notes": null,
-  "missing_fields": [
-    "performed_at",
-    "materials.material_text",
-    "materials.quantity",
-    "materials.unit_text"
-  ],
-  "warnings": [
-    {
-      "field": "materials",
-      "code": "INCOMPLETE_MATERIAL",
-      "message": "Chưa xác định được tên vật tư, số lượng và đơn vị."
-    },
-    {
-      "field": "performed_at",
-      "code": "MISSING_PERFORMED_AT",
-      "message": "Chưa xác định được ngày giờ thực hiện chính xác."
+  ]
+}
+```
+
+Các mã trên chỉ được xác định thông qua Integration Service.
+
+### 5.5. Trường hợp AI không xác định được dữ liệu
+
+Nếu lời nói không chứa đầy đủ thông tin, AI được phép trả `null` hoặc mảng rỗng.
+
+Ví dụ:
+
+```json
+{
+  "success": true,
+  "message": "Audio processed successfully.",
+  "data": {
+    "original_filename": "feeding-incomplete.m4a",
+    "stored_filename": "example-feeding-incomplete.m4a",
+    "content_type": "audio/x-m4a",
+    "path": "uploads/example-feeding-incomplete.m4a",
+    "noise_reduction_applied": true,
+    "transcript": "Sáng nay cho bò ăn ở lô A.",
+    "structured_data": {
+      "activity_text": "Cho bò ăn",
+      "lot_text": "Lô A",
+      "materials": [],
+      "time_text": "Sáng nay"
     }
-  ],
-  "confidence": {
-    "overall": 0.62,
-    "transcript": 0.94,
-    "activity_text": 0.9,
-    "lot_text": 0.88,
-    "materials": 0.35,
-    "performed_at": null
   }
 }
 ```
 
-Flutter phải hiển thị các trường thiếu và cảnh báo để người dùng bổ sung trước khi xác nhận.
-
-### 5.5. Luồng ánh xạ sang mã
+Trong trường hợp này:
 
 ```text
-Speech/AI Service
-→ trả activity_text, lot_text, material_text, unit_text
-→ Flutter hiển thị dữ liệu
-→ Flutter gọi POST /api/master-data/resolve
-→ Integration Service trả code tương ứng
-→ người dùng kiểm tra và xác nhận
-→ Flutter gửi Cultivation Log có các trường *_code
+activity_text = "Cho bò ăn"
+lot_text      = "Lô A"
+materials     = []
+time_text     = "Sáng nay"
 ```
 
-Master Data API hiện hỗ trợ:
+AI không tự suy đoán tên vật tư, số lượng hoặc đơn vị nếu người dùng không nói rõ.
+
+Flutter chịu trách nhiệm hiển thị dữ liệu còn thiếu để người dùng bổ sung hoặc chỉnh sửa trước khi xác nhận.
+
+### 5.6. Xử lý thời gian
+
+Speech/AI Service ưu tiên giữ thông tin thời gian mà người dùng thực sự nói trong `time_text`.
+
+Ví dụ:
+
+```text
+"7 giờ sáng"
+"sáng nay"
+"chiều nay"
+"07:00"
+```
+
+Nếu người dùng chỉ nói:
+
+```text
+Sáng nay cho bò ăn
+```
+
+AI không nên tự suy đoán:
+
+```text
+07:00
+```
+
+hoặc tự tạo một thời điểm ISO 8601 cụ thể.
+
+Flutter sẽ cho người dùng kiểm tra và xác nhận thời gian trước khi tạo Cultivation Log cuối cùng.
+
+### 5.7. Đơn vị mơ hồ
+
+AI phải giữ nguyên đơn vị nhận dạng được từ lời nói và không tự chuyển đổi các đơn vị có thể mang ý nghĩa khác nhau theo khu vực.
+
+Ví dụ người dùng nói:
+
+```text
+Bón một xị thuốc cho lô A
+```
+
+AI có thể trả:
+
+```json
+{
+  "material_text": "Thuốc",
+  "quantity": 1,
+  "unit_text": "xị"
+}
+```
+
+AI không được tự chuyển:
+
+```text
+xị → ML
+xị → L
+```
+
+Flutter sẽ gửi `unit_text` đến Integration Service để kiểm tra.
+
+Nếu Integration Service không thể chuẩn hóa an toàn, hệ thống phải yêu cầu người dùng xác nhận.
+
+### 5.8. Luồng ánh xạ từ text sang code
+
+Luồng xử lý:
+
+```text
+Audio
+↓
+Speech/AI Service
+↓
+transcript + structured_data
+↓
+activity_text
+lot_text
+material_text
+unit_text
+time_text
+↓
+Flutter
+↓
+POST /api/master-data/resolve
+↓
+Integration Service
+↓
+activity_code
+lot_code
+material_code
+unit_code
+↓
+Flutter hiển thị cho người dùng kiểm tra
+↓
+Người dùng xác nhận
+↓
+Flutter tạo Cultivation Log cuối
+↓
+Integration Service
+```
+
+Ví dụ AI trả:
+
+```json
+{
+  "activity_text": "Cho bò ăn",
+  "lot_text": "Lô A",
+  "materials": [
+    {
+      "material_text": "Cám",
+      "quantity": 20,
+      "unit_text": "kg"
+    }
+  ],
+  "time_text": "07:00"
+}
+```
+
+Flutter lần lượt resolve các giá trị cần chuẩn hóa.
+
+### 5.9. Master Data Resolve API
+
+Endpoint:
+
+```http
+POST /api/master-data/resolve
+```
+
+Các loại dữ liệu hiện hỗ trợ:
 
 ```text
 activity
-unit
 lot
 material
+unit
 ```
 
-Ví dụ resolve:
+Ví dụ resolve hoạt động:
+
+```json
+{
+  "data_type": "activity",
+  "text": "Cho bò ăn"
+}
+```
+
+Kết quả:
+
+```json
+{
+  "matched": true,
+  "code": "CHO_BO_AN",
+  "name": "Cho bò ăn",
+  "confidence": 1.0,
+  "requires_confirmation": false,
+  "normalized_text": "cho bò ăn",
+  "message": "Đã chuẩn hóa chính xác."
+}
+```
+
+Ví dụ resolve lô:
+
+```json
+{
+  "data_type": "lot",
+  "text": "Lô A"
+}
+```
+
+Kết quả mã:
+
+```text
+LO_A
+```
+
+Ví dụ resolve vật tư:
 
 ```json
 {
@@ -589,21 +796,131 @@ Ví dụ resolve:
 }
 ```
 
-Response:
+Kết quả mã:
+
+```text
+CAM
+```
+
+Ví dụ resolve đơn vị:
 
 ```json
 {
-  "matched": true,
-  "code": "CAM",
-  "name": "Cám",
-  "confidence": 1.0,
-  "requires_confirmation": false,
-  "normalized_text": "cám",
-  "message": "Đã chuẩn hóa chính xác."
+  "data_type": "unit",
+  "text": "kg"
 }
 ```
 
-Nếu không tìm thấy hoặc chỉ khớp gần đúng, Flutter phải yêu cầu người dùng xác nhận; không tự động gửi mã chưa chắc chắn vào Cultivation Log.
+Kết quả mã:
+
+```text
+KG
+```
+
+Do đó dữ liệu:
+
+```text
+Cho bò ăn
+Lô A
+Cám
+kg
+```
+
+được chuẩn hóa thành:
+
+```text
+CHO_BO_AN
+LO_A
+CAM
+KG
+```
+
+### 5.10. Trường hợp không resolve được
+
+Nếu giá trị không tồn tại trong master data, Integration Service trả:
+
+```text
+matched = false
+code = null
+requires_confirmation = true
+```
+
+Flutter không được tự tạo hoặc tự suy đoán mã nghiệp vụ.
+
+Ví dụ:
+
+```json
+{
+  "data_type": "unit",
+  "text": "xị"
+}
+```
+
+Integration Service có thể xác định đây là đơn vị mơ hồ và yêu cầu người dùng xác nhận.
+
+Tương tự, nếu AI trả một lô hoặc vật tư chưa tồn tại trong master data, Flutter phải yêu cầu người dùng kiểm tra thay vì tự động gửi dữ liệu sai.
+
+### 5.11. Phân biệt confidence của AI và Integration Service
+
+Speech/AI Service hiện không bắt buộc cung cấp `confidence` cho kết quả trích xuất.
+
+Không nên yêu cầu mô hình ngôn ngữ tự tạo các giá trị như:
+
+```json
+{
+  "confidence": 0.93
+}
+```
+
+nếu không có cơ sở đo lường rõ ràng.
+
+Trường `confidence` trong response của:
+
+```http
+POST /api/master-data/resolve
+```
+
+là độ phù hợp của quá trình chuẩn hóa text sang master data tại Integration Service và không phải confidence của Speech-to-Text hoặc mô hình AI.
+
+### 5.12. Kết quả sau khi resolve
+
+Sau khi Flutter resolve dữ liệu và người dùng xác nhận, JSON cuối gửi đến Integration Service sử dụng mã nghiệp vụ.
+
+Ví dụ:
+
+```json
+{
+  "schema_version": "1.0",
+  "client_record_id": "voice-log-0001",
+  "transcript": "Cho bò ăn 20 ký cám tại lô A lúc 7 giờ sáng.",
+  "lot_code": "LO_A",
+  "activity_code": "CHO_BO_AN",
+  "materials": [
+    {
+      "material_code": "CAM",
+      "quantity": 20,
+      "unit_code": "KG"
+    }
+  ],
+  "performed_at": "2026-08-07T07:00:00+07:00",
+  "performer_code": null,
+  "notes": null,
+  "source": "voice",
+  "confirmed": true
+}
+```
+
+Đây là Cultivation Log được gửi đến Integration Service để validate và lưu.
+
+Cần phân biệt rõ hai contract:
+
+```text
+Speech/AI → Flutter
+    dùng *_text
+
+Flutter → Integration Service
+    dùng *_code
+```
 ## 6. Hợp đồng Cultivation Log
 
 Schema:

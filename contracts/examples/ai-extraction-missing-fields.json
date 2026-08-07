@@ -1,43 +1,18 @@
 {
-  "schema_version": "1.0",
-  "request_id": "speech-request-0002",
-  "transcript": "Sáng nay bón phân cho lô A1",
-  "activity_text": "Bón phân",
-  "lot_text": "Lô A1",
-  "materials": [
-    {
-      "material_text": null,
-      "quantity": null,
-      "unit_text": null
+  "success": true,
+  "message": "Audio processed successfully.",
+  "data": {
+    "original_filename": "feeding-incomplete.m4a",
+    "stored_filename": "example-feeding-incomplete.m4a",
+    "content_type": "audio/x-m4a",
+    "path": "uploads/example-feeding-incomplete.m4a",
+    "noise_reduction_applied": true,
+    "transcript": "Sáng nay cho bò ăn ở lô A.",
+    "structured_data": {
+      "activity_text": "Cho bò ăn",
+      "lot_text": "Lô A",
+      "materials": [],
+      "time_text": "Sáng nay"
     }
-  ],
-  "time_text": "Sáng nay",
-  "performed_at": null,
-  "notes": null,
-  "missing_fields": [
-    "performed_at",
-    "materials.material_text",
-    "materials.quantity",
-    "materials.unit_text"
-  ],
-  "warnings": [
-    {
-      "field": "materials",
-      "code": "INCOMPLETE_MATERIAL",
-      "message": "Chưa xác định được tên vật tư, số lượng và đơn vị."
-    },
-    {
-      "field": "performed_at",
-      "code": "MISSING_PERFORMED_AT",
-      "message": "Chưa xác định được ngày giờ thực hiện chính xác."
-    }
-  ],
-  "confidence": {
-    "overall": 0.62,
-    "transcript": 0.94,
-    "activity_text": 0.9,
-    "lot_text": 0.88,
-    "materials": 0.35,
-    "performed_at": null
   }
 }

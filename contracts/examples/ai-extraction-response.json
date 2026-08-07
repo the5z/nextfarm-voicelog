@@ -1,27 +1,24 @@
 {
-  "schema_version": "1.0",
-  "request_id": "speech-request-0001",
-  "transcript": "Ngày 3 tháng 8 năm 2026, bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
-  "activity_text": "Bón phân",
-  "lot_text": "Lô A1",
-  "materials": [
-    {
-      "material_text": "Phân NPK",
-      "quantity": 20,
-      "unit_text": "kg"
+  "success": true,
+  "message": "Audio processed successfully.",
+  "data": {
+    "original_filename": "feeding.m4a",
+    "stored_filename": "example-feeding.m4a",
+    "content_type": "audio/x-m4a",
+    "path": "uploads/example-feeding.m4a",
+    "noise_reduction_applied": true,
+    "transcript": "Cho bò ăn 20 ký cám tại lô A lúc 7 giờ sáng.",
+    "structured_data": {
+      "activity_text": "Cho bò ăn",
+      "lot_text": "Lô A",
+      "materials": [
+        {
+          "material_text": "Cám",
+          "quantity": 20,
+          "unit_text": "kg"
+        }
+      ],
+      "time_text": "07:00"
     }
-  ],
-  "time_text": "7 giờ sáng ngày 03/08/2026",
-  "performed_at": "2026-08-03T07:00:00+07:00",
-  "notes": null,
-  "missing_fields": [],
-  "warnings": [],
-  "confidence": {
-    "overall": 0.93,
-    "transcript": 0.97,
-    "activity_text": 0.95,
-    "lot_text": 0.91,
-    "materials": 0.94,
-    "performed_at": 0.88
   }
 }
