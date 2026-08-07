@@ -25,74 +25,121 @@ function AIForm({
         <h3>🤖 Dữ liệu AI trích xuất</h3>
 
         {hasAiData && !isConfirmed && (
-          <span className="edit-badge">✏️ Có thể chỉnh sửa</span>
+          <span className="edit-badge">
+            ✏️ Có thể chỉnh sửa
+          </span>
         )}
 
         {isConfirmed && (
-          <span className="confirmed-badge">✅ Đã xác nhận</span>
+          <span className="confirmed-badge">
+            ✅ Đã xác nhận
+          </span>
         )}
       </div>
 
-      <input
-        type="text"
-        placeholder="Lô"
-        value={aiData.lot || ""}
-        onChange={(event) =>
-          handleChange("lot", event.target.value)
-        }
-        readOnly={isConfirmed}
-      />
+      <div className="ai-field">
+        <label htmlFor="lot">
+          🏷️ Lô canh tác
+        </label>
 
-      <input
-        type="text"
-        placeholder="Công việc"
-        value={aiData.work || ""}
-        onChange={(event) =>
-          handleChange("work", event.target.value)
-        }
-        readOnly={isConfirmed}
-      />
+        <input
+          id="lot"
+          type="text"
+          placeholder="Ví dụ: A01"
+          value={aiData.lot || ""}
+          onChange={(event) =>
+            handleChange("lot", event.target.value)
+          }
+          readOnly={isConfirmed}
+        />
+      </div>
 
-      <input
-        type="text"
-        placeholder="Vật tư"
-        value={aiData.material || ""}
-        onChange={(event) =>
-          handleChange("material", event.target.value)
-        }
-        readOnly={isConfirmed}
-      />
+      <div className="ai-field">
+        <label htmlFor="work">
+          🛠️ Công việc
+        </label>
 
-      <input
-        type="number"
-        placeholder="Số lượng"
-        value={aiData.quantity || ""}
-        onChange={(event) =>
-          handleChange("quantity", event.target.value)
-        }
-        readOnly={isConfirmed}
-        min="0"
-      />
+        <input
+          id="work"
+          type="text"
+          placeholder="Ví dụ: Bón phân"
+          value={aiData.work || ""}
+          onChange={(event) =>
+            handleChange("work", event.target.value)
+          }
+          readOnly={isConfirmed}
+        />
+      </div>
 
-      <input
-        type="text"
-        placeholder="Đơn vị"
-        value={aiData.unit || ""}
-        onChange={(event) =>
-          handleChange("unit", event.target.value)
-        }
-        readOnly={isConfirmed}
-      />
+      <div className="ai-field">
+        <label htmlFor="material">
+          🌾 Vật tư
+        </label>
 
-      <input
-        type="time"
-        value={aiData.time || ""}
-        onChange={(event) =>
-          handleChange("time", event.target.value)
-        }
-        readOnly={isConfirmed}
-        aria-label="Thời gian"
-      />
+        <input
+          id="material"
+          type="text"
+          placeholder="Ví dụ: Phân NPK"
+          value={aiData.material || ""}
+          onChange={(event) =>
+            handleChange("material", event.target.value)
+          }
+          readOnly={isConfirmed}
+        />
+      </div>
+
+      <div className="ai-form-row">
+        <div className="ai-field">
+          <label htmlFor="quantity">
+            📦 Số lượng
+          </label>
+
+          <input
+            id="quantity"
+            type="number"
+            placeholder="Ví dụ: 20"
+            value={aiData.quantity || ""}
+            onChange={(event) =>
+              handleChange("quantity", event.target.value)
+            }
+            readOnly={isConfirmed}
+            min="0"
+          />
+        </div>
+
+        <div className="ai-field">
+          <label htmlFor="unit">
+            ⚖️ Đơn vị
+          </label>
+
+          <input
+            id="unit"
+            type="text"
+            placeholder="Ví dụ: kg"
+            value={aiData.unit || ""}
+            onChange={(event) =>
+              handleChange("unit", event.target.value)
+            }
+            readOnly={isConfirmed}
+          />
+        </div>
+      </div>
+
+      <div className="ai-field">
+        <label htmlFor="time">
+          🕒 Thời gian
+        </label>
+
+        <input
+          id="time"
+          type="time"
+          value={aiData.time || ""}
+          onChange={(event) =>
+            handleChange("time", event.target.value)
+          }
+          readOnly={isConfirmed}
+        />
+      </div>
 
       {!hasAiData && (
         <p className="ai-hint">
@@ -102,7 +149,7 @@ function AIForm({
 
       {hasAiData && !isConfirmed && (
         <p className="ai-hint">
-          Bạn có thể sửa riêng trường bị AI nhận sai trước khi xác nhận.
+          Chỉnh sửa nếu AI nhận sai trước khi xác nhận.
         </p>
       )}
     </div>

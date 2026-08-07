@@ -139,13 +139,26 @@ function VoiceLog() {
       />
 
       {message && (
-        <p
-          className={`app-message ${
-            message.includes("Không thể") ? "error" : ""
+        <div
+          className={`app-toast ${
+            message.includes("Không thể") ||
+            message.includes("Vui lòng") ||
+            message.includes("lỗi")
+              ? "error"
+              : "success"
           }`}
+          role="status"
         >
-          {message}
-        </p>
+          <span className="app-toast-icon">
+            {message.includes("Không thể") ||
+            message.includes("Vui lòng") ||
+            message.includes("lỗi")
+              ? "⚠️"
+              : "✅"}
+          </span>
+
+          <span>{message}</span>
+        </div>
       )}
     </div>
   );

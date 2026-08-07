@@ -28,9 +28,14 @@ function ActionButtons({
               onClick={onUpload}
               disabled={!hasAudio || isUploading}
             >
-              {isUploading
-                ? "⏳ Đang xử lý..."
-                : "⬆ Gửi AI"}
+              {isUploading ? (
+                <span className="button-loading">
+                  <span className="spinner" />
+                  AI đang xử lý...
+                </span>
+              ) : (
+                "⬆ Gửi AI"
+              )}
             </button>
           )}
 
