@@ -19,10 +19,8 @@ const EMPTY_AI_DATA = {
 function VoiceLog() {
   const [audioUrl, setAudioUrl] = useState(null);
   const [audioBlob, setAudioBlob] = useState(null);
-
   const [transcript, setTranscript] = useState("");
   const [aiData, setAiData] = useState(EMPTY_AI_DATA);
-
   const [isUploading, setIsUploading] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [message, setMessage] = useState("");
@@ -68,9 +66,16 @@ function VoiceLog() {
 
       setTranscript(data?.transcript || "");
 
+      const structuredData = data?.structured_data || {};
+      const firstMaterial = structuredData.materials?.[0] || {};
+
       setAiData({
-        ...EMPTY_AI_DATA,
-        ...(data?.structured_data || {}),
+        lot: structuredData.lot_text || "",
+        work: structuredData.activity_text || "",
+        material: firstMaterial.material_text || "",
+        quantity: firstMaterial.quantity ?? "",
+        unit: firstMaterial.unit_text || "",
+        time: structuredData.time_text || "",
       });
 
       setMessage("Xử lý bản ghi thành công.");
@@ -90,7 +95,9 @@ function VoiceLog() {
 
   const handleConfirm = () => {
     if (!transcript.trim()) {
-      setMessage("Vui lòng kiểm tra nội dung ghi âm trước khi xác nhận.");
+      setMessage(
+        "Vui lòng kiểm tra nội dung ghi âm trước khi xác nhận."
+      );
       return;
     }
 
