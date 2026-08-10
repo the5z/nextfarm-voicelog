@@ -219,3 +219,5 @@ __marimo__/
 # Ignore uploaded audio files
 ai-service/uploads/*
 !ai-service/uploads/.gitkeep
+# Node.js dependencies
+node_modules/
