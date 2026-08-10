@@ -1,0 +1,17 @@
+{
+  "name": "Bón phân",
+  "start": "2026-08-03T07:00:00+07:00",
+  "end": "2026-08-03T07:00:00+07:00",
+  "description": "Nội dung ghi âm: Bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng\n\nVật tư:\n- NPK - 20 - KG\n\nMã bản ghi thiết bị: android-device-001-record-0001",
+  "images": [],
+  "location": "LO_A1",
+  "assigned_to": "NV001",
+  "category_task_id": "BON_PHAN",
+  "season_id": "LO_A1",
+  "metadata": {
+    "schema_version": "1.0",
+    "client_record_id": "android-device-001-record-0001",
+    "source": "voice",
+    "integration_source": "nextfarm-voicelog"
+  }
+}

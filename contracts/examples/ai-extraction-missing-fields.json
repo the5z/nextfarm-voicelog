@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "message": "Audio processed successfully.",
+  "data": {
+    "original_filename": "feeding-incomplete.m4a",
+    "stored_filename": "example-feeding-incomplete.m4a",
+    "content_type": "audio/x-m4a",
+    "path": "uploads/example-feeding-incomplete.m4a",
+    "noise_reduction_applied": true,
+    "transcript": "Sáng nay cho bò ăn ở lô A.",
+    "structured_data": {
+      "activity_text": "Cho bò ăn",
+      "lot_text": "Lô A",
+      "materials": [],
+      "time_text": "Sáng nay"
+    }
+  }
+}
