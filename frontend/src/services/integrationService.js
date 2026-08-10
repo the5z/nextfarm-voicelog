@@ -1,5 +1,10 @@
-const INTEGRATION_API_URL =
-  "http://127.0.0.1:8002/api/master-data/resolve";
+const INTEGRATION_API_BASE_URL = "http://127.0.0.1:8002";
+
+const RESOLVE_API_URL =
+  `${INTEGRATION_API_BASE_URL}/api/master-data/resolve`;
+
+const VALIDATE_LOG_API_URL =
+  `${INTEGRATION_API_BASE_URL}/api/cultivation-logs/validate`;
 
 export async function resolveMasterData(dataType, text) {
   if (!text || !text.trim()) {
@@ -11,7 +16,7 @@ export async function resolveMasterData(dataType, text) {
     };
   }
 
-  const response = await fetch(INTEGRATION_API_URL, {
+  const response = await fetch(RESOLVE_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -24,7 +29,32 @@ export async function resolveMasterData(dataType, text) {
 
   if (!response.ok) {
     throw new Error(
-      `Integration Service error: ${response.status}`
+      `Integration Service resolve error: ${response.status}`
+    );
+  }
+
+  return response.json();
+}
+
+export async function validateCultivationLog(payload) {
+  const response = await fetch(VALIDATE_LOG_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+
+    console.error(
+      "Cultivation log validation error:",
+      errorData
+    );
+
+    throw new Error(
+      `Integration Service validate error: ${response.status}`
     );
   }
 
