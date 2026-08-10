@@ -9,6 +9,7 @@ import { uploadAudio } from "../services/audioService";
 import {
   resolveMasterData,
   validateCultivationLog,
+  saveCultivationLog,
 } from "../services/integrationService";
 
 const EMPTY_AI_DATA = {
@@ -231,11 +232,35 @@ function VoiceLog() {
         return;
       }
 
+      setMessage("Đang lưu nhật ký vào hệ thống...");
+
+      const saveResult =
+        await saveCultivationLog(finalContract);
+
+      console.log(
+        "Save result:",
+        saveResult
+      );
+
+      if (!saveResult.success) {
+        setMessage(
+          "Không thể lưu nhật ký vào hệ thống."
+        );
+        return;
+      }
+
       setIsConfirmed(true);
       setCurrentStep(4);
-      setMessage(
-        "Nhật ký đã được chuẩn hóa và kiểm tra hợp lệ."
-      );
+
+      if (saveResult.status === "already_exists") {
+        setMessage(
+          "Nhật ký đã tồn tại trong hệ thống."
+        );
+      } else {
+        setMessage(
+          "Nhật ký đã được lưu thành công."
+        );
+      }
     } catch (error) {
       console.error("Integration error:", error);
 

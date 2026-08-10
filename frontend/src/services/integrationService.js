@@ -6,6 +6,9 @@ const RESOLVE_API_URL =
 const VALIDATE_LOG_API_URL =
   `${INTEGRATION_API_BASE_URL}/api/cultivation-logs/validate`;
 
+const SAVE_LOG_API_URL =
+  `${INTEGRATION_API_BASE_URL}/api/cultivation-logs`;
+
 export async function resolveMasterData(dataType, text) {
   if (!text || !text.trim()) {
     return {
@@ -55,6 +58,31 @@ export async function validateCultivationLog(payload) {
 
     throw new Error(
       `Integration Service validate error: ${response.status}`
+    );
+  }
+
+  return response.json();
+}
+
+export async function saveCultivationLog(payload) {
+  const response = await fetch(SAVE_LOG_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+
+    console.error(
+      "Cultivation log save error:",
+      errorData
+    );
+
+    throw new Error(
+      `Integration Service save error: ${response.status}`
     );
   }
 

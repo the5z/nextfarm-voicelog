@@ -1,4 +1,21 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: nextfarm-postgres
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: CLRinmymind5
+      POSTGRES_DB: nextfarm_voicelog
+
+    ports:
+      - "1275:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    restart: unless-stopped
+
   ai-service:
     build:
       context: ./ai-service
@@ -16,3 +33,6 @@ services:
       - ./ai-service/uploads:/app/uploads
 
     restart: unless-stopped
+
+volumes:
+  postgres_data:
