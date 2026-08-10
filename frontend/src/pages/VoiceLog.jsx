@@ -6,6 +6,7 @@ import TranscriptBox from "../components/TranscriptBox";
 import AIForm from "../components/AIForm";
 import ActionButtons from "../components/ActionButtons";
 import { uploadAudio } from "../services/audioService";
+import { resolveMasterData } from "../services/integrationService";
 
 const EMPTY_AI_DATA = {
   lot: "",
@@ -93,7 +94,7 @@ function VoiceLog() {
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!transcript.trim()) {
       setMessage(
         "Vui lòng kiểm tra nội dung ghi âm trước khi xác nhận."
@@ -101,9 +102,46 @@ function VoiceLog() {
       return;
     }
 
-    setIsConfirmed(true);
-    setCurrentStep(4);
-    setMessage("Nhật ký đã được xác nhận.");
+    try {
+      setMessage(
+        "Đang chuẩn hóa dữ liệu với Integration Service..."
+      );
+
+      const activityResult = await resolveMasterData(
+        "activity",
+        aiData.work
+      );
+
+      const unitResult = await resolveMasterData(
+        "unit",
+        aiData.unit
+      );
+
+      const lotResult = await resolveMasterData(
+        "lot",
+        aiData.lot
+      );
+
+      const materialResult = await resolveMasterData(
+        "material",
+        aiData.material
+      );
+
+      console.log("Activity resolve:", activityResult);
+      console.log("Unit resolve:", unitResult);
+      console.log("Lot resolve:", lotResult);
+      console.log("Material resolve:", materialResult);
+
+      setIsConfirmed(true);
+      setCurrentStep(4);
+      setMessage("Nhật ký đã được xác nhận.");
+    } catch (error) {
+      console.error("Integration resolve error:", error);
+
+      setMessage(
+        "Không thể kết nối Integration Service tại cổng 8002."
+      );
+    }
   };
 
   return (
