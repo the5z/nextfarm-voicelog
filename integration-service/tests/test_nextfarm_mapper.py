@@ -1,0 +1,180 @@
+from datetime import datetime, timezone
+from decimal import Decimal
+from typing import Any
+
+import pytest
+
+from app.services.nextfarm_mapper import (
+    build_description,
+    format_number,
+    map_cultivation_log_to_nextfarm,
+)
+
+
+def build_cultivation_log() -> dict[str, Any]:
+    """
+    Tạo dữ liệu nhật ký hợp lệ dùng trong các bài test.
+    """
+
+    return {
+        "schema_version": "1.0",
+        "client_record_id": "mapper-test-001",
+        "transcript": "Bón 20 kg NPK cho lô A1",
+        "lot_code": "LO_A1",
+        "activity_code": "BON_PHAN",
+        "materials": [
+            {
+                "material_code": "NPK",
+                "quantity": 20,
+                "unit_code": "KG",
+            }
+        ],
+        "performed_at": "2026-08-03T08:00:00+07:00",
+        "performer_code": "NV001",
+        "notes": "Bón phân lần một",
+        "source": "voice",
+        "confirmed": True,
+    }
+
+
+def test_format_number() -> None:
+    """
+    Số lượng phải được định dạng gọn, không dư số 0.
+    """
+
+    assert format_number(20) == "20"
+    assert format_number(20.0) == "20"
+    assert format_number(20.5) == "20.5"
+    assert format_number(Decimal("20.000")) == "20"
+    assert format_number(Decimal("20.500")) == "20.5"
+
+
+def test_build_description() -> None:
+    """
+    Mô tả phải chứa transcript, vật tư, ghi chú và mã bản ghi.
+    """
+
+    description = build_description(
+        build_cultivation_log()
+    )
+
+    assert "Bón 20 kg NPK cho lô A1" in description
+    assert "NPK - 20 - KG" in description
+    assert "Bón phân lần một" in description
+    assert "mapper-test-001" in description
+
+
+def test_map_without_external_mapping() -> None:
+    """
+    Khi chưa có ID NextFarm, mapper giữ nguyên mã nội bộ.
+    """
+
+    result = map_cultivation_log_to_nextfarm(
+        build_cultivation_log()
+    )
+
+    assert result["name"] == "Bón phân"
+    assert result["location"] == "LO_A1"
+    assert result["assigned_to"] == "NV001"
+    assert result["category_task_id"] == "BON_PHAN"
+    assert result["season_id"] == "LO_A1"
+
+    assert result["start"] == (
+        "2026-08-03T08:00:00+07:00"
+    )
+
+    assert result["end"] == result["start"]
+
+    assert result["metadata"]["client_record_id"] == (
+        "mapper-test-001"
+    )
+
+    assert result["metadata"]["integration_source"] == (
+        "nextfarm-voicelog"
+    )
+
+
+def test_map_with_external_mapping() -> None:
+    """
+    Khi có mapping, mã nội bộ phải được đổi thành ID NextFarm.
+    """
+
+    result = map_cultivation_log_to_nextfarm(
+        build_cultivation_log(),
+        activity_mapping={
+            "BON_PHAN": 101,
+        },
+        lot_mapping={
+            "LO_A1": 201,
+        },
+        performer_mapping={
+            "NV001": 301,
+        },
+        season_mapping={
+            "LO_A1": 401,
+        },
+    )
+
+    assert result["category_task_id"] == 101
+    assert result["location"] == 201
+    assert result["assigned_to"] == 301
+    assert result["season_id"] == 401
+
+
+def test_map_accepts_datetime() -> None:
+    """
+    Mapper phải xử lý được datetime ngoài chuỗi ISO 8601.
+    """
+
+    cultivation_log = build_cultivation_log()
+
+    cultivation_log["performed_at"] = datetime(
+        2026,
+        8,
+        3,
+        1,
+        0,
+        tzinfo=timezone.utc,
+    )
+
+    result = map_cultivation_log_to_nextfarm(
+        cultivation_log
+    )
+
+    assert result["start"] == (
+        "2026-08-03T01:00:00+00:00"
+    )
+
+
+def test_map_rejects_missing_client_record_id() -> None:
+    """
+    Nhật ký thiếu client_record_id không được chuyển đổi.
+    """
+
+    cultivation_log = build_cultivation_log()
+    cultivation_log.pop("client_record_id")
+
+    with pytest.raises(
+        ValueError,
+        match="Thiếu client_record_id",
+    ):
+        map_cultivation_log_to_nextfarm(
+            cultivation_log
+        )
+
+
+def test_map_rejects_invalid_performed_at() -> None:
+    """
+    Thời gian không hợp lệ phải được báo lỗi.
+    """
+
+    cultivation_log = build_cultivation_log()
+    cultivation_log["performed_at"] = "khong-hop-le"
+
+    with pytest.raises(
+        ValueError,
+        match="ISO 8601",
+    ):
+        map_cultivation_log_to_nextfarm(
+            cultivation_log
+        )

@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nextfarm-voicelog:contract:sync-response:1.0",
+  "title": "NextFarm VoiceLog Sync Response",
+  "description": "Hợp đồng JSON cho kết quả đồng bộ nhiều nhật ký offline.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "device_id",
+    "synced_at",
+    "summary",
+    "results"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "True khi không có bản ghi thất bại; False khi có ít nhất một bản ghi lỗi."
+    },
+    "device_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Mã thiết bị đã gửi dữ liệu."
+    },
+    "synced_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời điểm đồng bộ được gửi trong request."
+    },
+    "summary": {
+      "$ref": "#/$defs/sync_summary"
+    },
+    "results": {
+      "type": "array",
+      "description": "Kết quả xử lý riêng của từng bản ghi.",
+      "items": {
+        "$ref": "#/$defs/sync_record_result"
+      }
+    }
+  },
+  "$defs": {
+    "sync_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total",
+        "saved",
+        "duplicated",
+        "failed"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Tổng số bản ghi được gửi lên."
+        },
+        "saved": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Số bản ghi vừa được lưu mới."
+        },
+        "duplicated": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Số bản ghi đã tồn tại từ trước."
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Số bản ghi đồng bộ thất bại."
+        }
+      }
+    },
+    "sync_record_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "client_record_id",
+        "success",
+        "status",
+        "data",
+        "errors"
+      ],
+      "properties": {
+        "client_record_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Mã bản ghi do thiết bị tạo."
+        },
+        "success": {
+          "type": "boolean",
+          "description": "True nếu đã lưu hoặc đã tồn tại; False nếu thất bại."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "saved",
+            "already_exists",
+            "failed"
+          ],
+          "description": "Trạng thái xử lý của bản ghi."
+        },
+        "data": {
+          "description": "Dữ liệu nhật ký đã lưu hoặc null nếu xử lý thất bại.",
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "description": "Danh sách lỗi của bản ghi.",
+          "items": {
+            "$ref": "#/$defs/sync_issue"
+          }
+        }
+      }
+    },
+    "sync_issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Tên trường xảy ra lỗi."
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Mã lỗi để Flutter xử lý."
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Nội dung mô tả lỗi."
+        }
+      }
+    }
+  }
+}

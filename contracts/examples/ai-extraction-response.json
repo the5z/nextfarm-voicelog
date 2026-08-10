@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "message": "Audio processed successfully.",
+  "data": {
+    "original_filename": "feeding.m4a",
+    "stored_filename": "example-feeding.m4a",
+    "content_type": "audio/x-m4a",
+    "path": "uploads/example-feeding.m4a",
+    "noise_reduction_applied": true,
+    "transcript": "Cho bò ăn 20 ký cám tại lô A lúc 7 giờ sáng.",
+    "structured_data": {
+      "activity_text": "Cho bò ăn",
+      "lot_text": "Lô A",
+      "materials": [
+        {
+          "material_text": "Cám",
+          "quantity": 20,
+          "unit_text": "kg"
+        }
+      ],
+      "time_text": "07:00"
+    }
+  }
+}

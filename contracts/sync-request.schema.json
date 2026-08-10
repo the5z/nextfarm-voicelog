@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nextfarm-voicelog:contract:sync-request:1.0",
+  "title": "NextFarm VoiceLog Sync Request",
+  "description": "Hợp đồng JSON cho yêu cầu đồng bộ nhiều nhật ký offline từ Flutter tới Integration Service.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "device_id",
+    "synced_at",
+    "records"
+  ],
+  "properties": {
+    "device_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Mã định danh của thiết bị gửi dữ liệu."
+    },
+    "synced_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời điểm thiết bị bắt đầu đồng bộ theo ISO 8601."
+    },
+    "records": {
+      "type": "array",
+      "description": "Danh sách nhật ký cần đồng bộ. Mỗi bản ghi được backend kiểm tra độc lập.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  },
+  "examples": [
+    {
+      "device_id": "android-device-001",
+      "synced_at": "2026-08-03T15:30:00+07:00",
+      "records": [
+        {
+          "schema_version": "1.0",
+          "client_record_id": "offline-record-0001",
+          "transcript": "Bón 20 kg phân NPK cho lô A1",
+          "lot_code": "LO_A1",
+          "activity_code": "BON_PHAN",
+          "materials": [
+            {
+              "material_code": "NPK",
+              "quantity": 20,
+              "unit_code": "KG"
+            }
+          ],
+          "performed_at": "2026-08-03T07:00:00+07:00",
+          "performer_code": "NV001",
+          "notes": null,
+          "source": "voice",
+          "confirmed": true
+        }
+      ]
+    }
+  ]
+}

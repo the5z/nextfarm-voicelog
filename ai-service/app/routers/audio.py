@@ -6,6 +6,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.core.config import settings
 from app.responses.api_response import ApiResponse
+from app.services.audio_preprocessing import reduce_noise
 from app.services.llm_service import extract_activity
 from app.services.transcribe import transcribe_audio
 from app.utils.logger import logger
@@ -46,18 +47,28 @@ ALLOWED_EXTENSIONS = {
         },
     },
 )
-async def upload_audio(file: UploadFile = File(...)) -> ApiResponse:
+async def upload_audio(
+    file: UploadFile = File(...),
+    use_noise_reduction: bool = True,
+) -> ApiResponse:
     """
-    Upload an audio file, transcribe it with Whisper,
-    and extract structured livestock activity using Gemini.
+    Upload an audio file and process it with Whisper and Gemini.
+
+    Set use_noise_reduction=true to preprocess the audio with FFmpeg.
+    Set use_noise_reduction=false to send the original audio to Whisper.
     """
 
     original_filename = file.filename
+    cleaned_audio_path: Path | None = None
 
     logger.info(
-        "Audio upload started | filename=%s | content_type=%s",
+        (
+            "Audio upload started | filename=%s | "
+            "content_type=%s | noise_reduction=%s"
+        ),
         original_filename,
         file.content_type,
+        use_noise_reduction,
     )
 
     if not original_filename:
@@ -108,49 +119,97 @@ async def upload_audio(file: UploadFile = File(...)) -> ApiResponse:
     finally:
         await file.close()
 
-    logger.info(
-        "Whisper transcription started | filename=%s",
-        stored_filename,
-    )
+    try:
+        audio_path_for_whisper = file_path
 
-    transcript = transcribe_audio(file_path)
+        if use_noise_reduction:
+            logger.info(
+                "Audio preprocessing started | filename=%s",
+                stored_filename,
+            )
 
-    logger.info(
-        "Whisper transcription completed | transcript=%s",
-        transcript,
-    )
+            cleaned_audio_path = reduce_noise(file_path)
+            audio_path_for_whisper = cleaned_audio_path
 
-    logger.info(
-        "Gemini extraction started | filename=%s",
-        stored_filename,
-    )
+            logger.info(
+                "Audio preprocessing completed | cleaned_path=%s",
+                cleaned_audio_path,
+            )
 
-    structured_data = extract_activity(transcript)
+        else:
+            logger.info(
+                "Audio preprocessing skipped | filename=%s",
+                stored_filename,
+            )
 
-    logger.info(
-        (
-            "Gemini extraction completed | "
-            "activity=%s | animal=%s | quantity=%s"
-        ),
-        structured_data.activity,
-        structured_data.animal,
-        structured_data.quantity,
-    )
+        logger.info(
+            "Whisper transcription started | filename=%s",
+            audio_path_for_whisper.name,
+        )
 
-    logger.info(
-        "Audio processing completed successfully | filename=%s",
-        stored_filename,
-    )
+        transcript = transcribe_audio(audio_path_for_whisper)
 
-    return ApiResponse(
-        success=True,
-        message="Audio processed successfully.",
-        data={
-            "original_filename": original_filename,
-            "stored_filename": stored_filename,
-            "content_type": file.content_type,
-            "path": str(file_path),
-            "transcript": transcript,
-            "structured_data": structured_data.model_dump(),
-        },
-    )
+        logger.info(
+            "Whisper transcription completed | transcript=%s",
+            transcript,
+        )
+
+        logger.info(
+            "Gemini extraction started | filename=%s",
+            stored_filename,
+        )
+
+        structured_data = extract_activity(transcript)
+
+        logger.info(
+            (
+                "Gemini extraction completed | "
+                "activity=%s | lot=%s | materials=%s | time=%s"
+            ),
+            structured_data.activity_text,
+            structured_data.lot_text,
+            structured_data.materials,
+            structured_data.time_text,
+        )
+
+        logger.info(
+            (
+                "Audio processing completed successfully | "
+                "filename=%s | noise_reduction=%s"
+            ),
+            stored_filename,
+            use_noise_reduction,
+        )
+
+        return ApiResponse(
+            success=True,
+            message="Audio processed successfully.",
+            data={
+                "original_filename": original_filename,
+                "stored_filename": stored_filename,
+                "content_type": file.content_type,
+                "path": str(file_path),
+                "noise_reduction_applied": use_noise_reduction,
+                "transcript": transcript,
+                "structured_data": structured_data.model_dump(),
+            },
+        )
+
+    finally:
+        if (
+            cleaned_audio_path is not None
+            and cleaned_audio_path.exists()
+        ):
+            try:
+                cleaned_audio_path.unlink()
+
+                logger.info(
+                    "Temporary cleaned audio deleted | path=%s",
+                    cleaned_audio_path,
+                )
+
+            except OSError:
+                logger.exception(
+                    "Failed to delete temporary cleaned audio | path=%s",
+                    cleaned_audio_path,
+                )

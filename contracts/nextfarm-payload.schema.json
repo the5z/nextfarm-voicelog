@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nextfarm-voicelog:contract:nextfarm-payload:1.0",
+  "title": "NextFarm Mock Production Diary Payload",
+  "description": "Hợp đồng JSON mô phỏng dữ liệu nhật ký sản xuất được Integration Service chuyển đổi trước khi gửi sang NextFarm.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "start",
+    "end",
+    "description",
+    "images",
+    "location",
+    "assigned_to",
+    "category_task_id",
+    "season_id",
+    "metadata"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tên hoạt động canh tác hiển thị trên nhật ký."
+    },
+    "start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời gian bắt đầu hoạt động theo ISO 8601."
+    },
+    "end": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời gian kết thúc hoạt động theo ISO 8601."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Mô tả được tổng hợp từ transcript, vật tư, ghi chú và mã bản ghi."
+    },
+    "images": {
+      "type": "array",
+      "description": "Danh sách đường dẫn hình ảnh liên quan. Hiện tại mapper mặc định trả về mảng rỗng.",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
+    "location": {
+      "$ref": "#/$defs/external_reference"
+    },
+    "assigned_to": {
+      "$ref": "#/$defs/nullable_external_reference"
+    },
+    "category_task_id": {
+      "$ref": "#/$defs/external_reference"
+    },
+    "season_id": {
+      "$ref": "#/$defs/nullable_external_reference"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "client_record_id",
+        "source",
+        "integration_source"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Phiên bản dữ liệu nhật ký gốc."
+        },
+        "client_record_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Mã duy nhất của bản ghi trên thiết bị."
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "voice",
+            "manual",
+            "sync"
+          ],
+          "description": "Nguồn tạo nhật ký ban đầu."
+        },
+        "integration_source": {
+          "type": "string",
+          "const": "nextfarm-voicelog",
+          "description": "Tên hệ thống tích hợp tạo payload."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "external_reference": {
+      "description": "Mã nội bộ hoặc ID ngoài hệ thống sau khi ánh xạ.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    },
+    "nullable_external_reference": {
+      "description": "Mã nội bộ, ID ngoài hệ thống hoặc null nếu chưa ánh xạ.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "examples": [
+    {
+      "name": "Bón phân",
+      "start": "2026-08-03T07:00:00+07:00",
+      "end": "2026-08-03T07:00:00+07:00",
+      "description": "Nội dung ghi âm: Bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng\n\nVật tư:\n- NPK - 20 - KG\n\nMã bản ghi thiết bị: android-device-001-record-0001",
+      "images": [],
+      "location": "LO_A1",
+      "assigned_to": "NV001",
+      "category_task_id": "BON_PHAN",
+      "season_id": "LO_A1",
+      "metadata": {
+        "schema_version": "1.0",
+        "client_record_id": "android-device-001-record-0001",
+        "source": "voice",
+        "integration_source": "nextfarm-voicelog"
+      }
+    }
+  ]
+}

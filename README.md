@@ -74,10 +74,10 @@ nextfarm-voicelog/
 # Thành viên
 
 | Thành viên | Phụ trách |
-|------------|------------|
-| Hiệp | Flutter Frontend, ghi âm, giao diện xác nhận, SQLite |
+|------------|-----------|
+| Hiệp | Integration Service, NextFarm API, kiểm tra và đồng bộ dữ liệu |
 | Thắng | AI Service, FastAPI, Whisper, LLM, Validation |
-| Khoa | Integration Service, NextFarm API, đồng bộ dữ liệu |
+| Khoa | Flutter Frontend, ghi âm, giao diện xác nhận, SQLite |
 
 ---
 
