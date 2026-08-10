@@ -2,7 +2,7 @@ const API_URL = "http://localhost:8000/api/v1/audio/upload";
 
 // true: dùng dữ liệu giả để test frontend
 // false: gọi backend thật
-const USE_MOCK_AI = true;
+const USE_MOCK_AI = false;
 
 const wait = (milliseconds) =>
   new Promise((resolve) => {
