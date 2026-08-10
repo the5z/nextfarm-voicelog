@@ -188,3 +188,104 @@ def test_resolve_rejects_empty_text() -> None:
     )
 
     assert response.status_code == 422
+
+def test_resolve_activity_asr_like_text(client):
+    response = client.post(
+        "/api/master-data/resolve",
+        json={
+            "data_type": "activity",
+            "text": "Cho bỏ ăn",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["matched"] is True
+    assert body["code"] == "CHO_BO_AN"
+
+
+def test_resolve_activity_without_accents(client):
+    response = client.post(
+        "/api/master-data/resolve",
+        json={
+            "data_type": "activity",
+            "text": "Cho bo an",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["matched"] is True
+    assert body["code"] == "CHO_BO_AN"
+
+
+def test_resolve_material_asr_like_text(client):
+    response = client.post(
+        "/api/master-data/resolve",
+        json={
+            "data_type": "material",
+            "text": "Cảm",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["matched"] is True
+    assert body["code"] == "CAM"
+
+
+def test_resolve_material_without_accents(client):
+    response = client.post(
+        "/api/master-data/resolve",
+        json={
+            "data_type": "material",
+            "text": "cam",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["matched"] is True
+    assert body["code"] == "CAM"
+
+
+def test_resolve_unit_spoken_ky(client):
+    response = client.post(
+        "/api/master-data/resolve",
+        json={
+            "data_type": "unit",
+            "text": "ký",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["matched"] is True
+    assert body["code"] == "KG"
+
+
+def test_resolve_lot_without_accents(client):
+    response = client.post(
+        "/api/master-data/resolve",
+        json={
+            "data_type": "lot",
+            "text": "lo a",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["matched"] is True
+    assert body["code"] == "LO_A"
