@@ -108,7 +108,7 @@ function VoiceLog() {
     const performedAt = new Date();
 
     if (timeText) {
-      const match = timeText.match(/^(\d{1,2}):(\d{2})$/);
+      const match = String(timeText).match(/(\d{1,2}):(\d{2})/);
 
       if (match) {
         const hours = Number(match[1]);
