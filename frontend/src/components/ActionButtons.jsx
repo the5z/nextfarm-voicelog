@@ -7,6 +7,7 @@ function ActionButtons({
   hasResult,
   isUploading = false,
   isConfirmed = false,
+  text,
 }) {
   return (
     <div className="action-buttons">
@@ -18,7 +19,9 @@ function ActionButtons({
             onClick={onRetry}
             disabled={!hasAudio || isUploading}
           >
-            {hasResult ? "🎤 Ghi lại" : "🗑 Xóa bản ghi"}
+            {hasResult
+              ? `🎤 ${text.actions.recordAgain}`
+              : `🗑 ${text.actions.delete}`}
           </button>
 
           {!hasResult && (
@@ -31,10 +34,10 @@ function ActionButtons({
               {isUploading ? (
                 <span className="button-loading">
                   <span className="spinner" />
-                  AI đang xử lý...
+                  {text.actions.processing}
                 </span>
               ) : (
-                "⬆ Gửi AI"
+                `⬆ ${text.actions.sendAI}`
               )}
             </button>
           )}
@@ -46,7 +49,7 @@ function ActionButtons({
               onClick={onConfirm}
               disabled={isUploading}
             >
-              ✅ Xác nhận nhật ký
+              ✅ {text.actions.confirmLog}
             </button>
           )}
         </>
@@ -59,7 +62,7 @@ function ActionButtons({
             className="btn-primary"
             disabled
           >
-            ✅ Đã xác nhận
+            ✅ {text.actions.confirmed}
           </button>
 
           <button
@@ -67,7 +70,7 @@ function ActionButtons({
             className="btn-secondary"
             onClick={onCreateNew}
           >
-            ➕ Tạo nhật ký mới
+            ➕ {text.actions.createNew}
           </button>
         </>
       )}
