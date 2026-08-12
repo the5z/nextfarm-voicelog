@@ -221,3 +221,8 @@ ai-service/uploads/*
 !ai-service/uploads/.gitkeep
 # Node.js dependencies
 node_modules/
+
+# AI benchmark generated files
+ai-service/benchmark/__pycache__/
+ai-service/benchmark/results/predictions.jsonl
+ai-service/benchmark/results/metrics.json
