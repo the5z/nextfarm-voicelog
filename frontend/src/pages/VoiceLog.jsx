@@ -1,4 +1,7 @@
-import { useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import Header from "../components/Header";
 import WorkflowStepper from "../components/WorkflowStepper";
@@ -6,7 +9,6 @@ import RecordButton from "../components/RecordButton";
 import TranscriptBox from "../components/TranscriptBox";
 import AIForm from "../components/AIForm";
 import ActionButtons from "../components/ActionButtons";
-import AIAssistant from "../components/AIAssistant";
 
 import { uploadAudio } from "../services/audioService";
 import { TEXT } from "../constants/translations";
@@ -62,28 +64,59 @@ const DEV_WARNING_DATA = {
   },
 };
 
-function VoiceLog() {
-  const [language, setLanguage] =
-    useState("vi");
+function VoiceLog({
+  language = "vi",
+  onLanguageChange,
 
-  const t = TEXT[language];
+  themeMode = "light",
+  onThemeChange,
+
+  logToEdit = null,
+  onLogLoaded,
+
+  onSaveLog,
+
+  autoValidation = true,
+}) {
+  const t =
+    TEXT[language];
 
   const isVietnamese =
     language === "vi";
 
-  const [audioUrl, setAudioUrl] =
-    useState(null);
+  /* ===========================
+     Audio
+  =========================== */
 
-  const [audioBlob, setAudioBlob] =
-    useState(null);
+  const [
+    audioUrl,
+    setAudioUrl,
+  ] = useState(null);
+
+  const [
+    audioBlob,
+    setAudioBlob,
+  ] = useState(null);
+
+  /* ===========================
+     AI Data
+  =========================== */
 
   const [
     transcript,
     setTranscript,
   ] = useState("");
 
-  const [aiData, setAiData] =
-    useState(EMPTY_AI_DATA);
+  const [
+    aiData,
+    setAiData,
+  ] = useState(
+    EMPTY_AI_DATA
+  );
+
+  /* ===========================
+     Workflow
+  =========================== */
 
   const [
     isUploading,
@@ -100,16 +133,41 @@ function VoiceLog() {
     setHasAttemptedSubmit,
   ] = useState(false);
 
-  const [message, setMessage] =
-    useState(null);
+  const [
+    message,
+    setMessage,
+  ] = useState(null);
 
   const [
     currentStep,
     setCurrentStep,
   ] = useState(1);
 
+  /* ===========================
+     Current Log
+  =========================== */
+
+  const [
+    currentLogId,
+    setCurrentLogId,
+  ] = useState(null);
+
+  const [
+    currentLogDate,
+    setCurrentLogDate,
+  ] = useState(null);
+
+  const [
+    editingStatus,
+    setEditingStatus,
+  ] = useState(null);
+
   const isDevMode =
     import.meta.env.DEV;
+
+  /* ===========================
+     Message
+  =========================== */
 
   const showMessage = (
     type,
@@ -127,12 +185,15 @@ function VoiceLog() {
     }
 
     if (
-      typeof message === "string"
+      typeof message ===
+      "string"
     ) {
       return message;
     }
 
-    return message.text || "";
+    return (
+      message.text || ""
+    );
   };
 
   const getMessageType = () => {
@@ -141,7 +202,8 @@ function VoiceLog() {
     }
 
     if (
-      typeof message === "object"
+      typeof message ===
+      "object"
     ) {
       return (
         message.type ||
@@ -149,7 +211,7 @@ function VoiceLog() {
       );
     }
 
-    const errorKeywords = [
+    const keywords = [
       "Không thể",
       "Vui lòng",
       "lỗi",
@@ -158,13 +220,19 @@ function VoiceLog() {
       "error",
     ];
 
-    return errorKeywords.some(
+    return keywords.some(
       (keyword) =>
-        message.includes(keyword)
+        message.includes(
+          keyword
+        )
     )
       ? "error"
       : "success";
   };
+
+  /* ===========================
+     Validation
+  =========================== */
 
   const validateAiData = (
     data
@@ -218,10 +286,14 @@ function VoiceLog() {
 
     if (quantityRaw) {
       const quantity =
-        Number(quantityRaw);
+        Number(
+          quantityRaw
+        );
 
       if (
-        Number.isNaN(quantity)
+        Number.isNaN(
+          quantity
+        )
       ) {
         errors.quantity =
           isVietnamese
@@ -274,53 +346,28 @@ function VoiceLog() {
     return {
       errors,
       warnings,
+
       isValid:
-        Object.keys(errors)
-          .length === 0,
+        Object.keys(
+          errors
+        ).length === 0,
     };
   };
 
   const validation =
-    validateAiData(aiData);
+    validateAiData(
+      aiData
+    );
 
-  const resetVoiceLog = () => {
-    if (audioUrl) {
-      URL.revokeObjectURL(
-        audioUrl
-      );
+  /* ===========================
+     Load Log For Editing
+  =========================== */
+
+  useEffect(() => {
+    if (!logToEdit) {
+      return;
     }
 
-    setAudioUrl(null);
-    setAudioBlob(null);
-
-    setTranscript("");
-    setAiData(
-      EMPTY_AI_DATA
-    );
-
-    setIsUploading(false);
-    setIsConfirmed(false);
-
-    setHasAttemptedSubmit(
-      false
-    );
-
-    setMessage(null);
-    setCurrentStep(1);
-  };
-
-  const handleDelete = () => {
-    resetVoiceLog();
-  };
-
-  const handleCreateNew = () => {
-    resetVoiceLog();
-  };
-
-  const loadDevTestData = (
-    testData,
-    testName
-  ) => {
     if (audioUrl) {
       URL.revokeObjectURL(
         audioUrl
@@ -331,16 +378,220 @@ function VoiceLog() {
     setAudioBlob(null);
 
     setTranscript(
+      logToEdit.transcript ||
+        ""
+    );
+
+    setAiData({
+      ...EMPTY_AI_DATA,
+
+      lot:
+        logToEdit.lot ||
+        "",
+
+      work:
+        logToEdit.work ||
+        "",
+
+      material:
+        logToEdit.material ||
+        "",
+
+      quantity:
+        logToEdit.quantity ||
+        "",
+
+      unit:
+        logToEdit.unit ||
+        "",
+
+      time:
+        logToEdit.time ||
+        "",
+    });
+
+    setCurrentLogId(
+      logToEdit.id
+    );
+
+    setCurrentLogDate(
+      logToEdit.date ||
+        null
+    );
+
+    setEditingStatus(
+      logToEdit.status ||
+        null
+    );
+
+    setIsUploading(
+      false
+    );
+
+    setIsConfirmed(
+      false
+    );
+
+    /*
+      Nếu bản ghi đã thuộc
+      Cần kiểm tra:
+      hiện validation ngay.
+
+      Draft:
+      chưa cần hiện lỗi ngay.
+    */
+
+    setHasAttemptedSubmit(
+      logToEdit.status ===
+        "review"
+    );
+
+    setCurrentStep(3);
+
+    if (
+      logToEdit.status ===
+      "review"
+    ) {
+      setMessage({
+        type: "error",
+
+        text: isVietnamese
+          ? `⚠️ Nhật ký lô ${
+              logToEdit.lot ||
+              "---"
+            } cần được kiểm tra. Hãy sửa các trường được đánh dấu trước khi xác nhận.`
+          : `⚠️ The log for plot ${
+              logToEdit.lot ||
+              "---"
+            } needs review. Correct the highlighted fields before confirming.`,
+      });
+    } else {
+      setMessage({
+        type: "success",
+
+        text: isVietnamese
+          ? `📝 Đã mở lại nhật ký đang dở của lô ${
+              logToEdit.lot ||
+              "---"
+            }.`
+          : `📝 Draft log for plot ${
+              logToEdit.lot ||
+              "---"
+            } has been restored.`,
+      });
+    }
+
+    onLogLoaded?.();
+  }, [logToEdit]);
+
+  /* ===========================
+     Reset
+  =========================== */
+
+  const resetVoiceLog =
+    () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(
+          audioUrl
+        );
+      }
+
+      setAudioUrl(null);
+
+      setAudioBlob(null);
+
+      setTranscript("");
+
+      setAiData(
+        EMPTY_AI_DATA
+      );
+
+      setCurrentLogId(
+        null
+      );
+
+      setCurrentLogDate(
+        null
+      );
+
+      setEditingStatus(
+        null
+      );
+
+      setIsUploading(
+        false
+      );
+
+      setIsConfirmed(
+        false
+      );
+
+      setHasAttemptedSubmit(
+        false
+      );
+
+      setMessage(null);
+
+      setCurrentStep(1);
+    };
+
+  const handleDelete =
+    () => {
+      resetVoiceLog();
+    };
+
+  const handleCreateNew =
+    () => {
+      resetVoiceLog();
+    };
+
+  /* ===========================
+     DEV Test
+  =========================== */
+
+  const loadDevTestData = (
+    testData,
+    name
+  ) => {
+    if (audioUrl) {
+      URL.revokeObjectURL(
+        audioUrl
+      );
+    }
+
+    setAudioUrl(null);
+
+    setAudioBlob(null);
+
+    setTranscript(
       testData.transcript
     );
 
     setAiData({
       ...EMPTY_AI_DATA,
+
       ...testData.structuredData,
     });
 
-    setIsUploading(false);
-    setIsConfirmed(false);
+    setCurrentLogId(
+      null
+    );
+
+    setCurrentLogDate(
+      null
+    );
+
+    setEditingStatus(
+      null
+    );
+
+    setIsUploading(
+      false
+    );
+
+    setIsConfirmed(
+      false
+    );
 
     setHasAttemptedSubmit(
       false
@@ -350,9 +601,10 @@ function VoiceLog() {
 
     showMessage(
       "success",
+
       isVietnamese
-        ? `🧪 Đã nạp dữ liệu DEV: ${testName}.`
-        : `🧪 DEV test data loaded: ${testName}.`
+        ? `🧪 Đã nạp dữ liệu DEV: ${name}.`
+        : `🧪 DEV test data loaded: ${name}.`
     );
   };
 
@@ -360,19 +612,10 @@ function VoiceLog() {
     () => {
       loadDevTestData(
         DEV_VALID_DATA,
+
         isVietnamese
           ? "Dữ liệu hợp lệ"
           : "Valid data"
-      );
-    };
-
-  const handleLoadErrorTest =
-    () => {
-      loadDevTestData(
-        DEV_ERROR_DATA,
-        isVietnamese
-          ? "Dữ liệu lỗi"
-          : "Error data"
       );
     };
 
@@ -380,9 +623,21 @@ function VoiceLog() {
     () => {
       loadDevTestData(
         DEV_WARNING_DATA,
+
         isVietnamese
           ? "Dữ liệu cảnh báo"
           : "Warning data"
+      );
+    };
+
+  const handleLoadErrorTest =
+    () => {
+      loadDevTestData(
+        DEV_ERROR_DATA,
+
+        isVietnamese
+          ? "Dữ liệu lỗi"
+          : "Error data"
       );
     };
 
@@ -392,11 +647,16 @@ function VoiceLog() {
 
       showMessage(
         "success",
+
         isVietnamese
           ? "🧪 Đã reset dữ liệu DEV."
           : "🧪 DEV test data reset."
       );
     };
+
+  /* ===========================
+     Upload AI
+  =========================== */
 
   const handleUpload =
     async () => {
@@ -409,7 +669,10 @@ function VoiceLog() {
       }
 
       setCurrentStep(2);
-      setIsUploading(true);
+
+      setIsUploading(
+        true
+      );
 
       setHasAttemptedSubmit(
         false
@@ -433,6 +696,7 @@ function VoiceLog() {
 
         setAiData({
           ...EMPTY_AI_DATA,
+
           ...(data?.structured_data ||
             {}),
         });
@@ -462,51 +726,156 @@ function VoiceLog() {
       }
     };
 
-  const handleConfirm = () => {
-    setHasAttemptedSubmit(
-      true
-    );
+  /* ===========================
+     Confirm + Save
+  =========================== */
 
-    if (
-      !transcript.trim()
-    ) {
-      showMessage(
-        "error",
-        t.messages
-          .reviewBeforeConfirm
+  const handleConfirm =
+    () => {
+      setHasAttemptedSubmit(
+        true
       );
 
-      return;
-    }
+      if (
+        !transcript.trim()
+      ) {
+        showMessage(
+          "error",
 
-    const currentValidation =
-      validateAiData(
-        aiData
+          t.messages
+            .reviewBeforeConfirm
+        );
+
+        return;
+      }
+
+      const currentValidation =
+        validateAiData(
+          aiData
+        );
+
+      if (
+        !currentValidation.isValid
+      ) {
+        showMessage(
+          "error",
+
+          isVietnamese
+            ? "Chưa thể xác nhận nhật ký. Vui lòng sửa các trường được đánh dấu."
+            : "The log cannot be confirmed yet. Please correct the highlighted fields."
+        );
+
+        setCurrentStep(3);
+
+        return;
+      }
+
+      const now =
+        new Date();
+
+      const logId =
+        currentLogId ||
+        crypto.randomUUID();
+
+      const savedLog = {
+        id: logId,
+
+        lot:
+          String(
+            aiData.lot || ""
+          ).trim(),
+
+        work:
+          String(
+            aiData.work || ""
+          ).trim(),
+
+        material:
+          String(
+            aiData.material ||
+              ""
+          ).trim(),
+
+        quantity:
+          String(
+            aiData.quantity ??
+              ""
+          ).trim(),
+
+        unit:
+          String(
+            aiData.unit || ""
+          ).trim(),
+
+        time:
+          String(
+            aiData.time || ""
+          ).trim(),
+
+        transcript:
+          transcript.trim(),
+
+        /*
+          Sau khi sửa xong và
+          confirm thành công:
+          luôn Completed.
+        */
+
+        status:
+          "completed",
+
+        /*
+          Warning cũ được xóa.
+        */
+
+        warning: "",
+
+        /*
+          Nếu đang chỉnh log cũ,
+          giữ ngày cũ.
+
+          Log mới dùng ngày hiện tại.
+        */
+
+        date:
+          currentLogDate ||
+          now.toLocaleDateString(
+            "vi-VN"
+          ),
+
+        updatedAt:
+          now.toISOString(),
+
+        createdAt:
+          now.toISOString(),
+      };
+
+      onSaveLog?.(
+        savedLog
       );
 
-    if (
-      !currentValidation.isValid
-    ) {
+      setCurrentLogId(
+        logId
+      );
+
+      setEditingStatus(
+        "completed"
+      );
+
+      setIsConfirmed(
+        true
+      );
+
+      setCurrentStep(4);
+
       showMessage(
-        "error",
+        "success",
+
         isVietnamese
-          ? "Chưa thể xác nhận nhật ký. Vui lòng kiểm tra các trường được đánh dấu."
-          : "The log cannot be confirmed yet. Please review the highlighted fields."
+          ? "✅ Nhật ký đã được kiểm tra, xác nhận và lưu vào Nhật ký của tôi."
+          : "✅ The log has been reviewed, confirmed and saved to My Logs."
       );
-
-      setCurrentStep(3);
-
-      return;
-    }
-
-    setIsConfirmed(true);
-    setCurrentStep(4);
-
-    showMessage(
-      "success",
-      t.messages.confirmed
-    );
-  };
+    };
 
   const messageText =
     getMessageText();
@@ -515,324 +884,312 @@ function VoiceLog() {
     getMessageType();
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <div className="sidebar-logo">
-            🌱
+    <main className="workspace">
+      <div className="workspace-container">
+        <Header
+          language={
+            language
+          }
+
+          onLanguageChange={
+            onLanguageChange
+          }
+
+          text={t}
+
+          themeMode={
+            themeMode
+          }
+
+          onThemeChange={
+            onThemeChange
+          }
+        />
+
+        {/* Hero */}
+
+        <section className="workspace-hero">
+          <div>
+            <span className="workspace-eyebrow">
+              NextFarm AI Workspace
+            </span>
+
+            <h2>
+              {editingStatus ===
+              "review"
+                ? isVietnamese
+                  ? "Kiểm tra và hoàn thiện nhật ký"
+                  : "Review and complete log"
+                : isVietnamese
+                  ? "Tạo nhật ký canh tác bằng giọng nói"
+                  : "Create farming logs with your voice"}
+            </h2>
+
+            <p>
+              {editingStatus ===
+              "review"
+                ? isVietnamese
+                  ? "Kiểm tra các trường được cảnh báo, bổ sung thông tin còn thiếu và xác nhận lại nhật ký."
+                  : "Review highlighted fields, complete missing data and confirm the log."
+                : isVietnamese
+                  ? "Ghi âm, để AI xử lý và kiểm tra dữ liệu trước khi xác nhận."
+                  : "Record your voice, let AI process it, then review the extracted data before confirming."}
+            </p>
           </div>
 
-          <div className="sidebar-brand-text">
-            <strong>
-              NextFarm
-            </strong>
+          <div className="workspace-status">
+            <span className="workspace-status-dot" />
 
             <span>
-              VoiceLog
+              {editingStatus ===
+              "review"
+                ? isVietnamese
+                  ? "Đang kiểm tra"
+                  : "Reviewing"
+                : isVietnamese
+                  ? "Hệ thống sẵn sàng"
+                  : "System ready"}
             </span>
           </div>
-        </div>
+        </section>
 
-        <nav className="sidebar-nav">
-          <button
-            type="button"
-            className="sidebar-item active"
-          >
-            <span className="sidebar-item-icon">
-              🎙
-            </span>
+        {/* DEV */}
 
-            <span>
-              {isVietnamese
-                ? "Tạo nhật ký"
-                : "Create log"}
-            </span>
-          </button>
+        {isDevMode && (
+          <section className="dev-test-panel">
+            <div className="dev-test-info">
+              <span className="dev-test-icon">
+                🧪
+              </span>
 
-          <button
-            type="button"
-            className="sidebar-item"
-          >
-            <span className="sidebar-item-icon">
-              📋
-            </span>
+              <div>
+                <strong>
+                  DEV Test Mode
+                </strong>
 
-            <span>
-              {isVietnamese
-                ? "Nhật ký của tôi"
-                : "My logs"}
-            </span>
-          </button>
+                <span>
+                  {isVietnamese
+                    ? "Kiểm thử frontend không cần AI Service."
+                    : "Test the frontend without the AI Service."}
+                </span>
+              </div>
+            </div>
 
-          <div className="sidebar-divider" />
+            <div className="dev-test-actions">
+              <button
+                type="button"
+                className="dev-test-btn valid"
+                onClick={
+                  handleLoadValidTest
+                }
+              >
+                ✅{" "}
+                {isVietnamese
+                  ? "Hợp lệ"
+                  : "Valid"}
+              </button>
 
-          <button
-            type="button"
-            className="sidebar-item"
-          >
-            <span className="sidebar-item-icon">
-              ⚙️
-            </span>
+              <button
+                type="button"
+                className="dev-test-btn warning"
+                onClick={
+                  handleLoadWarningTest
+                }
+              >
+                ⚠️{" "}
+                {isVietnamese
+                  ? "Cảnh báo"
+                  : "Warning"}
+              </button>
 
-            <span>
-              {isVietnamese
-                ? "Cài đặt"
-                : "Settings"}
-            </span>
-          </button>
-        </nav>
-      </aside>
+              <button
+                type="button"
+                className="dev-test-btn error"
+                onClick={
+                  handleLoadErrorTest
+                }
+              >
+                ❌{" "}
+                {isVietnamese
+                  ? "Dữ liệu lỗi"
+                  : "Error"}
+              </button>
 
-      <main className="workspace">
-        <div className="workspace-container">
-          <Header
-            language={
-              language
-            }
-            onLanguageChange={
-              setLanguage
+              <button
+                type="button"
+                className="dev-test-btn reset"
+                onClick={
+                  handleResetDevTest
+                }
+              >
+                ↺ Reset
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* Workflow */}
+
+        <section className="workflow-card">
+          <WorkflowStepper
+            currentStep={
+              currentStep
             }
             text={t}
           />
+        </section>
 
-          <section className="workspace-hero">
-            <div>
-              <span className="workspace-eyebrow">
-                NextFarm AI Workspace
-              </span>
+        {/* Workspace */}
 
-              <h2>
-                {isVietnamese
-                  ? "Tạo nhật ký canh tác bằng giọng nói"
-                  : "Create farming logs with your voice"}
-              </h2>
+        <section className="voice-workspace-grid">
+          <div className="voice-primary-column">
+            <div className="workspace-card record-card">
+              <RecordButton
+                audioUrl={
+                  audioUrl
+                }
 
-              <p>
-                {isVietnamese
-                  ? "Ghi âm, để AI xử lý và kiểm tra dữ liệu trước khi xác nhận."
-                  : "Record your voice, let AI process it, then review the extracted data before confirming."}
-              </p>
+                setAudioUrl={
+                  setAudioUrl
+                }
+
+                setAudioBlob={
+                  setAudioBlob
+                }
+
+                setTranscript={
+                  setTranscript
+                }
+
+                setAiData={
+                  setAiData
+                }
+
+                setMessage={
+                  setMessage
+                }
+
+                isConfirmed={
+                  isConfirmed
+                }
+
+                text={t}
+              />
             </div>
 
-            <div className="workspace-status">
-              <span className="workspace-status-dot" />
+            <div className="workspace-card">
+              <TranscriptBox
+                transcript={
+                  transcript
+                }
 
-              <span>
-                {isVietnamese
-                  ? "Hệ thống sẵn sàng"
-                  : "System ready"}
-              </span>
+                onTranscriptChange={
+                  setTranscript
+                }
+
+                isConfirmed={
+                  isConfirmed
+                }
+
+                text={t}
+              />
             </div>
-          </section>
+          </div>
 
-          {isDevMode && (
-            <section className="dev-test-panel">
-              <div className="dev-test-info">
-                <span className="dev-test-icon">
-                  🧪
-                </span>
+          <div className="voice-secondary-column">
+            <div className="workspace-card ai-data-card">
+              <AIForm
+                aiData={
+                  aiData
+                }
 
-                <div>
-                  <strong>
-                    DEV Test Mode
-                  </strong>
+                onAiDataChange={
+                  setAiData
+                }
 
-                  <span>
-                    {isVietnamese
-                      ? "Kiểm thử frontend không cần AI Service."
-                      : "Test the frontend without the AI Service."}
-                  </span>
-                </div>
-              </div>
+                isConfirmed={
+                  isConfirmed
+                }
 
-              <div className="dev-test-actions">
-                <button
-                  type="button"
-                  className="dev-test-btn valid"
-                  onClick={
-                    handleLoadValidTest
-                  }
-                >
-                  ✅{" "}
-                  {isVietnamese
-                    ? "Hợp lệ"
-                    : "Valid"}
-                </button>
+                text={t}
 
-                <button
-                  type="button"
-                  className="dev-test-btn warning"
-                  onClick={
-                    handleLoadWarningTest
-                  }
-                >
-                  ⚠️{" "}
-                  {isVietnamese
-                    ? "Cảnh báo"
-                    : "Warning"}
-                </button>
+                language={
+                  language
+                }
 
-                <button
-                  type="button"
-                  className="dev-test-btn error"
-                  onClick={
-                    handleLoadErrorTest
-                  }
-                >
-                  ❌{" "}
-                  {isVietnamese
-                    ? "Dữ liệu lỗi"
-                    : "Error"}
-                </button>
+                validation={
+                  validation
+                }
 
-                <button
-                  type="button"
-                  className="dev-test-btn reset"
-                  onClick={
-                    handleResetDevTest
-                  }
-                >
-                  ↺ Reset
-                </button>
-              </div>
-            </section>
-          )}
+                showValidation={
+                  hasAttemptedSubmit
+                }
+              />
 
-          <section className="workflow-card">
-            <WorkflowStepper
-              currentStep={
-                currentStep
-              }
-              text={t}
-            />
-          </section>
+              <ActionButtons
+                hasAudio={
+                  Boolean(
+                    audioBlob
+                  )
+                }
 
-          <section className="voice-workspace-grid">
-            <div className="voice-primary-column">
-              <div className="workspace-card record-card">
-                <RecordButton
-                  audioUrl={
-                    audioUrl
-                  }
-                  setAudioUrl={
-                    setAudioUrl
-                  }
-                  setAudioBlob={
-                    setAudioBlob
-                  }
-                  setTranscript={
-                    setTranscript
-                  }
-                  setAiData={
-                    setAiData
-                  }
-                  setMessage={
-                    setMessage
-                  }
-                  isConfirmed={
-                    isConfirmed
-                  }
-                  text={t}
-                />
-              </div>
+                hasResult={
+                  Boolean(
+                    transcript.trim()
+                  )
+                }
 
-              <div className="workspace-card">
-                <TranscriptBox
-                  transcript={
-                    transcript
-                  }
-                  onTranscriptChange={
-                    setTranscript
-                  }
-                  isConfirmed={
-                    isConfirmed
-                  }
-                  text={t}
-                />
-              </div>
+                isUploading={
+                  isUploading
+                }
+
+                isConfirmed={
+                  isConfirmed
+                }
+
+                onRetry={
+                  handleDelete
+                }
+
+                onUpload={
+                  handleUpload
+                }
+
+                onConfirm={
+                  handleConfirm
+                }
+
+                onCreateNew={
+                  handleCreateNew
+                }
+
+                text={t}
+              />
             </div>
+          </div>
+        </section>
 
-            <div className="voice-secondary-column">
-              <div className="workspace-card ai-data-card">
-                <AIForm
-                  aiData={
-                    aiData
-                  }
-                  onAiDataChange={
-                    setAiData
-                  }
-                  isConfirmed={
-                    isConfirmed
-                  }
-                  text={t}
-                  language={
-                    language
-                  }
-                  validation={
-                    validation
-                  }
-                  showValidation={
-                    hasAttemptedSubmit
-                  }
-                />
+        {/* Toast */}
 
-                <ActionButtons
-                  hasAudio={
-                    Boolean(audioBlob)
-                  }
-                  hasResult={
-                    Boolean(
-                      transcript.trim()
-                    )
-                  }
-                  isUploading={
-                    isUploading
-                  }
-                  isConfirmed={
-                    isConfirmed
-                  }
-                  onRetry={
-                    handleDelete
-                  }
-                  onUpload={
-                    handleUpload
-                  }
-                  onConfirm={
-                    handleConfirm
-                  }
-                  onCreateNew={
-                    handleCreateNew
-                  }
-                  text={t}
-                />
-              </div>
-            </div>
-          </section>
+        {messageText && (
+          <div
+            className={`app-toast ${messageType}`}
+            role="status"
+          >
+            <span className="app-toast-icon">
+              {messageType ===
+              "error"
+                ? "⚠️"
+                : "✅"}
+            </span>
 
-          {messageText && (
-            <div
-              className={`app-toast ${messageType}`}
-              role="status"
-            >
-              <span className="app-toast-icon">
-                {messageType ===
-                "error"
-                  ? "⚠️"
-                  : "✅"}
-              </span>
-
-              <span>
-                {messageText}
-              </span>
-            </div>
-          )}
-        </div>
-      </main>
-
-      <AIAssistant
-        language={language}
-      />
-    </div>
+            <span>
+              {messageText}
+            </span>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
 

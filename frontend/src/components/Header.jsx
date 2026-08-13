@@ -8,75 +8,50 @@ function Header({
   language,
   onLanguageChange,
   text,
+
+  themeMode = "light",
+  onThemeChange,
 }) {
+  const [
+    showLanguageMenu,
+    setShowLanguageMenu,
+  ] = useState(false);
+
+  const [
+    showUserMenu,
+    setShowUserMenu,
+  ] = useState(false);
+
+  const languageRef =
+    useRef(null);
+
+  const userRef =
+    useRef(null);
+
   /* ===========================
      Theme
   =========================== */
 
-  const [darkMode, setDarkMode] = useState(() => {
-    try {
-      const savedTheme =
-        localStorage.getItem(
-          "nextfarm-theme"
-        );
-
-      if (savedTheme === "dark") {
-        return true;
-      }
-
-      if (savedTheme === "light") {
-        return false;
-      }
-
-      return false;
-    } catch (error) {
-      console.error(
-        "Load theme error:",
-        error
-      );
-
-      return false;
-    }
-  });
-
-  const [showLanguageMenu, setShowLanguageMenu] =
-    useState(false);
-
-  const [showUserMenu, setShowUserMenu] =
-    useState(false);
-
-  const languageRef = useRef(null);
-  const userRef = useRef(null);
-
-  /* ===========================
-     Apply saved theme
-  =========================== */
-
-  useEffect(() => {
-    document.body.classList.toggle(
-      "dark-mode",
-      darkMode
+  const isDarkMode =
+    document.body.classList.contains(
+      "dark-mode"
     );
 
-    try {
-      localStorage.setItem(
-        "nextfarm-theme",
-        darkMode
-          ? "dark"
-          : "light"
-      );
-    } catch (error) {
-      console.error(
-        "Save theme error:",
-        error
-      );
-    }
-  }, [darkMode]);
-
   const toggleTheme = () => {
-    setDarkMode(
-      (previousMode) =>
-        !previousMode
+    /*
+      Header chỉ chuyển nhanh
+      Light <-> Dark.
+
+      System vẫn chọn trong Settings.
+    */
+
+    const nextTheme =
+      isDarkMode
+        ? "light"
+        : "dark";
+
+    onThemeChange?.(
+      nextTheme
     );
   };
 
@@ -84,74 +59,107 @@ function Header({
      Language
   =========================== */
 
-  const handleLanguageChange = (lang) => {
-    onLanguageChange(lang);
+  const handleLanguageChange = (
+    lang
+  ) => {
+    onLanguageChange?.(
+      lang
+    );
 
-    setShowLanguageMenu(false);
+    setShowLanguageMenu(
+      false
+    );
+
     setShowUserMenu(false);
   };
 
-  const toggleLanguageMenu = () => {
-    setShowLanguageMenu((prev) => {
-      const nextState = !prev;
+  const toggleLanguageMenu =
+    () => {
+      setShowLanguageMenu(
+        (previous) => {
+          const next =
+            !previous;
 
-      if (nextState) {
-        setShowUserMenu(false);
-      }
+          if (next) {
+            setShowUserMenu(
+              false
+            );
+          }
 
-      return nextState;
-    });
-  };
+          return next;
+        }
+      );
+    };
 
   /* ===========================
-     User menu
+     User
   =========================== */
 
-  const toggleUserMenu = () => {
-    setShowUserMenu((prev) => {
-      const nextState = !prev;
+  const toggleUserMenu =
+    () => {
+      setShowUserMenu(
+        (previous) => {
+          const next =
+            !previous;
 
-      if (nextState) {
-        setShowLanguageMenu(false);
-      }
+          if (next) {
+            setShowLanguageMenu(
+              false
+            );
+          }
 
-      return nextState;
-    });
-  };
+          return next;
+        }
+      );
+    };
 
   /* ===========================
-     Close dropdown
-     - Click outside
-     - Press Escape
+     Outside / Escape
   =========================== */
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      const clickedOutsideLanguage =
+    const handleClickOutside = (
+      event
+    ) => {
+      const outsideLanguage =
         languageRef.current &&
         !languageRef.current.contains(
           event.target
         );
 
-      const clickedOutsideUser =
+      const outsideUser =
         userRef.current &&
         !userRef.current.contains(
           event.target
         );
 
-      if (clickedOutsideLanguage) {
-        setShowLanguageMenu(false);
+      if (outsideLanguage) {
+        setShowLanguageMenu(
+          false
+        );
       }
 
-      if (clickedOutsideUser) {
-        setShowUserMenu(false);
+      if (outsideUser) {
+        setShowUserMenu(
+          false
+        );
       }
     };
 
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        setShowLanguageMenu(false);
-        setShowUserMenu(false);
+    const handleKeyDown = (
+      event
+    ) => {
+      if (
+        event.key ===
+        "Escape"
+      ) {
+        setShowLanguageMenu(
+          false
+        );
+
+        setShowUserMenu(
+          false
+        );
       }
     };
 
@@ -184,9 +192,7 @@ function Header({
         <div className="topbar-spacer" />
 
         <div className="topbar-actions">
-          {/* ===========================
-              Language
-          =========================== */}
+          {/* Language */}
 
           <div
             className="topbar-language-wrapper"
@@ -207,7 +213,7 @@ function Header({
               }
               aria-haspopup="menu"
             >
-              <span aria-hidden="true">
+              <span>
                 🌐
               </span>
 
@@ -217,10 +223,7 @@ function Header({
                   : "EN"}
               </span>
 
-              <span
-                className="language-arrow"
-                aria-hidden="true"
-              >
+              <span className="language-arrow">
                 {showLanguageMenu
                   ? "⌃"
                   : "⌄"}
@@ -235,7 +238,8 @@ function Header({
                 <button
                   type="button"
                   className={`language-option ${
-                    language === "vi"
+                    language ===
+                    "vi"
                       ? "active"
                       : ""
                   }`}
@@ -244,15 +248,17 @@ function Header({
                       "vi"
                     )
                   }
-                  role="menuitem"
                 >
                   <span className="language-check">
-                    {language === "vi"
+                    {language ===
+                    "vi"
                       ? "✓"
                       : ""}
                   </span>
 
-                  <span>🇻🇳</span>
+                  <span>
+                    🇻🇳
+                  </span>
 
                   <span>
                     {
@@ -265,7 +271,8 @@ function Header({
                 <button
                   type="button"
                   className={`language-option ${
-                    language === "en"
+                    language ===
+                    "en"
                       ? "active"
                       : ""
                   }`}
@@ -274,15 +281,17 @@ function Header({
                       "en"
                     )
                   }
-                  role="menuitem"
                 >
                   <span className="language-check">
-                    {language === "en"
+                    {language ===
+                    "en"
                       ? "✓"
                       : ""}
                   </span>
 
-                  <span>🇬🇧</span>
+                  <span>
+                    🇬🇧
+                  </span>
 
                   <span>
                     {
@@ -295,27 +304,25 @@ function Header({
             )}
           </div>
 
-          {/* ===========================
-              Theme
-          =========================== */}
+          {/* Theme */}
 
           <button
             type="button"
             className="theme-toggle"
-            onClick={toggleTheme}
-            aria-label={
-              text.header.toggleTheme
+            onClick={
+              toggleTheme
             }
-            aria-pressed={darkMode}
+            aria-label={
+              text.header
+                .toggleTheme
+            }
           >
-            {darkMode
+            {isDarkMode
               ? "☀️"
               : "🌙"}
           </button>
 
-          {/* ===========================
-              User
-          =========================== */}
+          {/* User */}
 
           <div
             className="topbar-user-wrapper"
@@ -324,22 +331,22 @@ function Header({
             <button
               type="button"
               className="topbar-user"
-              onClick={toggleUserMenu}
+              onClick={
+                toggleUserMenu
+              }
               aria-expanded={
                 showUserMenu
               }
               aria-haspopup="menu"
             >
-              <span
-                className="user-icon"
-                aria-hidden="true"
-              >
+              <span className="user-icon">
                 👤
               </span>
 
               <span className="user-greeting">
                 {
-                  text.header.greeting
+                  text.header
+                    .greeting
                 }
                 ,{" "}
 
@@ -348,10 +355,7 @@ function Header({
                 </strong>
               </span>
 
-              <span
-                className="user-arrow"
-                aria-hidden="true"
-              >
+              <span className="user-arrow">
                 {showUserMenu
                   ? "⌃"
                   : "⌄"}
@@ -387,7 +391,6 @@ function Header({
                 <button
                   type="button"
                   className="user-menu-item"
-                  role="menuitem"
                 >
                   <span>
                     👤
@@ -404,7 +407,6 @@ function Header({
                 <button
                   type="button"
                   className="user-menu-item"
-                  role="menuitem"
                 >
                   <span>
                     📋
@@ -421,7 +423,6 @@ function Header({
                 <button
                   type="button"
                   className="user-menu-item"
-                  role="menuitem"
                 >
                   <span>
                     ⚙️
@@ -440,7 +441,6 @@ function Header({
                 <button
                   type="button"
                   className="user-menu-item logout"
-                  role="menuitem"
                 >
                   <span>
                     🚪
