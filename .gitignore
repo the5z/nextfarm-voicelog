@@ -226,3 +226,6 @@ node_modules/
 ai-service/benchmark/__pycache__/
 ai-service/benchmark/results/predictions.jsonl
 ai-service/benchmark/results/metrics.json
+ai-service/benchmark/results/predictions_noisy_raw.jsonl
+ai-service/benchmark/results/predictions_noisy_preprocessed.jsonl
+ai-service/benchmark/results/noise_ab_metrics.json
