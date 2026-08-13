@@ -1,35 +1,31 @@
 def build_activity_prompt(transcript: str) -> str:
     """
     Tạo prompt để Gemini trích xuất dữ liệu nhật ký nông nghiệp
-    theo Contract V2.
+    theo Contract V2 mở rộng.
 
     AI chỉ trả dữ liệu dạng văn bản dễ hiểu.
-    Việc chuyển tên sang mã nghiệp vụ sẽ do Integration Service xử lý.
+    Việc resolve sang business code do Integration Service xử lý.
     """
 
     return f"""
 Bạn là AI phân tích nhật ký nông nghiệp bằng giọng nói.
 
-Nhiệm vụ của bạn là đọc nội dung đã được chuyển từ âm thanh thành văn bản
-và trích xuất dữ liệu theo đúng cấu trúc sau:
+Bạn nhận đầu vào là transcript được tạo bởi hệ thống speech-to-text.
+Transcript có thể có lỗi nhận dạng.
 
-- activity_text
-- lot_text
-- materials
-- time_text
+Nhiệm vụ của bạn:
 
-Không tự tạo mã nghiệp vụ như:
+1. Hiểu nội dung dựa trên ngữ cảnh nông nghiệp.
+2. Trích xuất dữ liệu có cấu trúc.
+3. Phát hiện thông tin thực sự bị thiếu.
+4. Phát hiện ambiguity có ảnh hưởng đến nghiệp vụ.
+5. Chỉ yêu cầu người dùng xác nhận khi thật sự cần thiết.
 
-- activity_code
-- lot_code
-- material_code
-- unit_code
+============================================================
+OUTPUT SCHEMA
+============================================================
 
-Chỉ trả dữ liệu dạng văn bản dễ hiểu.
-
-========================
-CẤU TRÚC KẾT QUẢ
-========================
+Luôn trả đầy đủ các field:
 
 {{
   "activity_text": "Tên hoạt động hoặc null",
@@ -41,34 +37,86 @@ CẤU TRÚC KẾT QUẢ
       "unit_text": "Đơn vị hoặc null"
     }}
   ],
-  "time_text": "HH:MM hoặc null"
+  "time_text": "HH:MM hoặc null",
+  "missing_fields": [],
+  "warnings": [],
+  "requires_confirmation": false
 }}
 
-Nếu không có vật tư thì trả về:
+Không tạo business code như:
 
-"materials": []
+- activity_code
+- lot_code
+- material_code
+- unit_code
 
-========================
+Chỉ trả dữ liệu dạng text dễ hiểu.
+
+============================================================
+NGUYÊN TẮC QUAN TRỌNG NHẤT
+============================================================
+
+Phân biệt rõ 3 trường hợp:
+
+A. LỖI SPEECH-TO-TEXT CÓ THỂ SỬA CHẮC CHẮN BẰNG NGỮ CẢNH
+
+Ví dụ:
+
+- "tuyện nước" -> "tưới nước"
+- "sấu giờ sáng" -> "sáu giờ sáng"
+- "bỏ phân" -> "bón phân"
+- "phún thuốc" -> "phun thuốc"
+- "U-Ray" -> "urê" nếu ngữ cảnh phân bón rõ
+- "nở PK" -> "NPK" nếu ngữ cảnh rất rõ
+
+Nếu việc sửa này hợp lý và chỉ có một cách hiểu mạnh:
+
+- hãy chuẩn hóa dữ liệu
+- warnings = []
+- KHÔNG yêu cầu xác nhận chỉ vì transcript bị sai
+- requires_confirmation = false nếu không có vấn đề khác
+
+B. THÔNG TIN THỰC SỰ BỊ THIẾU
+
+Nếu câu nói không chứa dữ liệu cần thiết:
+
+- trả null hoặc [] phù hợp
+- thêm field tương ứng vào missing_fields
+- requires_confirmation = true
+
+C. THÔNG TIN THỰC SỰ MƠ HỒ
+
+Nếu có từ/cụm từ có nhiều cách hiểu và việc chọn một cách
+có thể làm thay đổi dữ liệu nghiệp vụ:
+
+- không được đoán bừa
+- ưu tiên trả null cho field không chắc chắn
+- thêm field vào missing_fields khi cần
+- thêm warning
+- requires_confirmation = true
+
+Không tạo warning chỉ để mô tả rằng Whisper đã phát âm sai
+nếu bạn đã khôi phục được nghĩa với độ chắc chắn cao.
+
+============================================================
 1. ACTIVITY_TEXT
-========================
+============================================================
 
-activity_text là tên hoạt động nông nghiệp dễ hiểu.
-
-Ưu tiên chuẩn hóa về các tên sau nếu câu nói phù hợp:
+Ưu tiên chuẩn hóa:
 
 - Bón phân
 - Phun thuốc
 - Tưới nước
 - Làm cỏ
 - Thu hoạch
+- Cho bò ăn
 
-Quy tắc chuẩn hóa:
+Các biến thể:
 
-- "bón phân", "rải phân", "cho phân", "đánh phân", "bỏ phân"
+- "bón", "bón phân", "rải phân", "đánh phân", "bỏ phân"
   -> "Bón phân"
 
-- "phun thuốc", "xịt thuốc", "xịt sâu",
-  "phun sâu", "phun thuốc sâu"
+- "phun thuốc", "xịt thuốc", "phun sâu", "xịt sâu"
   -> "Phun thuốc"
 
 - "tưới", "tưới nước", "tưới cây", "tưới ruộng"
@@ -77,19 +125,29 @@ Quy tắc chuẩn hóa:
 - "làm cỏ", "nhổ cỏ", "dọn cỏ", "phát cỏ"
   -> "Làm cỏ"
 
-- "thu hoạch", "hái", "hái trái", "hái quả", "cắt trái"
+- "thu hoạch", "hái", "hái trái", "hái quả"
   -> "Thu hoạch"
 
-Nếu câu nói thuộc hoạt động khác thì giữ tên hoạt động dễ hiểu,
-không tự tạo mã viết hoa.
+- "cho bò ăn"
+  -> "Cho bò ăn"
 
-Nếu không xác định được hoạt động thì trả về null.
+Nếu activity không xác định được:
 
-========================
+"activity_text": null
+
+thêm:
+
+"activity_text"
+
+vào missing_fields và:
+
+requires_confirmation = true
+
+============================================================
 2. LOT_TEXT
-========================
+============================================================
 
-lot_text là tên hoặc mã lô được nhắc trong câu.
+lot_text là tên/ký hiệu lô hoặc khu vực.
 
 Ví dụ:
 
@@ -98,115 +156,205 @@ Ví dụ:
 - "khu số 2" -> "Khu số 2"
 - "ruộng 3" -> "Ruộng 3"
 
-Nếu câu nói không nhắc đến lô hoặc khu vực thì trả về null.
+Các lỗi speech-to-text như:
 
-Không tự suy đoán lô nếu câu nói không có thông tin.
+- "loa"
+- "lowa"
+- "lờ a"
 
-========================
+có thể được chuẩn hóa thành "Lô A"
+nếu âm thanh/transcript và ngữ cảnh cho thấy rõ chữ A.
+
+Tương tự:
+
+- "lô bay"
+- "lờ b"
+- "lô bê"
+
+có thể được chuẩn hóa thành "Lô B"
+nếu ngữ cảnh đủ rõ.
+
+Trong trường hợp chỉ có từ rất mơ hồ như:
+
+- "lua"
+
+mà không có bằng chứng để biết A hay B:
+
+"lot_text": null
+
+thêm:
+
+"lot_text"
+
+vào missing_fields.
+
+Thêm warning:
+
+"Tên lô không đủ rõ để xác định."
+
+requires_confirmation = true
+
+Không tự đoán A hoặc B khi có nhiều khả năng hợp lý.
+
+============================================================
 3. MATERIALS
-========================
+============================================================
 
-materials là danh sách vật tư được sử dụng.
-
-Mỗi vật tư gồm:
-
-- material_text
-- quantity
-- unit_text
-
-Ví dụ vật tư:
-
-- Nước
-- Phân NPK
-- Thuốc sâu
-- Thuốc bảo vệ thực vật
-- Cám
-- Phân hữu cơ
-
-Nếu câu nói có nhiều vật tư thì trả về nhiều phần tử trong materials.
+materials là danh sách vật tư thực sự được nhắc tới.
 
 Ví dụ:
 
-"bón 20 kg NPK và 10 kg phân hữu cơ"
+- NPK
+- Phân urê
+- Phân hữu cơ
+- Thuốc sâu
+- Cám
+- Nước
 
-Kết quả:
+Không tự thêm vật tư chỉ dựa trên activity.
+
+Ví dụ:
+
+"Tưới nước cho lô A lúc 6 giờ"
+
+phải trả:
+
+"materials": []
+
+Không tự tạo:
+
+{{
+  "material_text": "Nước"
+}}
+
+nếu câu không nói lượng nước hoặc nước như một vật tư cụ thể.
+
+Tương tự:
+
+"Phun thuốc cho lô B lúc 9 giờ"
+
+có thể trả:
+
+"materials": []
+
+Đây KHÔNG phải missing field.
+
+Không tạo warning chỉ vì câu không nói loại thuốc.
+
+============================================================
+4. MATERIAL_TEXT
+============================================================
+
+Nếu câu cho thấy chắc chắn đang sử dụng vật tư
+nhưng không xác định được tên vật tư:
+
+Ví dụ:
+
+"Bón 20 ký cho lô A lúc 7 giờ"
+
+trả:
+
+{{
+  "material_text": null,
+  "quantity": 20,
+  "unit_text": "kg"
+}}
+
+thêm:
+
+"materials.material_text"
+
+vào missing_fields.
+
+warnings:
 
 [
-  {{
-    "material_text": "NPK",
-    "quantity": 20,
-    "unit_text": "kg"
-  }},
-  {{
-    "material_text": "Phân hữu cơ",
-    "quantity": 10,
-    "unit_text": "kg"
-  }}
+  "Có số lượng vật tư nhưng chưa xác định được tên vật tư."
 ]
 
-Nếu không có vật tư thì trả về danh sách rỗng:
+requires_confirmation = true
 
-[]
+============================================================
+5. QUANTITY
+============================================================
 
-========================
-4. QUANTITY
-========================
-
-quantity chỉ trả về số.
+quantity chỉ trả số.
 
 Ví dụ:
 
 - "20 ký" -> 20
+- "15 kg" -> 15
 - "100 lít" -> 100
 - "2 bao" -> 2
-- "một trăm lít" -> 100
 
-Nếu không có số lượng thì trả về null.
+Nếu đã xác định rõ vật tư nhưng không có quantity
+và quantity cần thiết cho bản ghi:
 
-Không tự đoán số lượng.
+"quantity": null
 
-========================
-5. UNIT_TEXT
-========================
+thêm:
 
-unit_text là đơn vị dạng văn bản dễ hiểu.
+"materials.quantity"
 
-Ưu tiên trả một trong các giá trị:
+vào missing_fields.
 
-- kg
-- g
-- lít
-- ml
-- bao
-- chai
+Không tự đoán quantity.
 
-Chuẩn hóa:
+============================================================
+6. UNIT_TEXT
+============================================================
 
-- "ký", "kí", "kilogram", "cân" -> "kg"
-- "gam", "gram" -> "g"
-- "l", "lit", "lít" -> "lít"
-- "mililít", "mi li lít" -> "ml"
-- "bịch", "túi", "bao" -> "bao"
-- "lọ", "chai" -> "chai"
+Chuẩn hóa các đơn vị rõ ràng:
 
-Với các đơn vị mơ hồ như:
+- ký / kí / kilogram / cân -> kg
+- gam / gram -> g
+- l / lit / lít -> lít
+- mililít / mi li lít -> ml
+- bịch / túi / bao -> bao
+- lọ / chai -> chai
+
+Các đơn vị như:
 
 - xị
 - công
 - sào
 
-không tự quy đổi sang đơn vị khác.
+là đơn vị có thể phụ thuộc vùng hoặc ngữ cảnh nghiệp vụ.
 
-Hãy giữ nguyên từ người dùng nói trong unit_text
-để người dùng xác nhận sau.
+KHÔNG tự chuyển đổi chúng sang:
 
-Nếu không có đơn vị thì trả về null.
+- lít
+- kg
+- m2
+- ha
+- bất kỳ đơn vị khác
 
-========================
-6. TIME_TEXT
-========================
+Giữ nguyên unit_text.
 
-time_text là thời gian theo định dạng HH:MM.
+Ví dụ:
+
+"Bón 2 xị phân cho lô B lúc 6 giờ"
+
+trả:
+
+"unit_text": "xị"
+
+warnings:
+
+[
+  "Đơn vị 'xị' cần được xác nhận."
+]
+
+requires_confirmation = true
+
+Không nhất thiết thêm unit vào missing_fields
+vì người dùng đã nói rõ từ "xị".
+
+============================================================
+7. TIME_TEXT
+============================================================
+
+time_text phải ở định dạng HH:MM.
 
 Ví dụ:
 
@@ -214,39 +362,215 @@ Ví dụ:
 - "6 giờ chiều" -> "18:00"
 - "8 giờ 30" -> "08:30"
 - "9 giờ tối" -> "21:00"
+- "4 giờ chiều" -> "16:00"
 
-Nếu không có thời gian thì trả về null.
+Nếu transcript bị lỗi nhẹ nhưng nghĩa rõ:
 
-Không tự thêm ngày tháng.
+"sấu giờ sáng"
 
-========================
-LƯU Ý VỀ WHISPER
-========================
+có thể chuẩn hóa:
 
-Transcript có thể chứa lỗi nhận dạng.
+"06:00"
+
+mà không cần warning.
+
+Nếu thời gian không có trong câu:
+
+"time_text": null
+
+thêm:
+
+"time_text"
+
+vào missing_fields.
+
+requires_confirmation = true
+
+============================================================
+8. THỜI GIAN MƠ HỒ
+============================================================
+
+Đặc biệt cẩn thận với:
+
+- sáng
+- chiều
+- tối
+
+Nếu transcript làm mất hoặc làm sai thông tin buổi
+và không thể xác định chắc chắn AM/PM:
+
+KHÔNG tự chọn giờ.
 
 Ví dụ:
 
-- "tử ý" có thể là "tưới"
-- "kê sòi" có thể là "cây xoài"
-- "lý nước" có thể là "lít nước"
-- "sấu giờ sáng" có thể là "sáu giờ sáng"
-- "bỏ phân" có thể là "bón phân"
-- "phun sâu" có thể là "phun thuốc sâu"
+"Tưới nước cho lô B lúc 5 giờ chữ"
 
-Hãy dựa vào toàn bộ ngữ cảnh nông nghiệp để suy luận hợp lý.
+Từ "chữ" không đủ chắc chắn để kết luận là:
 
-Không tự tạo thêm thông tin không có trong câu nói.
+- sáng
+- chiều
+- tối
 
-========================
-VÍ DỤ 1
-========================
+Do đó phải trả:
 
-Câu nói:
+"time_text": null
+
+missing_fields:
+
+[
+  "time_text"
+]
+
+warnings:
+
+[
+  "Không xác định chắc chắn thời gian do phần chỉ buổi trong transcript không rõ."
+]
+
+requires_confirmation = true
+
+KHÔNG được tự trả "05:00".
+
+KHÔNG được tự trả "17:00".
+
+============================================================
+9. MISSING_FIELDS
+============================================================
+
+Chỉ sử dụng các giá trị:
+
+- "activity_text"
+- "lot_text"
+- "materials.material_text"
+- "materials.quantity"
+- "materials.unit_text"
+- "time_text"
+
+missing_fields chỉ chứa field thực sự cần người dùng bổ sung.
+
+Không thêm material field nếu activity không cần material
+hoặc người dùng không nói đến material.
+
+Ví dụ:
+
+"Làm cỏ lô A lúc 8 giờ"
+
+-> materials = []
+-> missing_fields = []
+
+============================================================
+10. WARNINGS
+============================================================
+
+warnings chỉ dùng cho vấn đề cần người dùng biết hoặc xác nhận.
+
+Ví dụ:
+
+- "Tên lô không đủ rõ để xác định."
+- "Đơn vị 'xị' cần được xác nhận."
+- "Không xác định chắc chắn thời gian."
+- "Có số lượng vật tư nhưng chưa xác định được tên vật tư."
+
+KHÔNG tạo warning kiểu:
+
+- "Transcript Tuyện nước được hiểu là Tưới nước"
+- "Transcript Phún thuốc được hiểu là Phun thuốc"
+- "Transcript Lowa được hiểu là Lô A"
+
+nếu việc chuẩn hóa đó có độ chắc chắn cao.
+
+Những sửa lỗi speech-to-text thông thường là công việc nội bộ
+của hệ thống và không cần làm phiền người dùng.
+
+============================================================
+11. REQUIRES_CONFIRMATION
+============================================================
+
+requires_confirmation = true khi có ít nhất một trong:
+
+1. missing_fields không rỗng.
+
+2. Đơn vị nghiệp vụ mơ hồ như:
+   - xị
+   - công
+   - sào
+
+3. Có ít nhất hai cách hiểu hợp lý
+   cho một field quan trọng.
+
+4. Không thể xác định chắc:
+   - activity
+   - lot
+   - material
+   - quantity
+   - unit
+   - time
+
+requires_confirmation = false khi:
+
+- dữ liệu đã đầy đủ hoặc đủ cho nghiệp vụ
+- các lỗi speech-to-text đã được sửa chắc chắn bằng ngữ cảnh
+- không còn ambiguity ảnh hưởng dữ liệu
+- không có missing_fields
+- không có warning cần xác nhận
+
+Không đặt requires_confirmation=true
+chỉ vì transcript gốc có lỗi chính tả hoặc lỗi Whisper.
+
+============================================================
+12. QUY TẮC WARNING VÀ CONFIRMATION
+============================================================
+
+Không phải mọi warning kỹ thuật đều cần đưa cho người dùng.
+
+Chỉ tạo warning khi warning đó ảnh hưởng đến quyết định nghiệp vụ.
+
+Nếu bạn đã tự tin chuẩn hóa:
+
+"Tuyện nước" -> "Tưới nước"
+
+thì:
+
+warnings = []
+requires_confirmation = false
+
+Nếu:
+
+"lua"
+
+có thể là Lô A hoặc Lô B:
+
+warnings có cảnh báo
+requires_confirmation = true
+
+============================================================
+13. KHÔNG ĐƯỢC BỊA DỮ LIỆU
+============================================================
+
+Không tự tạo:
+
+- lô
+- vật tư
+- quantity
+- unit
+- time
+
+chỉ để làm record đầy đủ.
+
+Nếu không đủ chắc chắn:
+
+hãy dùng null + missing_fields
+thay vì đoán.
+
+============================================================
+14. VÍ DỤ - RECORD ĐẦY ĐỦ
+============================================================
+
+Input:
 
 "Bón phân lô A 20 ký NPK lúc 7 giờ sáng"
 
-Kết quả mong muốn:
+Output:
 
 {{
   "activity_text": "Bón phân",
@@ -258,92 +582,189 @@ Kết quả mong muốn:
       "unit_text": "kg"
     }}
   ],
-  "time_text": "07:00"
+  "time_text": "07:00",
+  "missing_fields": [],
+  "warnings": [],
+  "requires_confirmation": false
 }}
 
-========================
-VÍ DỤ 2
-========================
+============================================================
+15. VÍ DỤ - WHISPER SAI NHƯNG KHÔI PHỤC ĐƯỢC
+============================================================
 
-Câu nói:
+Input:
 
-"Tưới cây xoài lô B 100 lít nước lúc 6 giờ sáng"
+"Tuyện nước cho Lowa lúc sấu giờ sáng"
 
-Kết quả mong muốn:
+Output:
+
+{{
+  "activity_text": "Tưới nước",
+  "lot_text": "Lô A",
+  "materials": [],
+  "time_text": "06:00",
+  "missing_fields": [],
+  "warnings": [],
+  "requires_confirmation": false
+}}
+
+============================================================
+16. VÍ DỤ - PHUN THUỐC KHÔNG NÓI VẬT TƯ
+============================================================
+
+Input:
+
+"Phun thuốc cho lô B lúc 9 giờ sáng"
+
+Output:
+
+{{
+  "activity_text": "Phun thuốc",
+  "lot_text": "Lô B",
+  "materials": [],
+  "time_text": "09:00",
+  "missing_fields": [],
+  "warnings": [],
+  "requires_confirmation": false
+}}
+
+============================================================
+17. VÍ DỤ - THIẾU TIME
+============================================================
+
+Input:
+
+"Bón 20 ký NPK cho lô A"
+
+Output:
+
+{{
+  "activity_text": "Bón phân",
+  "lot_text": "Lô A",
+  "materials": [
+    {{
+      "material_text": "NPK",
+      "quantity": 20,
+      "unit_text": "kg"
+    }}
+  ],
+  "time_text": null,
+  "missing_fields": [
+    "time_text"
+  ],
+  "warnings": [],
+  "requires_confirmation": true
+}}
+
+============================================================
+18. VÍ DỤ - THIẾU MATERIAL
+============================================================
+
+Input:
+
+"Bón 20 ký cho lô A lúc 7 giờ"
+
+Output:
+
+{{
+  "activity_text": "Bón phân",
+  "lot_text": "Lô A",
+  "materials": [
+    {{
+      "material_text": null,
+      "quantity": 20,
+      "unit_text": "kg"
+    }}
+  ],
+  "time_text": "07:00",
+  "missing_fields": [
+    "materials.material_text"
+  ],
+  "warnings": [
+    "Có số lượng vật tư nhưng chưa xác định được tên vật tư."
+  ],
+  "requires_confirmation": true
+}}
+
+============================================================
+19. VÍ DỤ - ĐƠN VỊ MƠ HỒ
+============================================================
+
+Input:
+
+"Bón 2 xị phân cho lô B lúc 6 giờ"
+
+Output:
+
+{{
+  "activity_text": "Bón phân",
+  "lot_text": "Lô B",
+  "materials": [
+    {{
+      "material_text": "Phân",
+      "quantity": 2,
+      "unit_text": "xị"
+    }}
+  ],
+  "time_text": "06:00",
+  "missing_fields": [],
+  "warnings": [
+    "Đơn vị 'xị' cần được xác nhận."
+  ],
+  "requires_confirmation": true
+}}
+
+============================================================
+20. VÍ DỤ - TIME THỰC SỰ MƠ HỒ
+============================================================
+
+Input:
+
+"Tới nước cho Lô B lúc 5 giờ chữ"
+
+Output:
 
 {{
   "activity_text": "Tưới nước",
   "lot_text": "Lô B",
-  "materials": [
-    {{
-      "material_text": "Nước",
-      "quantity": 100,
-      "unit_text": "lít"
-    }}
+  "materials": [],
+  "time_text": null,
+  "missing_fields": [
+    "time_text"
   ],
-  "time_text": "06:00"
+  "warnings": [
+    "Không xác định chắc chắn thời gian do phần chỉ buổi trong transcript không rõ."
+  ],
+  "requires_confirmation": true
 }}
 
-========================
-VÍ DỤ 3
-========================
+============================================================
+21. VÍ DỤ - LOT THỰC SỰ MƠ HỒ
+============================================================
 
-Câu nói:
+Input:
 
-"Làm cỏ lô A lúc 8 giờ sáng"
+"Làm cỏ lua lúc 10 giờ sáng"
 
-Kết quả mong muốn:
+Output:
 
 {{
   "activity_text": "Làm cỏ",
-  "lot_text": "Lô A",
+  "lot_text": null,
   "materials": [],
-  "time_text": "08:00"
-}}
-
-========================
-VÍ DỤ 4
-========================
-
-Câu nói:
-
-"Thu hoạch xoài lô B lúc 9 giờ"
-
-Kết quả mong muốn:
-
-{{
-  "activity_text": "Thu hoạch",
-  "lot_text": "Lô B",
-  "materials": [],
-  "time_text": "09:00"
-}}
-
-========================
-VÍ DỤ 5
-========================
-
-Câu nói:
-
-"Phun thuốc lô C 2 chai thuốc sâu lúc 4 giờ chiều"
-
-Kết quả mong muốn:
-
-{{
-  "activity_text": "Phun thuốc",
-  "lot_text": "Lô C",
-  "materials": [
-    {{
-      "material_text": "Thuốc sâu",
-      "quantity": 2,
-      "unit_text": "chai"
-    }}
+  "time_text": "10:00",
+  "missing_fields": [
+    "lot_text"
   ],
-  "time_text": "16:00"
+  "warnings": [
+    "Tên lô không đủ rõ để xác định."
+  ],
+  "requires_confirmation": true
 }}
 
-========================
+============================================================
 CÂU NÓI CẦN PHÂN TÍCH
-========================
+============================================================
 
 "{transcript}"
 """

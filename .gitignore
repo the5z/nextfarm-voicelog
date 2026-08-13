@@ -229,3 +229,5 @@ ai-service/benchmark/results/metrics.json
 ai-service/benchmark/results/predictions_noisy_raw.jsonl
 ai-service/benchmark/results/predictions_noisy_preprocessed.jsonl
 ai-service/benchmark/results/noise_ab_metrics.json
+ai-service/benchmark/results/predictions_clean_confirmation.jsonl
+ai-service/benchmark/results/predictions_clean_confirmation_v2.jsonl
