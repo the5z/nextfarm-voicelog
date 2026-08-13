@@ -1,6 +1,7 @@
 import json
 import re
 import unicodedata
+from collections import defaultdict
 from pathlib import Path
 
 
@@ -54,8 +55,7 @@ def normalize_text(value) -> str:
 
     text = text.lower().strip()
 
-    # Tách số và chữ:
-    # 20kg -> 20 kg
+    # Tách số và chữ: 20kg -> 20 kg
     text = re.sub(
         r"(?<=\d)(?=[a-zA-ZÀ-ỹ])",
         " ",
@@ -216,14 +216,153 @@ def compare_materials(
     }
 
 
-def percent(correct: int, total: int) -> float:
+def percent(correct: int, total: int):
     if total == 0:
-        return 0.0
+        return None
 
     return round(
         correct / total * 100,
         2,
     )
+
+
+def empty_group_stats() -> dict:
+    return {
+        "total_cases": 0,
+        "successful_cases": 0,
+        "material_cases": 0,
+        "word_errors": 0,
+        "reference_words": 0,
+        "processing_time_ms": 0.0,
+        "activity_correct": 0,
+        "lot_correct": 0,
+        "material_correct": 0,
+        "quantity_correct": 0,
+        "unit_correct": 0,
+        "time_correct": 0,
+        "full_record_correct": 0,
+    }
+
+
+def update_group_stats(
+    stats: dict,
+    case_data: dict,
+) -> None:
+    stats["total_cases"] += 1
+
+    if not case_data["success"]:
+        return
+
+    stats["successful_cases"] += 1
+
+    stats["word_errors"] += (
+        case_data["word_errors"]
+    )
+
+    stats["reference_words"] += (
+        case_data["reference_words"]
+    )
+
+    stats["processing_time_ms"] += (
+        case_data["processing_time_ms"]
+    )
+
+    if case_data["activity_correct"]:
+        stats["activity_correct"] += 1
+
+    if case_data["lot_correct"]:
+        stats["lot_correct"] += 1
+
+    if case_data["time_correct"]:
+        stats["time_correct"] += 1
+
+    if case_data["full_record_correct"]:
+        stats["full_record_correct"] += 1
+
+    if case_data["has_material"]:
+        stats["material_cases"] += 1
+
+        if case_data["material_correct"]:
+            stats["material_correct"] += 1
+
+        if case_data["quantity_correct"]:
+            stats["quantity_correct"] += 1
+
+        if case_data["unit_correct"]:
+            stats["unit_correct"] += 1
+
+
+def finalize_group_stats(
+    stats: dict,
+) -> dict:
+    if stats["reference_words"]:
+        wer_percent = round(
+            stats["word_errors"]
+            / stats["reference_words"]
+            * 100,
+            2,
+        )
+    else:
+        wer_percent = None
+
+    if stats["successful_cases"]:
+        average_processing_time_ms = round(
+            stats["processing_time_ms"]
+            / stats["successful_cases"],
+            2,
+        )
+    else:
+        average_processing_time_ms = None
+
+    return {
+        "summary": {
+            "total_cases": stats["total_cases"],
+            "successful_cases": (
+                stats["successful_cases"]
+            ),
+            "failed_cases": (
+                stats["total_cases"]
+                - stats["successful_cases"]
+            ),
+            "material_cases": (
+                stats["material_cases"]
+            ),
+        },
+        "metrics": {
+            "wer_percent": wer_percent,
+            "activity_accuracy_percent": percent(
+                stats["activity_correct"],
+                stats["total_cases"],
+            ),
+            "lot_accuracy_percent": percent(
+                stats["lot_correct"],
+                stats["total_cases"],
+            ),
+            "material_accuracy_percent": percent(
+                stats["material_correct"],
+                stats["material_cases"],
+            ),
+            "quantity_accuracy_percent": percent(
+                stats["quantity_correct"],
+                stats["material_cases"],
+            ),
+            "unit_accuracy_percent": percent(
+                stats["unit_correct"],
+                stats["material_cases"],
+            ),
+            "time_accuracy_percent": percent(
+                stats["time_correct"],
+                stats["total_cases"],
+            ),
+            "full_record_accuracy_percent": percent(
+                stats["full_record_correct"],
+                stats["total_cases"],
+            ),
+            "average_processing_time_ms": (
+                average_processing_time_ms
+            ),
+        },
+    }
 
 
 def save_metrics(metrics: dict) -> None:
@@ -244,6 +383,20 @@ def save_metrics(metrics: dict) -> None:
         )
 
 
+def format_percent(value) -> str:
+    if value is None:
+        return "N/A"
+
+    return f"{value}%"
+
+
+def format_ms(value) -> str:
+    if value is None:
+        return "N/A"
+
+    return f"{value} ms"
+
+
 def main() -> None:
     ground_truth_rows = load_jsonl(
         GROUND_TRUTH_FILE
@@ -253,60 +406,79 @@ def main() -> None:
         PREDICTIONS_FILE
     )
 
-    ground_truth = {
-        row["test_case_id"]: row
-        for row in ground_truth_rows
-    }
-
     predictions = {
         row["test_case_id"]: row
         for row in prediction_rows
     }
 
-    total_cases = len(ground_truth)
+    overall_stats = empty_group_stats()
 
-    counters = {
-        "activity": 0,
-        "lot": 0,
-        "material": 0,
-        "quantity": 0,
-        "unit": 0,
-        "time": 0,
-        "full_record": 0,
-    }
+    speaker_type_stats = defaultdict(
+        empty_group_stats
+    )
 
-    material_case_count = 0
-
-    total_word_errors = 0
-    total_reference_words = 0
-
-    total_processing_time_ms = 0
-    successful_cases = 0
+    accent_stats = defaultdict(
+        empty_group_stats
+    )
 
     case_results = []
 
     print("=" * 72)
-    print("NEXTFARM VOICELOG - BENCHMARK EVALUATION")
+    print(
+        "NEXTFARM VOICELOG - BENCHMARK EVALUATION"
+    )
     print("=" * 72)
 
-    for test_case_id, expected in ground_truth.items():
+    for expected in ground_truth_rows:
+        test_case_id = expected["test_case_id"]
+
         result = predictions.get(test_case_id)
+
+        accent = expected.get(
+            "accent",
+            "unknown",
+        )
+
+        speaker_type = expected.get(
+            "speaker_type",
+            "human_unspecified",
+        )
 
         print(f"\n[{test_case_id}]")
 
-        if not result or not result.get("success"):
+        if (
+            not result
+            or not result.get("success")
+        ):
             print("Prediction: FAILED")
 
-            case_results.append(
-                {
-                    "test_case_id": test_case_id,
-                    "success": False,
-                }
+            case_data = {
+                "test_case_id": test_case_id,
+                "success": False,
+                "accent": accent,
+                "speaker_type": speaker_type,
+            }
+
+            case_results.append(case_data)
+
+            update_group_stats(
+                overall_stats,
+                case_data,
+            )
+
+            update_group_stats(
+                speaker_type_stats[
+                    speaker_type
+                ],
+                case_data,
+            )
+
+            update_group_stats(
+                accent_stats[accent],
+                case_data,
             )
 
             continue
-
-        successful_cases += 1
 
         prediction = result["prediction"]
 
@@ -318,15 +490,14 @@ def main() -> None:
             "transcript"
         ]
 
-        errors, reference_words = calculate_wer(
-            expected[
-                "ground_truth_transcript"
-            ],
-            transcript,
+        word_errors, reference_words = (
+            calculate_wer(
+                expected[
+                    "ground_truth_transcript"
+                ],
+                transcript,
+            )
         )
-
-        total_word_errors += errors
-        total_reference_words += reference_words
 
         activity_correct = values_match(
             expected.get("activity_text"),
@@ -358,32 +529,9 @@ def main() -> None:
             materials_predicted,
         )
 
-        if activity_correct:
-            counters["activity"] += 1
-
-        if lot_correct:
-            counters["lot"] += 1
-
-        if time_correct:
-            counters["time"] += 1
-
-        if materials_expected:
-            material_case_count += 1
-
-            if material_result[
-                "material_correct"
-            ]:
-                counters["material"] += 1
-
-            if material_result[
-                "quantity_correct"
-            ]:
-                counters["quantity"] += 1
-
-            if material_result[
-                "unit_correct"
-            ]:
-                counters["unit"] += 1
+        has_material = bool(
+            materials_expected
+        )
 
         full_record_correct = (
             activity_correct
@@ -394,45 +542,57 @@ def main() -> None:
             ]
         )
 
-        if full_record_correct:
-            counters["full_record"] += 1
-
         total_time_ms = (
             result
             .get("timing", {})
             .get("total_time_ms", 0)
         )
 
-        total_processing_time_ms += total_time_ms
-
         case_wer = (
-            errors / reference_words * 100
+            word_errors
+            / reference_words
+            * 100
             if reference_words
             else 0
         )
 
-        case_result = {
+        case_data = {
             "test_case_id": test_case_id,
             "success": True,
+            "accent": accent,
+            "speaker_type": speaker_type,
             "wer_percent": round(
                 case_wer,
                 2,
             ),
-            "activity_correct": activity_correct,
+            "word_errors": word_errors,
+            "reference_words": (
+                reference_words
+            ),
+            "activity_correct": (
+                activity_correct
+            ),
             "lot_correct": lot_correct,
+            "has_material": has_material,
             "material_correct": (
-                material_result["material_correct"]
-                if materials_expected
+                material_result[
+                    "material_correct"
+                ]
+                if has_material
                 else None
             ),
             "quantity_correct": (
-                material_result["quantity_correct"]
-                if materials_expected
+                material_result[
+                    "quantity_correct"
+                ]
+                if has_material
                 else None
             ),
             "unit_correct": (
-                material_result["unit_correct"]
-                if materials_expected
+                material_result[
+                    "unit_correct"
+                ]
+                if has_material
                 else None
             ),
             "time_correct": time_correct,
@@ -444,7 +604,32 @@ def main() -> None:
             ),
         }
 
-        case_results.append(case_result)
+        case_results.append(case_data)
+
+        update_group_stats(
+            overall_stats,
+            case_data,
+        )
+
+        update_group_stats(
+            speaker_type_stats[
+                speaker_type
+            ],
+            case_data,
+        )
+
+        update_group_stats(
+            accent_stats[accent],
+            case_data,
+        )
+
+        print(
+            f"Accent: {accent}"
+        )
+
+        print(
+            f"Speaker type: {speaker_type}"
+        )
 
         print(
             f"WER: {case_wer:.2f}%"
@@ -464,7 +649,7 @@ def main() -> None:
             else "FAIL",
         )
 
-        if materials_expected:
+        if has_material:
             print(
                 "Material:",
                 "PASS"
@@ -510,133 +695,315 @@ def main() -> None:
             else "FAIL",
         )
 
-    overall_wer = (
-        total_word_errors
-        / total_reference_words
-        * 100
-        if total_reference_words
-        else 0
+    overall_metrics = finalize_group_stats(
+        overall_stats
     )
 
-    average_processing_time_ms = (
-        total_processing_time_ms
-        / successful_cases
-        if successful_cases
-        else 0
-    )
+    by_speaker_type = {
+        key: finalize_group_stats(value)
+        for key, value
+        in speaker_type_stats.items()
+    }
+
+    by_accent = {
+        key: finalize_group_stats(value)
+        for key, value
+        in accent_stats.items()
+    }
 
     metrics = {
-        "summary": {
-            "total_cases": total_cases,
-            "successful_cases": successful_cases,
-            "failed_cases": (
-                total_cases
-                - successful_cases
-            ),
-            "material_cases": material_case_count,
-        },
-        "metrics": {
-            "wer_percent": round(
-                overall_wer,
-                2,
-            ),
-            "activity_accuracy_percent": percent(
-                counters["activity"],
-                total_cases,
-            ),
-            "lot_accuracy_percent": percent(
-                counters["lot"],
-                total_cases,
-            ),
-            "material_accuracy_percent": percent(
-                counters["material"],
-                material_case_count,
-            ),
-            "quantity_accuracy_percent": percent(
-                counters["quantity"],
-                material_case_count,
-            ),
-            "unit_accuracy_percent": percent(
-                counters["unit"],
-                material_case_count,
-            ),
-            "time_accuracy_percent": percent(
-                counters["time"],
-                total_cases,
-            ),
-            "full_record_accuracy_percent": percent(
-                counters["full_record"],
-                total_cases,
-            ),
-            "average_processing_time_ms": round(
-                average_processing_time_ms,
-                2,
-            ),
-        },
+        "overall": overall_metrics,
+        "by_speaker_type": by_speaker_type,
+        "by_accent": by_accent,
         "cases": case_results,
     }
 
     save_metrics(metrics)
 
     print("\n" + "=" * 72)
-    print("FINAL METRICS")
+    print("OVERALL METRICS")
     print("=" * 72)
 
+    overall = overall_metrics[
+        "metrics"
+    ]
+
+    summary = overall_metrics[
+        "summary"
+    ]
+
     print(
-        f"Total cases: {total_cases}"
+        f"Total cases: "
+        f"{summary['total_cases']}"
     )
 
     print(
         f"Successful cases: "
-        f"{successful_cases}/{total_cases}"
+        f"{summary['successful_cases']}/"
+        f"{summary['total_cases']}"
     )
 
     print(
-        f"WER: {overall_wer:.2f}%"
+        "WER:",
+        format_percent(
+            overall["wer_percent"]
+        ),
     )
 
     print(
         "Activity Accuracy:",
-        f"{percent(counters['activity'], total_cases)}%",
+        format_percent(
+            overall[
+                "activity_accuracy_percent"
+            ]
+        ),
     )
 
     print(
         "Lot Accuracy:",
-        f"{percent(counters['lot'], total_cases)}%",
+        format_percent(
+            overall[
+                "lot_accuracy_percent"
+            ]
+        ),
     )
 
     print(
         "Material Accuracy:",
-        f"{percent(counters['material'], material_case_count)}%",
+        format_percent(
+            overall[
+                "material_accuracy_percent"
+            ]
+        ),
     )
 
     print(
         "Quantity Accuracy:",
-        f"{percent(counters['quantity'], material_case_count)}%",
+        format_percent(
+            overall[
+                "quantity_accuracy_percent"
+            ]
+        ),
     )
 
     print(
         "Unit Accuracy:",
-        f"{percent(counters['unit'], material_case_count)}%",
+        format_percent(
+            overall[
+                "unit_accuracy_percent"
+            ]
+        ),
     )
 
     print(
         "Time Accuracy:",
-        f"{percent(counters['time'], total_cases)}%",
+        format_percent(
+            overall[
+                "time_accuracy_percent"
+            ]
+        ),
     )
 
     print(
         "Full Record Accuracy:",
-        f"{percent(counters['full_record'], total_cases)}%",
+        format_percent(
+            overall[
+                "full_record_accuracy_percent"
+            ]
+        ),
     )
 
     print(
         "Average Processing Time:",
-        f"{average_processing_time_ms:.2f} ms",
+        format_ms(
+            overall[
+                "average_processing_time_ms"
+            ]
+        ),
     )
 
+    print("\n" + "=" * 72)
+    print("BY SPEAKER TYPE")
+    print("=" * 72)
+
+    for speaker_type, data in (
+        by_speaker_type.items()
+    ):
+        group_metrics = data["metrics"]
+        group_summary = data["summary"]
+
+        print(
+            f"\n[{speaker_type}]"
+        )
+
+        print(
+            f"Cases: "
+            f"{group_summary['total_cases']}"
+        )
+
+        print(
+            "WER:",
+            format_percent(
+                group_metrics[
+                    "wer_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Activity Accuracy:",
+            format_percent(
+                group_metrics[
+                    "activity_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Lot Accuracy:",
+            format_percent(
+                group_metrics[
+                    "lot_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Material Accuracy:",
+            format_percent(
+                group_metrics[
+                    "material_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Quantity Accuracy:",
+            format_percent(
+                group_metrics[
+                    "quantity_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Unit Accuracy:",
+            format_percent(
+                group_metrics[
+                    "unit_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Time Accuracy:",
+            format_percent(
+                group_metrics[
+                    "time_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Full Record Accuracy:",
+            format_percent(
+                group_metrics[
+                    "full_record_accuracy_percent"
+                ]
+            ),
+        )
+
+    print("\n" + "=" * 72)
+    print("BY ACCENT")
+    print("=" * 72)
+
+    for accent, data in by_accent.items():
+        group_metrics = data["metrics"]
+        group_summary = data["summary"]
+
+        print(
+            f"\n[{accent}]"
+        )
+
+        print(
+            f"Cases: "
+            f"{group_summary['total_cases']}"
+        )
+
+        print(
+            "WER:",
+            format_percent(
+                group_metrics[
+                    "wer_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Activity Accuracy:",
+            format_percent(
+                group_metrics[
+                    "activity_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Lot Accuracy:",
+            format_percent(
+                group_metrics[
+                    "lot_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Material Accuracy:",
+            format_percent(
+                group_metrics[
+                    "material_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Quantity Accuracy:",
+            format_percent(
+                group_metrics[
+                    "quantity_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Unit Accuracy:",
+            format_percent(
+                group_metrics[
+                    "unit_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Time Accuracy:",
+            format_percent(
+                group_metrics[
+                    "time_accuracy_percent"
+                ]
+            ),
+        )
+
+        print(
+            "Full Record Accuracy:",
+            format_percent(
+                group_metrics[
+                    "full_record_accuracy_percent"
+                ]
+            ),
+        )
+
     print(
-        f"Metrics file: {METRICS_FILE}"
+        f"\nMetrics file: {METRICS_FILE}"
     )
 
 
