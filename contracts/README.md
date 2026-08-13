@@ -734,11 +734,9 @@ Flutter lần lượt resolve các giá trị cần chuẩn hóa.
 
 ### 5.9. Master Data Resolve API
 
-Endpoint:
+Integration Service chịu trách nhiệm chuẩn hóa các giá trị dạng text thành business code có sẵn trong Master Data.
 
-```http
-POST /api/master-data/resolve
-```
+Integration Service không tự sinh business code mới từ text.
 
 Các loại dữ liệu hiện hỗ trợ:
 
@@ -747,6 +745,14 @@ activity
 lot
 material
 unit
+```
+
+#### 5.9.1. Resolve một giá trị
+
+Endpoint:
+
+```http
+POST /api/master-data/resolve
 ```
 
 Ví dụ resolve hoạt động:
@@ -766,13 +772,85 @@ Kết quả:
   "code": "CHO_BO_AN",
   "name": "Cho bò ăn",
   "confidence": 1.0,
+  "match_type": "exact",
+  "matched_text": "Cho bò ăn",
   "requires_confirmation": false,
-  "normalized_text": "cho bò ăn",
-  "message": "Đã chuẩn hóa chính xác."
+  "normalized_text": "cho bo an",
+  "message": "Đã khớp chính xác."
 }
 ```
 
-Ví dụ resolve lô:
+Ví dụ resolve bằng alias:
+
+```json
+{
+  "data_type": "activity",
+  "text": "cho gia súc ăn"
+}
+```
+
+Kết quả:
+
+```json
+{
+  "matched": true,
+  "code": "CHO_BO_AN",
+  "name": "Cho bò ăn",
+  "confidence": 1.0,
+  "match_type": "alias",
+  "matched_text": "cho gia súc ăn",
+  "requires_confirmation": false,
+  "normalized_text": "cho gia suc an",
+  "message": "Đã khớp bí danh nghiệp vụ."
+}
+```
+
+Ví dụ fuzzy match khi text bị nhận dạng gần đúng:
+
+```json
+{
+  "data_type": "activity",
+  "text": "cho ra súc ăn"
+}
+```
+
+Kết quả:
+
+```json
+{
+  "matched": true,
+  "code": "CHO_BO_AN",
+  "name": "Cho bò ăn",
+  "confidence": 0.8889,
+  "match_type": "fuzzy",
+  "matched_text": "cho gia súc ăn",
+  "requires_confirmation": true,
+  "normalized_text": "cho ra suc an",
+  "message": "Đã tìm thấy dữ liệu gần đúng. Cần người dùng xác nhận."
+}
+```
+
+Trong trường hợp fuzzy match, Integration Service vẫn trả business code có sẵn nhưng yêu cầu người dùng xác nhận trước khi sử dụng.
+
+Ví dụ:
+
+```text
+"cho ra súc ăn"
+        ↓
+gần với alias "cho gia súc ăn"
+        ↓
+CHO_BO_AN
+```
+
+Integration Service không được tự sinh một mã mới như:
+
+```text
+CHO_RA_SUC_AN
+```
+
+#### 5.9.2. Resolve lô
+
+Request:
 
 ```json
 {
@@ -787,7 +865,9 @@ Kết quả mã:
 LO_A
 ```
 
-Ví dụ resolve vật tư:
+#### 5.9.3. Resolve vật tư
+
+Request:
 
 ```json
 {
@@ -802,7 +882,9 @@ Kết quả mã:
 CAM
 ```
 
-Ví dụ resolve đơn vị:
+#### 5.9.4. Resolve đơn vị
+
+Request:
 
 ```json
 {
@@ -835,6 +917,158 @@ CAM
 KG
 ```
 
+#### 5.9.5. Match type
+
+Field `match_type` cho biết cách Integration Service tìm ra kết quả.
+
+| `match_type` | Ý nghĩa | Trả code | Cần xác nhận |
+|---|---|---:|---:|
+| `exact` | Khớp trực tiếp với tên chuẩn | Có | Không |
+| `alias` | Khớp trực tiếp với alias | Có | Không |
+| `fuzzy` | Khớp gần đúng với tên hoặc alias | Có | Có |
+| `ambiguous` | Giá trị có thể mang nhiều nghĩa | Không | Có |
+| `none` | Không tìm thấy giá trị phù hợp | Không | Có |
+
+Field `matched_text` cho biết tên hoặc alias thực tế mà resolver đã dùng để tìm ra business code.
+
+Ví dụ:
+
+```text
+input:
+cho ra súc ăn
+
+matched_text:
+cho gia súc ăn
+
+code:
+CHO_BO_AN
+```
+
+Các giá trị mơ hồ theo vùng miền như:
+
+```text
+xị
+công
+sào
+```
+
+không được tự động quy đổi sang một đơn vị chuẩn nếu chưa đủ thông tin.
+
+#### 5.9.6. Resolve toàn bộ Cultivation Data
+
+Để Flutter không phải gọi `/api/master-data/resolve` riêng cho từng field, Integration Service hỗ trợ endpoint:
+
+```http
+POST /api/master-data/resolve-cultivation
+```
+
+Request:
+
+```json
+{
+  "activity_text": "cho ra súc ăn",
+  "lot_text": "Lô A",
+  "materials": [
+    {
+      "material_text": "Cám",
+      "quantity": 20,
+      "unit_text": "kg"
+    }
+  ],
+  "time_text": "07:00"
+}
+```
+
+Response:
+
+```json
+{
+  "activity": {
+    "matched": true,
+    "code": "CHO_BO_AN",
+    "name": "Cho bò ăn",
+    "confidence": 0.8889,
+    "match_type": "fuzzy",
+    "matched_text": "cho gia súc ăn",
+    "requires_confirmation": true,
+    "normalized_text": "cho ra suc an",
+    "message": "Đã tìm thấy dữ liệu gần đúng. Cần người dùng xác nhận."
+  },
+  "lot": {
+    "matched": true,
+    "code": "LO_A",
+    "name": "Lô A",
+    "confidence": 1.0,
+    "match_type": "exact",
+    "matched_text": "Lô A",
+    "requires_confirmation": false,
+    "normalized_text": "lo a",
+    "message": "Đã khớp chính xác."
+  },
+  "materials": [
+    {
+      "material": {
+        "matched": true,
+        "code": "CAM",
+        "name": "Cám",
+        "confidence": 1.0,
+        "match_type": "exact",
+        "matched_text": "Cám",
+        "requires_confirmation": false,
+        "normalized_text": "cam",
+        "message": "Đã khớp chính xác."
+      },
+      "quantity": 20,
+      "unit": {
+        "matched": true,
+        "code": "KG",
+        "name": "Kilôgam",
+        "confidence": 1.0,
+        "match_type": "alias",
+        "matched_text": "kg",
+        "requires_confirmation": false,
+        "normalized_text": "kg",
+        "message": "Đã khớp bí danh nghiệp vụ."
+      }
+    }
+  ],
+  "time_text": "07:00",
+  "requires_confirmation": true
+}
+```
+
+Nếu có ít nhất một master-data field là fuzzy, ambiguous, không tìm thấy hoặc còn thiếu thì:
+
+```json
+{
+  "requires_confirmation": true
+}
+```
+
+Flutter phải hiển thị kết quả để người dùng xác nhận trước khi tạo Cultivation Log cuối cùng.
+
+`time_text` được giữ nguyên và không được Integration Service tự động chuyển thành `performed_at`.
+
+Luồng chuẩn:
+
+```text
+AI Service
+   ↓
+activity_text / lot_text / material_text / unit_text / time_text
+   ↓
+Flutter
+   ↓
+POST /api/master-data/resolve-cultivation
+   ↓
+Integration Service
+   ↓
+business code suggestions
+   ↓
+Flutter hiển thị cho người dùng xác nhận
+   ↓
+Final Cultivation Log
+
+```
 ### 5.10. Trường hợp không resolve được
 
 Nếu giá trị không tồn tại trong master data, Integration Service trả:
