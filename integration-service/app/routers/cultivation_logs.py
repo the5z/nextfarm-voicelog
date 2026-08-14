@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.cultivation_log import CultivationLogInput
 from app.schemas.responses import (
+    GetLogResponse,
     ListLogsResponse,
     SaveLogResponse,
     ValidationResponse,
@@ -16,6 +17,7 @@ from app.schemas.responses import (
 from app.services.log_service import (
     create_log,
     get_all_logs,
+    get_log_by_client_record_id,
 )
 
 
@@ -147,4 +149,35 @@ def list_cultivation_logs(
     return ListLogsResponse(
         success=True,
         data=records,
+    )
+
+@router.get(
+    "/{client_record_id}",
+    response_model=GetLogResponse,
+)
+def get_cultivation_log(
+    client_record_id: str,
+    database_session: Session = Depends(get_db),
+) -> GetLogResponse:
+    """
+    Lấy chi tiết một nhật ký theo client_record_id.
+    """
+
+    record = get_log_by_client_record_id(
+        database_session=database_session,
+        client_record_id=client_record_id,
+    )
+
+    if record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "CULTIVATION_LOG_NOT_FOUND",
+                "message": "Không tìm thấy nhật ký.",
+            },
+        )
+
+    return GetLogResponse(
+        success=True,
+        data=record,
     )
