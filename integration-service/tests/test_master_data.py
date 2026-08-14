@@ -497,3 +497,129 @@ def test_resolve_cultivation_fuzzy_activity(client):
 
     assert body["time_text"] == "07:00"
     assert body["requires_confirmation"] is True
+
+def test_resolve_cultivation_unknown_activity_does_not_invent_code(client):
+    response = client.post(
+        "/api/master-data/resolve-cultivation",
+        json={
+            "activity_text": "vệ sinh chuồng hoàn toàn mới xyz",
+            "lot_text": "Lô A",
+            "materials": [],
+            "time_text": "07:00",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["activity"]["matched"] is False
+    assert body["activity"]["code"] is None
+    assert body["activity"]["match_type"] == "none"
+    assert body["activity"]["matched_text"] is None
+    assert body["activity"]["requires_confirmation"] is True
+
+    assert body["requires_confirmation"] is True
+
+
+def test_resolve_cultivation_missing_quantity_requires_confirmation(client):
+    response = client.post(
+        "/api/master-data/resolve-cultivation",
+        json={
+            "activity_text": "Cho bò ăn",
+            "lot_text": "Lô A",
+            "materials": [
+                {
+                    "material_text": "Cám",
+                    "quantity": None,
+                    "unit_text": "kg",
+                }
+            ],
+            "time_text": "07:00",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["materials"][0]["material"]["code"] == "CAM"
+    assert body["materials"][0]["unit"]["code"] == "KG"
+    assert body["materials"][0]["quantity"] is None
+
+    assert body["requires_confirmation"] is True
+
+
+def test_resolve_cultivation_missing_unit_requires_confirmation(client):
+    response = client.post(
+        "/api/master-data/resolve-cultivation",
+        json={
+            "activity_text": "Cho bò ăn",
+            "lot_text": "Lô A",
+            "materials": [
+                {
+                    "material_text": "Cám",
+                    "quantity": 20,
+                    "unit_text": None,
+                }
+            ],
+            "time_text": "07:00",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    unit = body["materials"][0]["unit"]
+
+    assert unit["matched"] is False
+    assert unit["code"] is None
+    assert unit["match_type"] == "none"
+    assert unit["requires_confirmation"] is True
+
+    assert body["requires_confirmation"] is True
+
+
+def test_resolve_cultivation_without_material_is_valid_for_activity(client):
+    response = client.post(
+        "/api/master-data/resolve-cultivation",
+        json={
+            "activity_text": "Làm cỏ",
+            "lot_text": "Lô A",
+            "materials": [],
+            "time_text": "07:00",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["activity"]["code"] == "LAM_CO"
+    assert body["lot"]["code"] == "LO_A"
+    assert body["materials"] == []
+
+    assert body["requires_confirmation"] is False
+
+
+def test_resolve_cultivation_time_text_is_preserved(client):
+    response = client.post(
+        "/api/master-data/resolve-cultivation",
+        json={
+            "activity_text": "Làm cỏ",
+            "lot_text": "Lô A",
+            "materials": [],
+            "time_text": "Sáng nay",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["time_text"] == "Sáng nay"
+
+    # time_text không phải Master Data.
+    # Integration không tự biến nó thành performed_at.
+    assert body["requires_confirmation"] is False
