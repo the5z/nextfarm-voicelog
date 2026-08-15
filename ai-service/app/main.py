@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
-from app.routers import audio, health
+from app.routers import audio, bot, health
 
 
 app = FastAPI(
@@ -33,3 +33,4 @@ register_exception_handlers(app)
 # Register routers
 app.include_router(health.router)
 app.include_router(audio.router)
+app.include_router(bot.router)
