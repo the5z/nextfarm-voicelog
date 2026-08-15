@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# AI benchmark generated files
+# AI benchmark generated files
+benchmark/__pycache__/
+benchmark/results/predictions.jsonl
+benchmark/results/metrics.json
+benchmark/results/predictions_noisy_raw.jsonl
+benchmark/results/predictions_noisy_preprocessed.jsonl
+benchmark/results/noise_ab_metrics.json
+benchmark/results/predictions_clean_confirmation.jsonl
+benchmark/results/predictions_clean_confirmation_v2.jsonl
+benchmark/results/predictions_confirmation_cases.jsonl
+benchmark/results/confirmation_metrics.json
