@@ -6,11 +6,6 @@ import TranscriptBox from "../components/TranscriptBox";
 import AIForm from "../components/AIForm";
 import ActionButtons from "../components/ActionButtons";
 import { uploadAudio } from "../services/audioService";
-import {
-  resolveMasterData,
-  validateCultivationLog,
-  saveCultivationLog,
-} from "../services/integrationService";
 
 const EMPTY_AI_DATA = {
   lot: "",
@@ -29,10 +24,6 @@ function VoiceLog() {
   const [isUploading, setIsUploading] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [message, setMessage] = useState("");
-
-  const [clientRecordId, setClientRecordId] = useState(
-    () => `voice-${crypto.randomUUID()}`
-  );
 
   // 1: Ghi âm
   // 2: AI xử lý
@@ -53,8 +44,6 @@ function VoiceLog() {
     setIsConfirmed(false);
     setMessage("");
     setCurrentStep(1);
-
-    setClientRecordId(`voice-${crypto.randomUUID()}`);
   };
 
   const handleDelete = () => {
@@ -104,31 +93,7 @@ function VoiceLog() {
     }
   };
 
-  const buildPerformedAt = (timeText) => {
-    const performedAt = new Date();
-
-    if (timeText) {
-      const match = String(timeText).match(/(\d{1,2}):(\d{2})/);
-
-      if (match) {
-        const hours = Number(match[1]);
-        const minutes = Number(match[2]);
-
-        if (
-          hours >= 0 &&
-          hours <= 23 &&
-          minutes >= 0 &&
-          minutes <= 59
-        ) {
-          performedAt.setHours(hours, minutes, 0, 0);
-        }
-      }
-    }
-
-    return performedAt.toISOString();
-  };
-
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!transcript.trim()) {
       setMessage(
         "Vui lòng kiểm tra nội dung ghi âm trước khi xác nhận."
@@ -136,142 +101,13 @@ function VoiceLog() {
       return;
     }
 
-    try {
-      setMessage(
-        "Đang chuẩn hóa dữ liệu với Integration Service..."
-      );
-
-      const activityResult = await resolveMasterData(
-        "activity",
-        aiData.work
-      );
-
-      const unitResult = await resolveMasterData(
-        "unit",
-        aiData.unit
-      );
-
-      const lotResult = await resolveMasterData(
-        "lot",
-        aiData.lot
-      );
-
-      const materialResult = await resolveMasterData(
-        "material",
-        aiData.material
-      );
-
-      console.log("Activity resolve:", activityResult);
-      console.log("Unit resolve:", unitResult);
-      console.log("Lot resolve:", lotResult);
-      console.log("Material resolve:", materialResult);
-
-      const allMatched =
-        activityResult.matched &&
-        unitResult.matched &&
-        lotResult.matched &&
-        materialResult.matched;
-
-      if (!allMatched) {
-        setMessage(
-          "Có dữ liệu chưa chuẩn hóa được. Vui lòng kiểm tra lại thông tin."
-        );
-        return;
-      }
-
-      const quantity = Number(aiData.quantity);
-
-      if (!Number.isFinite(quantity) || quantity <= 0) {
-        setMessage(
-          "Số lượng vật tư phải lớn hơn 0."
-        );
-        return;
-      }
-
-      const finalContract = {
-        schema_version: "1.0",
-        client_record_id: clientRecordId,
-        transcript: transcript.trim(),
-        lot_code: lotResult.code,
-        activity_code: activityResult.code,
-        materials: [
-          {
-            material_code: materialResult.code,
-            quantity,
-            unit_code: unitResult.code,
-          },
-        ],
-        performed_at: buildPerformedAt(aiData.time),
-        performer_code: null,
-        notes: null,
-        source: "voice",
-        confirmed: true,
-      };
-
-      console.log("Final Contract:", finalContract);
-
-      setMessage("Đang kiểm tra Final Contract...");
-
-      const validationResult =
-        await validateCultivationLog(finalContract);
-
-      console.log(
-        "Validation result:",
-        validationResult
-      );
-
-      if (!validationResult.valid) {
-        console.error(
-          "Validation errors:",
-          validationResult.errors
-        );
-
-        setMessage(
-          "Final Contract chưa hợp lệ. Vui lòng kiểm tra lại dữ liệu."
-        );
-        return;
-      }
-
-      setMessage("Đang lưu nhật ký vào hệ thống...");
-
-      const saveResult =
-        await saveCultivationLog(finalContract);
-
-      console.log(
-        "Save result:",
-        saveResult
-      );
-
-      if (!saveResult.success) {
-        setMessage(
-          "Không thể lưu nhật ký vào hệ thống."
-        );
-        return;
-      }
-
-      setIsConfirmed(true);
-      setCurrentStep(4);
-
-      if (saveResult.status === "already_exists") {
-        setMessage(
-          "Nhật ký đã tồn tại trong hệ thống."
-        );
-      } else {
-        setMessage(
-          "Nhật ký đã được lưu thành công."
-        );
-      }
-    } catch (error) {
-      console.error("Integration error:", error);
-
-      setMessage(
-        "Không thể kết nối Integration Service tại cổng 8002."
-      );
-    }
+    setIsConfirmed(true);
+    setCurrentStep(4);
+    setMessage("Nhật ký đã được xác nhận.");
   };
 
   return (
-    <div className="container">
+    <div className="voice-log-page">
       <Header />
 
       <WorkflowStepper currentStep={currentStep} />
@@ -314,8 +150,6 @@ function VoiceLog() {
           className={`app-toast ${
             message.includes("Không thể") ||
             message.includes("Vui lòng") ||
-            message.includes("chưa") ||
-            message.includes("phải lớn hơn") ||
             message.includes("lỗi")
               ? "error"
               : "success"
@@ -325,8 +159,6 @@ function VoiceLog() {
           <span className="app-toast-icon">
             {message.includes("Không thể") ||
             message.includes("Vui lòng") ||
-            message.includes("chưa") ||
-            message.includes("phải lớn hơn") ||
             message.includes("lỗi")
               ? "⚠️"
               : "✅"}

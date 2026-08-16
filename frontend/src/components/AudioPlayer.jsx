@@ -1,16 +1,21 @@
-function AudioPlayer({ audioUrl }) {
+function AudioPlayer({
+  audioUrl,
+  text,
+}) {
   if (!audioUrl) return null;
 
   return (
     <div className="audio-player">
-      <h3>🎧 Bản ghi vừa tạo</h3>
+      <h3>
+        🎧 {text.audioPlayer.title}
+      </h3>
 
       <audio
         controls
         src={audioUrl}
         style={{ width: "100%" }}
       >
-        Trình duyệt của bạn không hỗ trợ phát âm thanh.
+        {text.audioPlayer.unsupported}
       </audio>
     </div>
   );

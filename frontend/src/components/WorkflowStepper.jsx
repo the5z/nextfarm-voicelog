@@ -1,31 +1,37 @@
-const STEPS = [
-  {
-    id: 1,
-    label: "Ghi âm",
-  },
-  {
-    id: 2,
-    label: "AI xử lý",
-  },
-  {
-    id: 3,
-    label: "Kiểm tra",
-  },
-  {
-    id: 4,
-    label: "Xác nhận",
-  },
-];
+function WorkflowStepper({
+  currentStep = 1,
+  text,
+}) {
+  const steps = [
+    {
+      id: 1,
+      label: text.workflow.record,
+    },
+    {
+      id: 2,
+      label: text.workflow.processing,
+    },
+    {
+      id: 3,
+      label: text.workflow.review,
+    },
+    {
+      id: 4,
+      label: text.workflow.confirm,
+    },
+  ];
 
-function WorkflowStepper({ currentStep = 1 }) {
   return (
     <nav
       className="workflow-stepper"
-      aria-label="Tiến trình tạo nhật ký"
+      aria-label="Voice log workflow"
     >
-      {STEPS.map((step, index) => {
-        const isCompleted = step.id < currentStep;
-        const isActive = step.id === currentStep;
+      {steps.map((step, index) => {
+        const isCompleted =
+          step.id < currentStep;
+
+        const isActive =
+          step.id === currentStep;
 
         return (
           <div
@@ -35,14 +41,20 @@ function WorkflowStepper({ currentStep = 1 }) {
             <div
               className={[
                 "workflow-step",
-                isCompleted ? "completed" : "",
-                isActive ? "active" : "",
+                isCompleted
+                  ? "completed"
+                  : "",
+                isActive
+                  ? "active"
+                  : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
             >
               <div className="workflow-step-number">
-                {isCompleted ? "✓" : step.id}
+                {isCompleted
+                  ? "✓"
+                  : step.id}
               </div>
 
               <span className="workflow-step-label">
@@ -50,10 +62,12 @@ function WorkflowStepper({ currentStep = 1 }) {
               </span>
             </div>
 
-            {index < STEPS.length - 1 && (
+            {index < steps.length - 1 && (
               <div
                 className={`workflow-step-line ${
-                  isCompleted ? "completed" : ""
+                  isCompleted
+                    ? "completed"
+                    : ""
                 }`}
               />
             )}
