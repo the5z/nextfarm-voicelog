@@ -2,8 +2,10 @@ from pathlib import Path
 
 import whisper
 
+from app.core.config import settings
 
-MODEL_NAME = "base"
+
+MODEL_NAME = settings.WHISPER_MODEL
 
 _model = whisper.load_model(MODEL_NAME)
 

@@ -10,15 +10,52 @@ class Settings:
     Centralized application configuration.
     """
 
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    # Application
+    APP_NAME: str = os.getenv(
+        "APP_NAME",
+        "NextFarm AI Service",
+    )
 
-    GEMINI_MODEL: str = "gemini-3.1-flash-lite"
+    APP_VERSION: str = os.getenv(
+        "APP_VERSION",
+        "1.0.0",
+    )
 
-    UPLOAD_DIR: str = "uploads"
+    API_PREFIX: str = os.getenv(
+        "API_PREFIX",
+        "/api/v1",
+    )
 
-    API_PREFIX: str = "/api/v1"
+    # Gemini
+    GEMINI_API_KEY: str = os.getenv(
+        "GEMINI_API_KEY",
+        "",
+    )
 
-    APP_NAME: str = "NextFarm AI Service"
+    GEMINI_MODEL: str = os.getenv(
+        "GEMINI_MODEL",
+        "gemini-3.1-flash-lite",
+    )
+
+    # Whisper
+    WHISPER_MODEL: str = os.getenv(
+        "WHISPER_MODEL",
+        "base",
+    )
+
+    # File upload
+    UPLOAD_DIR: str = os.getenv(
+        "UPLOAD_DIR",
+        "uploads",
+    )
+
+    # Production safeguards
+    REQUEST_TIMEOUT_SECONDS: float = float(
+        os.getenv(
+            "REQUEST_TIMEOUT_SECONDS",
+            "60",
+        )
+    )
 
 
 settings = Settings()
