@@ -201,3 +201,98 @@ def test_list_saved_logs(
         "test-list-001",
         "test-list-002",
     }
+
+def test_get_saved_log_detail(
+    client: TestClient,
+) -> None:
+    """
+    Có thể lấy lại chi tiết nhật ký bằng client_record_id.
+    """
+
+    payload = build_valid_log(
+        client_record_id="test-detail-001"
+    )
+
+    save_response = client.post(
+        "/api/cultivation-logs",
+        json=payload,
+    )
+
+    assert save_response.status_code == 201
+
+    response = client.get(
+        "/api/cultivation-logs/test-detail-001"
+    )
+
+    assert response.status_code == 200
+
+    response_data = response.json()
+
+    assert response_data["success"] is True
+
+    stored_log = response_data["data"]
+
+    assert stored_log["client_record_id"] == "test-detail-001"
+    assert stored_log["lot_code"] == "LO_A1"
+    assert stored_log["activity_code"] == "BON_PHAN"
+    assert stored_log["confirmed"] is True
+    assert stored_log["status"] == "saved"
+
+
+def test_get_saved_log_detail_includes_materials(
+    client: TestClient,
+) -> None:
+    """
+    API chi tiết phải trả về đầy đủ vật tư của nhật ký.
+    """
+
+    payload = build_valid_log(
+        client_record_id="test-detail-materials-001"
+    )
+
+    save_response = client.post(
+        "/api/cultivation-logs",
+        json=payload,
+    )
+
+    assert save_response.status_code == 201
+
+    response = client.get(
+        "/api/cultivation-logs/test-detail-materials-001"
+    )
+
+    assert response.status_code == 200
+
+    stored_log = response.json()["data"]
+
+    assert len(stored_log["materials"]) == 1
+
+    material = stored_log["materials"][0]
+
+    assert material["material_code"] == "NPK"
+    assert material["quantity"] == 20
+    assert material["unit_code"] == "KG"
+
+
+def test_get_log_detail_not_found(
+    client: TestClient,
+) -> None:
+    """
+    client_record_id không tồn tại phải trả về HTTP 404.
+    """
+
+    response = client.get(
+        "/api/cultivation-logs/not-found-001"
+    )
+
+    assert response.status_code == 404
+
+    response_data = response.json()
+
+    assert response_data["detail"]["code"] == (
+        "CULTIVATION_LOG_NOT_FOUND"
+    )
+
+    assert response_data["detail"]["message"] == (
+        "Không tìm thấy nhật ký."
+    )

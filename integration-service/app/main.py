@@ -13,7 +13,9 @@ from app.routers.nextfarm import (
 from app.routers.sync import (
     router as sync_router,
 )
-
+from app.routers.history import (
+    router as history_router,
+)
 
 app = FastAPI(
     title="NextFarm VoiceLog Integration Service",
@@ -62,3 +64,4 @@ app.include_router(cultivation_logs_router)
 app.include_router(master_data_router)
 app.include_router(sync_router)
 app.include_router(nextfarm_router)
+app.include_router(history_router)

@@ -33,3 +33,10 @@ class ListLogsResponse(BaseModel):
 
     success: bool
     data: list[dict[str, Any]]
+
+
+class GetLogResponse(BaseModel):
+    """Chi tiết một nhật ký đã lưu."""
+
+    success: bool
+    data: dict[str, Any]

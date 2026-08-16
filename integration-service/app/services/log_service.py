@@ -209,3 +209,23 @@ def clear_logs(
     )
 
     database_session.commit()
+
+def get_log_by_client_record_id(
+    database_session: Session,
+    client_record_id: str,
+) -> dict[str, Any] | None:
+    """
+    Lấy chi tiết một nhật ký theo client_record_id.
+
+    Trả về None nếu không tìm thấy nhật ký.
+    """
+
+    log = find_log_by_client_record_id(
+        database_session=database_session,
+        client_record_id=client_record_id,
+    )
+
+    if log is None:
+        return None
+
+    return serialize_log(log)

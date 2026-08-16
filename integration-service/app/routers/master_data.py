@@ -8,10 +8,17 @@ from app.data.master_data import (
 )
 from app.schemas.master_data import (
     MasterDataItem,
+    ResolveCultivationRequest,
+    ResolveCultivationResponse,
     ResolveMasterDataRequest,
     ResolveMasterDataResponse,
 )
-from app.services.normalization_service import resolve_master_data
+from app.services.master_data_service import (
+    resolve_cultivation_master_data,
+)
+from app.services.normalization_service import (
+    resolve_master_data,
+)
 
 
 router = APIRouter(
@@ -20,11 +27,13 @@ router = APIRouter(
 )
 
 
-def build_master_data_items(
-    records: list[dict[str, str | list[str]]],
-) -> list[MasterDataItem]:
+def _build_items(records) -> list[MasterDataItem]:
     return [
-        MasterDataItem(**record)
+        MasterDataItem(
+            code=record["code"],
+            name=record["name"],
+            aliases=record.get("aliases", []),
+        )
         for record in records
     ]
 
@@ -34,7 +43,7 @@ def build_master_data_items(
     response_model=list[MasterDataItem],
 )
 def get_activities() -> list[MasterDataItem]:
-    return build_master_data_items(ACTIVITIES)
+    return _build_items(ACTIVITIES)
 
 
 @router.get(
@@ -42,7 +51,7 @@ def get_activities() -> list[MasterDataItem]:
     response_model=list[MasterDataItem],
 )
 def get_units() -> list[MasterDataItem]:
-    return build_master_data_items(UNITS)
+    return _build_items(UNITS)
 
 
 @router.get(
@@ -50,7 +59,7 @@ def get_units() -> list[MasterDataItem]:
     response_model=list[MasterDataItem],
 )
 def get_lots() -> list[MasterDataItem]:
-    return build_master_data_items(LOTS)
+    return _build_items(LOTS)
 
 
 @router.get(
@@ -58,19 +67,33 @@ def get_lots() -> list[MasterDataItem]:
     response_model=list[MasterDataItem],
 )
 def get_materials() -> list[MasterDataItem]:
-    return build_master_data_items(MATERIALS)
+    return _build_items(MATERIALS)
 
 
 @router.post(
     "/resolve",
     response_model=ResolveMasterDataResponse,
 )
-def resolve_value(
-    payload: ResolveMasterDataRequest,
+def resolve_master_data_endpoint(
+    request: ResolveMasterDataRequest,
 ) -> ResolveMasterDataResponse:
     result = resolve_master_data(
-        data_type=payload.data_type,
-        text=payload.text,
+        data_type=request.data_type,
+        text=request.text,
     )
 
-    return ResolveMasterDataResponse(**result)
+    return ResolveMasterDataResponse.model_validate(
+        result
+    )
+
+
+@router.post(
+    "/resolve-cultivation",
+    response_model=ResolveCultivationResponse,
+)
+def resolve_cultivation_endpoint(
+    request: ResolveCultivationRequest,
+) -> ResolveCultivationResponse:
+    return resolve_cultivation_master_data(
+        request
+    )

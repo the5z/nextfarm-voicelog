@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.cultivation_log import CultivationLogInput
 from app.schemas.responses import (
+    GetLogResponse,
     ListLogsResponse,
     SaveLogResponse,
     ValidationResponse,
@@ -16,8 +17,9 @@ from app.schemas.responses import (
 from app.services.log_service import (
     create_log,
     get_all_logs,
+    get_log_by_client_record_id,
 )
-
+from app.services.history_service import create_history
 
 router = APIRouter(
     prefix="/api/cultivation-logs",
@@ -91,23 +93,47 @@ def validate_cultivation_log(
     status_code=status.HTTP_201_CREATED,
     response_model=SaveLogResponse,
 )
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SaveLogResponse,
+)
 def save_cultivation_log(
     payload: CultivationLogInput,
     database_session: Session = Depends(get_db),
 ) -> SaveLogResponse:
     """
     Lưu nhật ký đã được người dùng xác nhận vào PostgreSQL.
+    Đồng thời ghi lịch sử xử lý của Integration Service.
     """
 
+    request_payload = payload.model_dump(
+        mode="json"
+    )
+
     if not payload.confirmed:
+        error_detail = {
+            "code": "UNCONFIRMED_RECORD",
+            "message": (
+                "Nhật ký chưa được người dùng xác nhận"
+            ),
+        }
+
+        create_history(
+            database_session=database_session,
+            event_type="save_cultivation_log",
+            client_record_id=payload.client_record_id,
+            request_payload=request_payload,
+            response_payload={
+                "detail": error_detail,
+            },
+            status="failed",
+            http_status=status.HTTP_400_BAD_REQUEST,
+        )
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "UNCONFIRMED_RECORD",
-                "message": (
-                    "Nhật ký chưa được người dùng xác nhận"
-                ),
-            },
+            detail=error_detail,
         )
 
     record, created = create_log(
@@ -115,18 +141,29 @@ def save_cultivation_log(
         payload=payload,
     )
 
-    if not created:
-        return SaveLogResponse(
-            success=True,
-            status="already_exists",
-            data=record,
-        )
-
-    return SaveLogResponse(
+    response = SaveLogResponse(
         success=True,
-        status="saved",
+        status=(
+            "saved"
+            if created
+            else "already_exists"
+        ),
         data=record,
     )
+
+    create_history(
+        database_session=database_session,
+        event_type="save_cultivation_log",
+        client_record_id=payload.client_record_id,
+        request_payload=request_payload,
+        response_payload=response.model_dump(
+            mode="json"
+        ),
+        status="success",
+        http_status=status.HTTP_201_CREATED,
+    )
+
+    return response
 
 
 @router.get(
@@ -147,4 +184,35 @@ def list_cultivation_logs(
     return ListLogsResponse(
         success=True,
         data=records,
+    )
+
+@router.get(
+    "/{client_record_id}",
+    response_model=GetLogResponse,
+)
+def get_cultivation_log(
+    client_record_id: str,
+    database_session: Session = Depends(get_db),
+) -> GetLogResponse:
+    """
+    Lấy chi tiết một nhật ký theo client_record_id.
+    """
+
+    record = get_log_by_client_record_id(
+        database_session=database_session,
+        client_record_id=client_record_id,
+    )
+
+    if record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "CULTIVATION_LOG_NOT_FOUND",
+                "message": "Không tìm thấy nhật ký.",
+            },
+        )
+
+    return GetLogResponse(
+        success=True,
+        data=record,
     )
