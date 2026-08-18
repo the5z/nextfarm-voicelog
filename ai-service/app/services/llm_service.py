@@ -4,6 +4,7 @@ from google.genai import errors
 from app.core.config import settings
 from app.prompts.activity_prompt import build_activity_prompt
 from app.schemas.activity import ActivityData
+from app.services.confidence_service import apply_confidence_rules
 
 
 if not settings.GEMINI_API_KEY:
@@ -25,7 +26,9 @@ def extract_activity(transcript: str) -> ActivityData:
     Business codes are resolved later by the Integration Service.
     """
 
-    prompt = build_activity_prompt(transcript)
+    prompt = build_activity_prompt(
+        transcript
+    )
 
     try:
         response = client.models.generate_content(
@@ -43,7 +46,9 @@ def extract_activity(transcript: str) -> ActivityData:
                 "Gemini returned an empty structured response."
             )
 
-        return response.parsed
+        return apply_confidence_rules(
+            response.parsed
+        )
 
     except errors.APIError as exc:
         raise RuntimeError(
