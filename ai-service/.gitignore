@@ -31,3 +31,6 @@ benchmark/results/predictions_clean_confirmation.jsonl
 benchmark/results/predictions_clean_confirmation_v2.jsonl
 benchmark/results/predictions_confirmation_cases.jsonl
 benchmark/results/confirmation_metrics.json
+benchmark/results/predictions_no_prompt.jsonl
+benchmark/results/predictions_short_prompt.jsonl
+benchmark/results/predictions_with_prompt.jsonl
