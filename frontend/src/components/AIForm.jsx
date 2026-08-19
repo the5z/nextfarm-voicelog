@@ -1,3 +1,5 @@
+import TimePicker from "./TimePicker";
+
 function AIForm({
   aiData = {},
   onAiDataChange,
@@ -9,9 +11,14 @@ function AIForm({
     warnings: {},
   },
   showValidation = false,
+  highlightedField = "",
 }) {
   const isVietnamese =
     language === "vi";
+
+  /* ===========================
+     Change data
+  =========================== */
 
   const handleChange = (
     field,
@@ -23,6 +30,10 @@ function AIForm({
     });
   };
 
+  /* ===========================
+     Data state
+  =========================== */
+
   const hasAiData = Boolean(
     aiData.lot ||
       aiData.work ||
@@ -32,38 +43,244 @@ function AIForm({
       aiData.time
   );
 
+  /* ===========================
+     Validation
+  =========================== */
+
   const errors =
     validation?.errors || {};
 
   const warnings =
     validation?.warnings || {};
 
+  const errorEntries =
+    Object.entries(errors).filter(
+      ([, message]) =>
+        Boolean(message)
+    );
+
+  const warningEntries =
+    Object.entries(
+      warnings
+    ).filter(
+      ([, message]) =>
+        Boolean(message)
+    );
+
   const hasErrors =
-    Object.keys(errors).length > 0;
+    errorEntries.length > 0;
 
   const hasWarnings =
-    Object.keys(warnings).length > 0;
+    warningEntries.length > 0;
+
+  /* ===========================
+     Field labels
+  =========================== */
+
+  const FIELD_LABELS = {
+    lot: isVietnamese
+      ? "Lô canh tác"
+      : "Farm plot",
+
+    work: isVietnamese
+      ? "Công việc"
+      : "Task",
+
+    material: isVietnamese
+      ? "Vật tư"
+      : "Material",
+
+    quantity: isVietnamese
+      ? "Số lượng"
+      : "Quantity",
+
+    unit: isVietnamese
+      ? "Đơn vị"
+      : "Unit",
+
+    time: isVietnamese
+      ? "Thời gian"
+      : "Time",
+  };
+
+  /* ===========================
+     Field helpers
+  =========================== */
 
   const getFieldClassName = (
     field
   ) => {
-    if (!showValidation) {
-      return "";
+    const classes = [];
+
+    if (showValidation) {
+      if (errors[field]) {
+        classes.push(
+          "validation-error"
+        );
+      } else if (
+        warnings[field]
+      ) {
+        classes.push(
+          "validation-warning"
+        );
+      }
+    }
+
+    if (
+      highlightedField ===
+      field
+    ) {
+      classes.push(
+        "ai-field-updated"
+      );
+    }
+
+    return classes.join(" ");
+  };
+
+  const hasFieldValue = (
+    field
+  ) => {
+    const value =
+      aiData[field];
+
+    if (
+      value === null ||
+      value === undefined
+    ) {
+      return false;
+    }
+
+    return (
+      String(value).trim() !== ""
+    );
+  };
+
+  const getFieldStatus = (
+    field
+  ) => {
+    /*
+      Không hiện trạng thái ngay khi mới mở trang.
+
+      Thứ tự ưu tiên:
+      1. Error
+      2. Warning
+      3. Confirmed / identified
+      4. Neutral
+
+      Quan trọng:
+      Warning phải được xử lý trước khi xác nhận.
+      Nếu có warning, field vẫn hiển thị trạng thái
+      "Cần kiểm tra".
+    */
+
+    if (
+      !hasAiData ||
+      (
+        !showValidation &&
+        !isConfirmed
+      )
+    ) {
+      return null;
     }
 
     if (errors[field]) {
-      return "validation-error";
+      return {
+        type: "error",
+        icon: "✕",
+        label: isVietnamese
+          ? "Chưa xác định"
+          : "Not identified",
+      };
     }
 
     if (warnings[field]) {
-      return "validation-warning";
+      return {
+        type: "warning",
+        icon: "!",
+        label: isVietnamese
+          ? "Cần kiểm tra"
+          : "Needs review",
+      };
     }
 
-    return "";
+    if (isConfirmed) {
+      if (hasFieldValue(field)) {
+        return {
+          type: "success",
+          icon: "✓",
+          label: isVietnamese
+            ? "Đã xác nhận"
+            : "Confirmed",
+        };
+      }
+
+      return null;
+    }
+
+    if (hasFieldValue(field)) {
+      return {
+        type: "success",
+        icon: "✓",
+        label: isVietnamese
+          ? "Đã xác định"
+          : "Identified",
+      };
+    }
+
+    return {
+      type: "neutral",
+      icon: "–",
+      label: isVietnamese
+        ? "Chưa có dữ liệu"
+        : "No data",
+    };
   };
+
+  const FieldStatus = ({
+    field,
+  }) => {
+    const status =
+      getFieldStatus(field);
+
+    if (!status) {
+      return null;
+    }
+
+    return (
+      <span
+        className={`ai-field-status ${status.type}`}
+        title={
+          status.label
+        }
+        aria-label={
+          status.label
+        }
+      >
+        <span
+          className="ai-field-status-icon"
+          aria-hidden="true"
+        >
+          {status.icon}
+        </span>
+
+        <span className="ai-field-status-text">
+          {status.label}
+        </span>
+      </span>
+    );
+  };
+
+  /* ===========================
+     UI
+  =========================== */
 
   return (
     <div className="ai-form">
+      {/* ===========================
+          Header
+      =========================== */}
+
       <div className="ai-form-header">
         <h3>
           🤖 {text.aiForm.title}
@@ -122,17 +339,168 @@ function AIForm({
           )}
       </div>
 
+      {/* ===========================
+          AI COMPLETENESS
+      =========================== */}
+
+      {hasAiData &&
+        !isConfirmed &&
+        showValidation && (
+          <>
+            {hasErrors && (
+              <div className="ai-completeness-box error">
+                <div className="ai-completeness-header">
+                  <span className="ai-completeness-icon">
+                    ❌
+                  </span>
+
+                  <div>
+                    <strong>
+                      {isVietnamese
+                        ? "Cần bổ sung hoặc chỉnh sửa"
+                        : "Information needs attention"}
+                    </strong>
+
+                    <span>
+                      {isVietnamese
+                        ? `${errorEntries.length} vấn đề cần xử lý trước khi xác nhận.`
+                        : `${errorEntries.length} issue(s) must be fixed before confirmation.`}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="ai-completeness-list">
+                  {errorEntries.map(
+                    ([
+                      field,
+                      message,
+                    ]) => (
+                      <div
+                        key={field}
+                        className="ai-completeness-item"
+                      >
+                        <span className="ai-completeness-bullet">
+                          •
+                        </span>
+
+                        <div>
+                          <strong>
+                            {FIELD_LABELS[field] ||
+                              field}
+                          </strong>
+
+                          <span>
+                            {message}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!hasErrors &&
+              hasWarnings && (
+                <div className="ai-completeness-box warning">
+                  <div className="ai-completeness-header">
+                    <span className="ai-completeness-icon">
+                      ⚠️
+                    </span>
+
+                    <div>
+                      <strong>
+                        {isVietnamese
+                          ? "AI đề xuất kiểm tra thêm"
+                          : "AI suggests a quick review"}
+                      </strong>
+
+                      <span>
+                        {isVietnamese
+                          ? "Các thông tin dưới đây cần được kiểm tra và xử lý trước khi xác nhận nhật ký."
+                          : "The following information must be reviewed and resolved before confirming the log."}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="ai-completeness-list">
+                    {warningEntries.map(
+                      ([
+                        field,
+                        message,
+                      ]) => (
+                        <div
+                          key={field}
+                          className="ai-completeness-item"
+                        >
+                          <span className="ai-completeness-bullet">
+                            •
+                          </span>
+
+                          <div>
+                            <strong>
+                              {FIELD_LABELS[field] ||
+                                field}
+                            </strong>
+
+                            <span>
+                              {message}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+            {!hasErrors &&
+              !hasWarnings && (
+                <div className="ai-completeness-box success">
+                  <div className="ai-completeness-header">
+                    <span className="ai-completeness-icon">
+                      ✅
+                    </span>
+
+                    <div>
+                      <strong>
+                        {isVietnamese
+                          ? "Đã đủ thông tin để xác nhận"
+                          : "Ready for confirmation"}
+                      </strong>
+
+                      <span>
+                        {isVietnamese
+                          ? "Các trường chính đã hợp lệ. Bạn có thể kiểm tra lại và xác nhận nhật ký."
+                          : "The main fields are valid. You can review and confirm the log."}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+          </>
+        )}
+
+      {/* ===========================
+          Lot
+      =========================== */}
+
       <div
         className={`ai-field ${getFieldClassName(
           "lot"
         )}`}
       >
-        <label htmlFor="lot">
-          🏷️ {text.aiForm.lot}
-          <span className="required-mark">
-            *
-          </span>
-        </label>
+        <div className="ai-field-label-row">
+          <label htmlFor="lot">
+            🏷️ {text.aiForm.lot}
+
+            <span className="required-mark">
+              *
+            </span>
+          </label>
+
+          <FieldStatus field="lot" />
+        </div>
 
         <input
           id="lot"
@@ -141,14 +509,18 @@ function AIForm({
             text.aiForm
               .lotPlaceholder
           }
-          value={aiData.lot || ""}
+          value={
+            aiData.lot || ""
+          }
           onChange={(event) =>
             handleChange(
               "lot",
               event.target.value
             )
           }
-          readOnly={isConfirmed}
+          readOnly={
+            isConfirmed
+          }
           aria-invalid={
             showValidation &&
             Boolean(errors.lot)
@@ -171,17 +543,26 @@ function AIForm({
           )}
       </div>
 
+      {/* ===========================
+          Work
+      =========================== */}
+
       <div
         className={`ai-field ${getFieldClassName(
           "work"
         )}`}
       >
-        <label htmlFor="work">
-          🛠️ {text.aiForm.work}
-          <span className="required-mark">
-            *
-          </span>
-        </label>
+        <div className="ai-field-label-row">
+          <label htmlFor="work">
+            🛠️ {text.aiForm.work}
+
+            <span className="required-mark">
+              *
+            </span>
+          </label>
+
+          <FieldStatus field="work" />
+        </div>
 
         <input
           id="work"
@@ -199,10 +580,14 @@ function AIForm({
               event.target.value
             )
           }
-          readOnly={isConfirmed}
+          readOnly={
+            isConfirmed
+          }
           aria-invalid={
             showValidation &&
-            Boolean(errors.work)
+            Boolean(
+              errors.work
+            )
           }
         />
 
@@ -222,14 +607,22 @@ function AIForm({
           )}
       </div>
 
+      {/* ===========================
+          Material
+      =========================== */}
+
       <div
         className={`ai-field ${getFieldClassName(
           "material"
         )}`}
       >
-        <label htmlFor="material">
-          🌾 {text.aiForm.material}
-        </label>
+        <div className="ai-field-label-row">
+          <label htmlFor="material">
+            🌾 {text.aiForm.material}
+          </label>
+
+          <FieldStatus field="material" />
+        </div>
 
         <input
           id="material"
@@ -239,7 +632,8 @@ function AIForm({
               .materialPlaceholder
           }
           value={
-            aiData.material || ""
+            aiData.material ||
+            ""
           }
           onChange={(event) =>
             handleChange(
@@ -247,17 +641,25 @@ function AIForm({
               event.target.value
             )
           }
-          readOnly={isConfirmed}
+          readOnly={
+            isConfirmed
+          }
         />
 
         {showValidation &&
           warnings.material && (
             <span className="field-validation-message warning">
               ⚠️{" "}
-              {warnings.material}
+              {
+                warnings.material
+              }
             </span>
           )}
       </div>
+
+      {/* ===========================
+          Quantity + Unit
+      =========================== */}
 
       <div className="ai-form-row">
         <div
@@ -265,10 +667,14 @@ function AIForm({
             "quantity"
           )}`}
         >
-          <label htmlFor="quantity">
-            📦{" "}
-            {text.aiForm.quantity}
-          </label>
+          <div className="ai-field-label-row">
+            <label htmlFor="quantity">
+              📦{" "}
+              {text.aiForm.quantity}
+            </label>
+
+            <FieldStatus field="quantity" />
+          </div>
 
           <input
             id="quantity"
@@ -278,7 +684,8 @@ function AIForm({
                 .quantityPlaceholder
             }
             value={
-              aiData.quantity || ""
+              aiData.quantity ||
+              ""
             }
             onChange={(event) =>
               handleChange(
@@ -286,7 +693,9 @@ function AIForm({
                 event.target.value
               )
             }
-            readOnly={isConfirmed}
+            readOnly={
+              isConfirmed
+            }
             min="0"
             step="any"
             aria-invalid={
@@ -301,7 +710,9 @@ function AIForm({
             errors.quantity && (
               <span className="field-validation-message error">
                 ❌{" "}
-                {errors.quantity}
+                {
+                  errors.quantity
+                }
               </span>
             )}
 
@@ -322,9 +733,13 @@ function AIForm({
             "unit"
           )}`}
         >
-          <label htmlFor="unit">
-            ⚖️ {text.aiForm.unit}
-          </label>
+          <div className="ai-field-label-row">
+            <label htmlFor="unit">
+              ⚖️ {text.aiForm.unit}
+            </label>
+
+            <FieldStatus field="unit" />
+          </div>
 
           <input
             id="unit"
@@ -342,10 +757,14 @@ function AIForm({
                 event.target.value
               )
             }
-            readOnly={isConfirmed}
+            readOnly={
+              isConfirmed
+            }
             aria-invalid={
               showValidation &&
-              Boolean(errors.unit)
+              Boolean(
+                errors.unit
+              )
             }
           />
 
@@ -360,34 +779,52 @@ function AIForm({
             warnings.unit &&
             !errors.unit && (
               <span className="field-validation-message warning">
-                ⚠️ {warnings.unit}
+                ⚠️{" "}
+                {warnings.unit}
               </span>
             )}
         </div>
       </div>
+
+      {/* ===========================
+          Time
+      =========================== */}
 
       <div
         className={`ai-field ${getFieldClassName(
           "time"
         )}`}
       >
-        <label htmlFor="time">
-          🕒 {text.aiForm.time}
-        </label>
+        <div className="ai-field-label-row">
+          <span
+            id="time-label"
+            className="ai-time-field-label"
+          >
+            🕒 {text.aiForm.time}
+          </span>
 
-        <input
+          <FieldStatus field="time" />
+        </div>
+
+        <TimePicker
           id="time"
-          type="time"
+          ariaLabelledBy="time-label"
           value={
             aiData.time || ""
           }
-          onChange={(event) =>
+          onChange={(value) =>
             handleChange(
               "time",
-              event.target.value
+              value
             )
           }
-          readOnly={isConfirmed}
+          disabled={
+            isConfirmed
+          }
+          placeholder="--:--"
+          language={
+            language
+          }
         />
 
         {showValidation &&
@@ -397,6 +834,10 @@ function AIForm({
             </span>
           )}
       </div>
+
+      {/* ===========================
+          Empty / Editing
+      =========================== */}
 
       {!hasAiData && (
         <p className="ai-hint">
@@ -410,68 +851,6 @@ function AIForm({
           <p className="ai-hint">
             {text.aiForm.editHint}
           </p>
-        )}
-
-      {hasAiData &&
-        !isConfirmed &&
-        showValidation &&
-        hasErrors && (
-          <div className="validation-summary error">
-            <strong>
-              ❌{" "}
-              {isVietnamese
-                ? "Chưa thể xác nhận"
-                : "Cannot confirm yet"}
-            </strong>
-
-            <span>
-              {isVietnamese
-                ? "Vui lòng bổ sung hoặc sửa các trường được đánh dấu đỏ."
-                : "Please complete or correct the fields highlighted in red."}
-            </span>
-          </div>
-        )}
-
-      {hasAiData &&
-        !isConfirmed &&
-        showValidation &&
-        !hasErrors &&
-        hasWarnings && (
-          <div className="validation-summary warning">
-            <strong>
-              ⚠️{" "}
-              {isVietnamese
-                ? "Dữ liệu cần kiểm tra"
-                : "Please review the data"}
-            </strong>
-
-            <span>
-              {isVietnamese
-                ? "Một số trường chưa đầy đủ nhưng không bắt buộc. Bạn vẫn có thể xác nhận nếu thông tin phù hợp."
-                : "Some optional fields are incomplete. You may still confirm if the information is appropriate."}
-            </span>
-          </div>
-        )}
-
-      {hasAiData &&
-        !isConfirmed &&
-        showValidation &&
-        !hasErrors &&
-        !hasWarnings && (
-          <div className="validation-summary success">
-            <strong>
-              ✅{" "}
-              {isVietnamese
-                ? "Dữ liệu hợp lệ"
-                : "Data is valid"}
-            </strong>
-
-            <span>
-              {isVietnamese
-                ? "Các trường chính đã đầy đủ và sẵn sàng xác nhận."
-                : "The main fields are complete and ready to confirm."}
-            </span>
-          </div>
         )}
     </div>
   );

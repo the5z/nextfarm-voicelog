@@ -3,6 +3,10 @@ import {
   useState,
 } from "react";
 
+import {
+  generateId,
+} from "../utils/id";
+
 import Header from "../components/Header";
 import WorkflowStepper from "../components/WorkflowStepper";
 import RecordButton from "../components/RecordButton";
@@ -77,6 +81,12 @@ function VoiceLog({
   onSaveLog,
 
   autoValidation = true,
+
+  onAiDataChange,
+  externalAiChanges = null,
+  onExternalAiChangesApplied,
+  highlightedField = "",
+  onHighlightClear,
 }) {
   const t =
     TEXT[language];
@@ -113,6 +123,83 @@ function VoiceLog({
   ] = useState(
     EMPTY_AI_DATA
   );
+
+
+  /* ===========================
+     Sync AI data to App
+  =========================== */
+
+  useEffect(() => {
+    onAiDataChange?.(
+      aiData
+    );
+  }, [
+    aiData,
+    onAiDataChange,
+  ]);
+
+  /* ===========================
+     Apply external AI edits
+  =========================== */
+
+  useEffect(() => {
+    if (
+      !externalAiChanges ||
+      Object.keys(
+        externalAiChanges
+      ).length === 0
+    ) {
+      return;
+    }
+
+    setAiData(
+      (previous) => ({
+        ...previous,
+        ...externalAiChanges,
+      })
+    );
+
+    setIsConfirmed(false);
+    setCurrentStep(3);
+
+    if (autoValidation) {
+      setHasAttemptedSubmit(true);
+    }
+
+    showMessage(
+      "success",
+      isVietnamese
+        ? "🤖 NextFarm AI đã cập nhật dữ liệu nhật ký."
+        : "🤖 NextFarm AI updated the farming log data."
+    );
+
+    onExternalAiChangesApplied?.();
+  }, [
+    externalAiChanges,
+    autoValidation,
+    isVietnamese,
+    onExternalAiChangesApplied,
+  ]);
+
+  useEffect(() => {
+    if (!highlightedField) {
+      return;
+    }
+
+    const timer =
+      window.setTimeout(() => {
+        onHighlightClear?.();
+      }, 1800);
+
+    return () => {
+      window.clearTimeout(
+        timer
+      );
+    };
+  }, [
+    highlightedField,
+    onHighlightClear,
+  ]);
 
   /* ===========================
      Workflow
@@ -350,6 +437,9 @@ function VoiceLog({
       isValid:
         Object.keys(
           errors
+        ).length === 0 &&
+        Object.keys(
+          warnings
         ).length === 0,
     };
   };
@@ -761,8 +851,8 @@ function VoiceLog({
           "error",
 
           isVietnamese
-            ? "Chưa thể xác nhận nhật ký. Vui lòng sửa các trường được đánh dấu."
-            : "The log cannot be confirmed yet. Please correct the highlighted fields."
+            ? "Chưa thể xác nhận nhật ký. Vui lòng xử lý tất cả lỗi và cảnh báo được đánh dấu trước khi xác nhận."
+            : "The log cannot be confirmed yet. Please resolve all highlighted errors and warnings before confirmation."
         );
 
         setCurrentStep(3);
@@ -775,7 +865,7 @@ function VoiceLog({
 
       const logId =
         currentLogId ||
-        crypto.randomUUID();
+        generateId();
 
       const savedLog = {
         id: logId,
@@ -1074,6 +1164,10 @@ function VoiceLog({
                 }
 
                 text={t}
+
+                language={
+                  language
+                }
               />
             </div>
 
@@ -1123,6 +1217,10 @@ function VoiceLog({
 
                 showValidation={
                   hasAttemptedSubmit
+                }
+
+                highlightedField={
+                  highlightedField
                 }
               />
 

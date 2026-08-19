@@ -27,14 +27,17 @@ function TranscriptBox({
       </div>
 
       <textarea
+        id="transcript"
+        name="transcript"
         className="transcript-textarea"
-        value={transcript}
+        value={transcript ?? ""}
         onChange={(event) =>
           onTranscriptChange(event.target.value)
         }
         readOnly={isConfirmed}
         placeholder={text.transcript.placeholder}
         aria-label={text.transcript.ariaLabel}
+        autoComplete="off"
       />
 
       {!hasTranscript && (
@@ -58,4 +61,4 @@ function TranscriptBox({
   );
 }
 
-export default TranscriptBox; 
+export default TranscriptBox;

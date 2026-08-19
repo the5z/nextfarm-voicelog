@@ -5385,3 +5385,5066 @@ body.dark-mode
   background: #3f1d1d;
   color: #fecaca;
 }
+
+/* =========================================================
+   MOBILE APP SHELL V1
+   NextFarm VoiceLog
+   <= 767px
+========================================================= */
+
+@media (max-width: 767px) {
+
+  /* =======================================================
+     APP
+  ======================================================= */
+
+  .app-shell {
+    display: block;
+
+    min-height: 100dvh;
+
+    /*
+      Chừa chỗ cho bottom navigation.
+    */
+    padding-bottom:
+      calc(
+        76px +
+        env(safe-area-inset-bottom)
+      );
+  }
+
+
+  /* =======================================================
+     SIDEBAR -> BOTTOM NAVIGATION
+  ======================================================= */
+
+  .sidebar {
+    position: fixed;
+
+    z-index: 250;
+
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+    width: 100%;
+    height: auto;
+
+    padding:
+      7px
+      10px
+      calc(
+        7px +
+        env(safe-area-inset-bottom)
+      );
+
+    border-top:
+      1px solid #e2e8f0;
+
+    border-right: none;
+    border-bottom: none;
+
+    background:
+      rgba(
+        255,
+        255,
+        255,
+        0.96
+      );
+
+    backdrop-filter:
+      blur(16px);
+
+    -webkit-backdrop-filter:
+      blur(16px);
+
+    box-shadow:
+      0 -8px 28px
+      rgba(
+        15,
+        23,
+        42,
+        0.08
+      );
+  }
+
+
+  /*
+    Logo NextFarm không cần lặp lại ở bottom nav.
+    Header trên trang đã đảm nhiệm branding.
+  */
+
+  .sidebar-brand {
+    display: none;
+  }
+
+
+  .sidebar-nav {
+    display: grid;
+
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+
+    gap: 5px;
+
+    width: min(
+      520px,
+      100%
+    );
+
+    margin: 0 auto;
+    padding: 0;
+
+    overflow: visible;
+  }
+
+
+  .sidebar-divider {
+    display: none;
+  }
+
+
+  .sidebar-item {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 3px;
+
+    width: 100%;
+    min-width: 0;
+    min-height: 54px;
+
+    padding: 6px 4px;
+
+    border: none;
+    border-radius: 11px;
+
+    background: transparent;
+
+    color: #64748b;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    line-height: 1.15;
+
+    text-align: center;
+
+    white-space: normal;
+
+    transform: none;
+  }
+
+
+  .sidebar-item:hover {
+    transform: none;
+  }
+
+
+  .sidebar-item.active {
+    border-color: transparent;
+
+    background: #ecfdf3;
+    color: #15803d;
+  }
+
+
+  .sidebar-item-icon {
+    width: auto;
+
+    font-size: 19px;
+    line-height: 1;
+  }
+
+
+  /* =======================================================
+     WORKSPACE
+  ======================================================= */
+
+  .workspace {
+    width: 100%;
+
+    padding:
+      0
+      14px
+      28px;
+  }
+
+
+  .workspace-container {
+    width: 100%;
+    max-width: none;
+  }
+
+
+  /* =======================================================
+     TOPBAR
+  ======================================================= */
+
+  .workspace .topbar {
+    min-height: 52px;
+
+    margin-bottom: 4px;
+
+    padding:
+      10px
+      0
+      6px;
+  }
+
+
+  .topbar-spacer {
+    display: none;
+  }
+
+
+  .topbar-actions {
+    width: 100%;
+
+    margin-left: 0;
+
+    justify-content: flex-end;
+
+    gap: 7px;
+  }
+
+
+  /*
+    Trên mobile không cần hiện:
+    "Xin chào, Khoa Nguyễn"
+    vì chiếm quá nhiều chiều ngang.
+
+    Icon user vẫn giữ và vẫn mở menu.
+  */
+
+  .user-greeting {
+    display: none;
+  }
+
+
+  .topbar-user {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 38px;
+    height: 38px;
+
+    padding: 0;
+
+    border:
+      1px solid transparent;
+
+    border-radius: 10px;
+  }
+
+
+  .user-icon {
+    font-size: 18px;
+  }
+
+
+  .user-arrow {
+    display: none;
+  }
+
+
+  .theme-toggle {
+    width: 38px;
+    height: 38px;
+
+    border-width: 1px;
+
+    font-size: 17px;
+  }
+
+
+  .language-toggle {
+    min-height: 38px;
+
+    padding: 7px 9px;
+
+    font-size: 12px;
+  }
+
+
+  /* =======================================================
+     DROPDOWNS
+  ======================================================= */
+
+  /*
+    Language nằm bên phải màn hình.
+    Dropdown mở về phía trái để không tràn viewport.
+  */
+
+  .language-menu {
+    right: 0;
+    left: auto;
+
+    width: 172px;
+  }
+
+
+  .user-menu {
+    right: 0;
+
+    width: min(
+      230px,
+      calc(
+        100vw - 28px
+      )
+    );
+  }
+
+
+  /* =======================================================
+     HEADER
+  ======================================================= */
+
+  .workspace .header {
+    margin-top: 4px;
+    margin-bottom: 18px;
+  }
+
+
+  .workspace .header h1 {
+    margin-bottom: 4px;
+
+    font-size: 23px;
+  }
+
+
+  .workspace .header p {
+    margin-top: 4px;
+
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+
+  /* =======================================================
+     AI FLOATING BUTTON
+     nâng lên trên bottom navigation
+  ======================================================= */
+
+  .ai-assistant-floating {
+    right: 16px;
+
+    bottom:
+      calc(
+        86px +
+        env(safe-area-inset-bottom)
+      );
+
+    width: 54px;
+    height: 54px;
+
+    font-size: 23px;
+  }
+
+
+  /*
+    Panel hiện vẫn giữ thiết kế popup.
+    Upgrade 0.4 mới biến nó thành mobile sheet.
+  */
+
+  .ai-assistant-panel {
+    right: 12px;
+
+    bottom:
+      calc(
+        150px +
+        env(safe-area-inset-bottom)
+      );
+
+    width:
+      calc(
+        100vw - 24px
+      );
+
+    max-width: none;
+
+    height:
+      min(
+        610px,
+        calc(
+          100dvh - 175px
+        )
+      );
+  }
+
+
+  /* =======================================================
+     TOAST
+  ======================================================= */
+
+  .workspace-container
+  > .app-toast {
+    margin-bottom: 10px;
+  }
+}
+
+
+/* =========================================================
+   EXTRA SMALL PHONE
+   ~ iPhone SE / Android nhỏ
+========================================================= */
+
+@media (max-width: 390px) {
+
+  .workspace {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+
+  .sidebar {
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+
+  .sidebar-item {
+    font-size: 9.5px;
+  }
+
+
+  .sidebar-item-icon {
+    font-size: 18px;
+  }
+
+
+  .workspace .header h1 {
+    font-size: 21px;
+  }
+
+
+  .language-toggle {
+    gap: 5px;
+
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+}
+
+
+/* =========================================================
+   MOBILE DARK MODE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  body.dark-mode
+  .sidebar {
+    border-top-color: #26354a;
+
+    background:
+      rgba(
+        15,
+        23,
+        42,
+        0.96
+      );
+
+    box-shadow:
+      0 -10px 30px
+      rgba(
+        0,
+        0,
+        0,
+        0.28
+      );
+  }
+
+
+  body.dark-mode
+  .sidebar-item {
+    color: #94a3b8;
+  }
+
+
+  body.dark-mode
+  .sidebar-item.active {
+    background: #14351f;
+    color: #4ade80;
+  }
+}
+
+/* =========================================================
+   MOBILE HEADER ALIGNMENT FIX
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .workspace .header {
+    display: flex;
+
+    flex-direction: column;
+    align-items: center;
+
+    margin-top: 8px;
+    margin-bottom: 18px;
+
+    text-align: center;
+  }
+
+
+  .workspace .header h1 {
+    width: 100%;
+
+    margin:
+      0
+      auto
+      5px;
+
+    text-align: center;
+  }
+
+
+  .workspace .header p {
+    width: 100%;
+
+    margin:
+      0
+      auto;
+
+    text-align: center;
+  }
+}
+
+/* =========================================================
+   UI UPGRADE 0.2
+   VOICELOG MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  /* =======================================================
+     HERO
+  ======================================================= */
+
+  .workspace-hero {
+    gap: 14px;
+
+    margin-bottom: 14px;
+
+    padding: 18px 16px;
+
+    border-radius: 14px;
+  }
+
+  .workspace-eyebrow {
+    margin-bottom: 7px;
+
+    padding: 4px 8px;
+
+    font-size: 8px;
+  }
+
+  .workspace-hero h2 {
+    font-size: 21px;
+    line-height: 1.25;
+  }
+
+  .workspace-hero p {
+    margin-top: 7px;
+
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .workspace-status {
+    padding: 6px 9px;
+
+    font-size: 9px;
+  }
+
+
+  /* =======================================================
+     DEV TEST MODE
+  ======================================================= */
+
+  /*
+    Vẫn giữ trong DEV,
+    nhưng thu nhỏ để không chiếm gần hết màn hình.
+  */
+
+  .dev-test-panel {
+    gap: 10px;
+
+    margin-bottom: 14px;
+
+    padding: 12px;
+
+    border-radius: 12px;
+  }
+
+  .dev-test-info {
+    gap: 8px;
+  }
+
+  .dev-test-icon {
+    width: 32px;
+    height: 32px;
+
+    font-size: 15px;
+  }
+
+  .dev-test-info strong {
+    font-size: 10px;
+  }
+
+  .dev-test-info span {
+    font-size: 8px;
+  }
+
+  .dev-test-actions {
+    display: grid;
+
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+
+    gap: 6px;
+
+    width: 100%;
+  }
+
+  .dev-test-btn {
+    width: 100%;
+
+    min-width: 0;
+
+    padding: 7px 5px;
+
+    font-size: 8px;
+  }
+
+
+  /* =======================================================
+     WORKFLOW CARD
+  ======================================================= */
+
+  .workflow-card {
+    margin-bottom: 14px;
+
+    padding:
+      14px
+      8px;
+
+    border-radius: 13px;
+  }
+
+  .workflow-card
+  .workflow-stepper {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .workflow-stepper {
+    align-items: flex-start;
+  }
+
+  .workflow-step-wrapper {
+    min-width: 0;
+  }
+
+  .workflow-step {
+    min-width: 0;
+  }
+
+  .workflow-step-number {
+    width: 30px;
+    height: 30px;
+
+    font-size: 11px;
+  }
+
+  .workflow-step-label {
+    max-width: 58px;
+
+    margin-top: 5px;
+
+    font-size: 8px;
+    line-height: 1.25;
+
+    white-space: normal;
+
+    text-align: center;
+  }
+
+  .workflow-step-line {
+    margin-top: 14px;
+  }
+
+
+  /* =======================================================
+     MAIN GRID
+  ======================================================= */
+
+  .voice-workspace-grid {
+    display: grid;
+
+    grid-template-columns: 1fr;
+
+    gap: 14px;
+  }
+
+  .voice-primary-column,
+  .voice-secondary-column {
+    gap: 14px;
+  }
+
+  .workspace-card {
+    padding: 16px;
+
+    border-radius: 14px;
+  }
+
+
+  /* =======================================================
+     RECORD CARD
+  ======================================================= */
+
+  .record-card {
+    min-height: 250px;
+
+    padding:
+      22px
+      16px;
+
+    border-radius: 14px;
+  }
+
+  .record-card::before {
+    width: 210px;
+    height: 210px;
+  }
+
+  .record-card
+  .record-section {
+    width: 100%;
+
+    margin-top: 0;
+  }
+
+  .record-card
+  .record-btn {
+    width: 96px;
+    height: 96px;
+
+    font-size: 32px;
+  }
+
+  .record-card
+  .record-status {
+    margin-top: 16px;
+  }
+
+  .record-status span {
+    font-size: 16px;
+  }
+
+  .record-status strong {
+    font-size: 13px;
+  }
+
+
+  /* =======================================================
+     AUDIO PLAYER
+  ======================================================= */
+
+  .audio-player {
+    margin-top: 18px;
+
+    padding: 12px;
+
+    border-radius: 12px;
+  }
+
+  .audio-player h3 {
+    margin-bottom: 10px;
+
+    font-size: 13px;
+  }
+
+  .audio-player audio {
+    width: 100%;
+    max-width: 100%;
+  }
+
+
+  /* =======================================================
+     TRANSCRIPT
+  ======================================================= */
+
+  .transcript-header {
+    align-items: flex-start;
+
+    gap: 8px;
+
+    margin-bottom: 11px;
+  }
+
+  .transcript-header h2 {
+    font-size: 17px;
+  }
+
+  .workspace-card
+  .transcript-textarea {
+    min-height: 145px;
+
+    padding: 12px;
+
+    font-size: 14px;
+    line-height: 1.55;
+
+    border-radius: 11px;
+  }
+
+  .edit-badge,
+  .confirmed-badge {
+    flex-shrink: 0;
+
+    padding: 5px 7px;
+
+    font-size: 8px;
+  }
+
+  .transcript-hint {
+    font-size: 10px;
+  }
+
+  .transcript-tip,
+  .transcript-success {
+    padding: 10px;
+
+    font-size: 10px;
+    line-height: 1.5;
+  }
+
+
+  /* =======================================================
+     AI FORM
+  ======================================================= */
+
+  .ai-data-card {
+    min-height: 0;
+  }
+
+  .ai-form-header {
+    align-items: flex-start;
+
+    gap: 8px;
+
+    margin-bottom: 14px;
+  }
+
+  .ai-form-header h3 {
+    font-size: 17px;
+  }
+
+  .ai-field {
+    margin-bottom: 14px;
+  }
+
+  .ai-field label {
+    margin-bottom: 6px;
+
+    font-size: 12px;
+  }
+
+  .ai-field input,
+  .ai-field select {
+    width: 100%;
+
+    min-height: 45px;
+
+    padding:
+      10px
+      11px;
+
+    font-size: 14px;
+
+    border-radius: 10px;
+  }
+
+  /*
+    Quantity + Unit:
+    mobile xếp dọc để tránh hai ô quá hẹp.
+  */
+
+  .ai-form-row {
+    grid-template-columns: 1fr;
+
+    gap: 0;
+  }
+
+  .ai-hint {
+    font-size: 10px;
+    line-height: 1.5;
+  }
+
+
+  /* =======================================================
+     FIELD VALIDATION
+  ======================================================= */
+
+  .field-error,
+  .field-warning,
+  .ai-field-error,
+  .ai-field-warning {
+    font-size: 9px;
+    line-height: 1.45;
+  }
+
+
+  /* =======================================================
+     ACTION BUTTONS
+  ======================================================= */
+
+  .ai-data-card
+  .action-buttons {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+
+    margin-top: 18px;
+  }
+
+  .action-buttons button {
+    width: 100%;
+
+    min-height: 46px;
+
+    padding:
+      11px
+      12px;
+
+    font-size: 13px;
+
+    border-radius: 10px;
+  }
+
+
+  /* =======================================================
+     TOAST
+  ======================================================= */
+
+  .workspace-container
+  > .app-toast {
+    gap: 8px;
+
+    padding: 10px 11px;
+
+    border-radius: 10px;
+
+    font-size: 10px;
+    line-height: 1.45;
+  }
+}
+
+
+/* =========================================================
+   EXTRA SMALL MOBILE
+========================================================= */
+
+@media (max-width: 390px) {
+
+  .workspace-hero {
+    padding:
+      16px
+      14px;
+  }
+
+  .workspace-hero h2 {
+    font-size: 19px;
+  }
+
+  .workspace-hero p {
+    font-size: 11px;
+  }
+
+
+  /* Workflow */
+
+  .workflow-card {
+    padding-right: 5px;
+    padding-left: 5px;
+  }
+
+  .workflow-step-number {
+    width: 28px;
+    height: 28px;
+  }
+
+  .workflow-step-label {
+    max-width: 52px;
+
+    font-size: 7.5px;
+  }
+
+  .workflow-step-line {
+    margin-top: 13px;
+  }
+
+
+  /* Record */
+
+  .record-card {
+    min-height: 230px;
+  }
+
+  .record-card
+  .record-btn {
+    width: 88px;
+    height: 88px;
+
+    font-size: 29px;
+  }
+
+
+  /* Cards */
+
+  .workspace-card {
+    padding: 14px;
+  }
+
+  .transcript-header h2,
+  .ai-form-header h3 {
+    font-size: 16px;
+  }
+}
+
+/* =========================================================
+   VOICELOG MOBILE - BOTTOM SAFE SPACE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .voice-workspace-grid {
+    margin-bottom: 24px;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 0.3A
+   MY LOGS MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  /* =======================================================
+     SUMMARY
+  ======================================================= */
+
+  /*
+    Mobile không xếp 4 card thành 1 cột dài.
+    Dùng grid 2 x 2 sẽ gọn hơn.
+  */
+
+  .logs-summary-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+
+    gap: 8px;
+
+    margin-bottom: 14px;
+  }
+
+  .logs-summary-card {
+    gap: 8px;
+
+    min-width: 0;
+
+    padding: 11px;
+
+    border-radius: 11px;
+  }
+
+  .logs-summary-icon {
+    width: 34px;
+    height: 34px;
+
+    flex-shrink: 0;
+
+    font-size: 16px;
+  }
+
+  .logs-summary-card strong {
+    font-size: 17px;
+  }
+
+  .logs-summary-card span:last-child {
+    font-size: 8px;
+    line-height: 1.25;
+  }
+
+
+  /* =======================================================
+     TOOLBAR
+  ======================================================= */
+
+  .logs-toolbar {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+
+    margin-bottom: 14px;
+  }
+
+
+  /*
+    Search lên trước filter về mặt thị giác.
+  */
+
+  .logs-search-wrapper {
+    order: 1;
+
+    width: 100%;
+
+    min-height: 42px;
+
+    padding:
+      0
+      11px;
+
+    border-radius: 10px;
+  }
+
+  .logs-search-wrapper input {
+    min-width: 0;
+
+    font-size: 11px;
+  }
+
+
+  /*
+    Filter thành thanh ngang cuộn được.
+    Không wrap thành 2–3 dòng.
+  */
+
+  .logs-filter-tabs {
+    order: 2;
+
+    display: flex;
+
+    gap: 6px;
+
+    width: 100%;
+
+    overflow-x: auto;
+
+    padding-bottom: 3px;
+
+    flex-wrap: nowrap;
+
+    scrollbar-width: none;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .logs-filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .logs-filter-tabs button {
+    flex: 0 0 auto;
+
+    padding:
+      7px
+      10px;
+
+    font-size: 9px;
+
+    white-space: nowrap;
+  }
+
+
+  /* =======================================================
+     LOG LIST
+  ======================================================= */
+
+  .logs-list {
+    gap: 10px;
+  }
+
+  .log-card {
+    padding: 14px;
+
+    border-radius: 12px;
+
+    box-shadow: none;
+  }
+
+  /*
+    Hover transform trên điện thoại không cần.
+  */
+
+  .log-card:hover {
+    transform: none;
+  }
+
+
+  /* Header */
+
+  .log-card-header {
+    display: flex;
+
+    flex-direction: row;
+
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 8px;
+
+    width: 100%;
+  }
+
+  .log-card-header > div {
+    min-width: 0;
+  }
+
+  .log-lot {
+    font-size: 9px;
+  }
+
+  .log-card-header h3 {
+    margin-top: 4px;
+
+    font-size: 15px;
+    line-height: 1.3;
+
+    overflow-wrap: anywhere;
+  }
+
+  .log-status {
+    flex-shrink: 0;
+
+    padding:
+      5px
+      7px;
+
+    font-size: 8px;
+
+    white-space: nowrap;
+  }
+
+
+  /* Data */
+
+  .log-card-info {
+    display: grid;
+
+    grid-template-columns: 1fr;
+
+    gap: 7px;
+
+    margin-top: 12px;
+
+    font-size: 10px;
+  }
+
+
+  /* Review warning */
+
+  .log-review-warning {
+    margin-top: 10px;
+
+    padding:
+      8px
+      9px;
+
+    font-size: 9px;
+    line-height: 1.45;
+
+    border-radius: 8px;
+  }
+
+
+  /* Footer */
+
+  .log-card-footer {
+    display: flex;
+
+    flex-direction: row;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+
+    margin-top: 12px;
+    padding-top: 10px;
+
+    font-size: 9px;
+  }
+
+  .log-action-btn {
+    flex-shrink: 0;
+
+    padding:
+      6px
+      0;
+
+    font-size: 10px;
+  }
+
+
+  /* =======================================================
+     DEV NOTE
+  ======================================================= */
+
+  .logs-dev-note {
+    margin-top: 12px;
+    margin-bottom: 20px;
+
+    padding:
+      9px
+      10px;
+
+    font-size: 8px;
+    line-height: 1.45;
+  }
+
+
+  /* =======================================================
+     EMPTY STATE
+  ======================================================= */
+
+  .logs-empty-state {
+    padding:
+      36px
+      16px;
+
+    border-radius: 12px;
+  }
+
+  .logs-empty-state > span {
+    font-size: 28px;
+  }
+
+  .logs-empty-state h3 {
+    font-size: 15px;
+  }
+
+  .logs-empty-state p {
+    font-size: 10px;
+  }
+
+
+  /* =======================================================
+     DETAIL MODAL
+  ======================================================= */
+
+  .log-detail-overlay {
+    align-items: flex-end;
+
+    padding: 0;
+
+    /*
+      Bottom nav nằm z-index thấp hơn modal,
+      nên modal phủ toàn bộ là đúng.
+    */
+  }
+
+  .log-detail-modal {
+    width: 100%;
+
+    max-height:
+      min(
+        88dvh,
+        760px
+      );
+
+    padding:
+      18px
+      16px
+      calc(
+        20px +
+        env(safe-area-inset-bottom)
+      );
+
+    border-right: none;
+    border-bottom: none;
+    border-left: none;
+
+    border-radius:
+      20px
+      20px
+      0
+      0;
+
+    box-shadow:
+      0 -18px 50px
+      rgba(
+        15,
+        23,
+        42,
+        0.22
+      );
+  }
+
+
+  /* Drag handle giả lập bottom sheet */
+
+  .log-detail-modal::before {
+    content: "";
+
+    display: block;
+
+    width: 42px;
+    height: 4px;
+
+    margin:
+      -7px
+      auto
+      12px;
+
+    border-radius: 999px;
+
+    background: #cbd5e1;
+  }
+
+
+  .log-detail-header {
+    gap: 10px;
+  }
+
+  .log-detail-header h2 {
+    margin-top: 4px;
+
+    font-size: 22px;
+  }
+
+  .log-detail-close {
+    width: 32px;
+    height: 32px;
+
+    flex-shrink: 0;
+  }
+
+
+  .log-detail-status-row {
+    flex-wrap: wrap;
+
+    gap: 7px;
+
+    margin-top: 12px;
+
+    font-size: 10px;
+  }
+
+
+  .log-detail-section {
+    margin-top: 16px;
+  }
+
+  .log-detail-section h3 {
+    margin-bottom: 8px;
+
+    font-size: 12px;
+  }
+
+
+  .log-detail-transcript {
+    padding: 11px;
+
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+
+  .log-detail-grid {
+    grid-template-columns: 1fr;
+
+    gap: 7px;
+  }
+
+  .log-detail-item {
+    gap: 3px;
+
+    padding: 10px;
+
+    border-radius: 9px;
+  }
+
+  .log-detail-item span {
+    font-size: 9px;
+  }
+
+  .log-detail-item strong {
+    font-size: 11px;
+  }
+
+
+  .log-detail-warning {
+    margin-top: 14px;
+
+    padding: 10px;
+
+    font-size: 10px;
+  }
+
+
+  /* =======================================================
+     MODAL ACTIONS
+  ======================================================= */
+
+  .log-detail-footer {
+    margin-top: 16px;
+  }
+
+  .log-detail-footer-actions {
+    display: grid;
+
+    grid-template-columns:
+      1fr
+      1fr;
+
+    gap: 8px;
+
+    width: 100%;
+  }
+
+  .log-detail-footer-actions
+  .btn-primary,
+  .log-detail-footer-actions
+  .btn-secondary {
+    width: 100%;
+    min-width: 0;
+
+    min-height: 42px;
+
+    margin: 0;
+
+    padding:
+      9px
+      10px;
+
+    font-size: 10px;
+  }
+
+}
+
+
+/* =========================================================
+   MY LOGS - EXTRA SMALL
+========================================================= */
+
+@media (max-width: 390px) {
+
+  .logs-summary-card {
+    padding: 9px;
+  }
+
+  .logs-summary-icon {
+    width: 30px;
+    height: 30px;
+
+    font-size: 14px;
+  }
+
+  .logs-summary-card strong {
+    font-size: 15px;
+  }
+
+  .logs-summary-card span:last-child {
+    font-size: 7.5px;
+  }
+
+
+  .log-card {
+    padding: 12px;
+  }
+
+  .log-card-header h3 {
+    font-size: 14px;
+  }
+
+
+  /*
+    Nếu status quá dài ở điện thoại nhỏ,
+    header chuyển dọc.
+  */
+
+  .log-card-header {
+    flex-wrap: wrap;
+  }
+
+
+  .log-detail-modal {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+}
+
+
+/* =========================================================
+   MY LOGS MOBILE - DARK MODE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  body.dark-mode
+  .log-detail-modal::before {
+    background: #475569;
+  }
+
+}
+
+/* =========================================================
+   MY LOGS MOBILE - MODAL SINGLE ACTION FIX
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .log-detail-footer:not(.log-detail-footer-actions) {
+    width: 100%;
+  }
+
+  .log-detail-footer:not(.log-detail-footer-actions)
+  .btn-secondary {
+    width: 100%;
+
+    min-height: 42px;
+
+    margin: 0;
+
+    padding: 10px 12px;
+
+    border-radius: 10px;
+
+    font-size: 10px;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 0.3B
+   SETTINGS MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  /* =======================================================
+     SETTINGS GRID
+  ======================================================= */
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+
+    gap: 12px;
+  }
+
+  .settings-card {
+    padding: 16px;
+
+    border-radius: 14px;
+
+    box-shadow: none;
+  }
+
+
+  /* =======================================================
+     CARD HEADER
+  ======================================================= */
+
+  .settings-card-header {
+    gap: 10px;
+
+    margin-bottom: 16px;
+  }
+
+  .settings-card-icon {
+    width: 38px;
+    height: 38px;
+
+    border-radius: 10px;
+
+    font-size: 18px;
+  }
+
+  .settings-card-header h3 {
+    font-size: 15px;
+  }
+
+  .settings-card-header p {
+    margin-top: 3px;
+
+    font-size: 9px;
+    line-height: 1.45;
+  }
+
+
+  /* =======================================================
+     SETTINGS FIELDS
+  ======================================================= */
+
+  .settings-field {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: stretch;
+
+    gap: 9px;
+
+    padding: 13px 0;
+  }
+
+  .settings-field-label {
+    gap: 3px;
+  }
+
+  .settings-field-label strong {
+    font-size: 11px;
+  }
+
+  .settings-field-label span {
+    font-size: 8.5px;
+    line-height: 1.45;
+  }
+
+  .settings-field select {
+    width: 100%;
+    min-width: 0;
+
+    min-height: 44px;
+
+    padding:
+      9px
+      11px;
+
+    border-radius: 10px;
+
+    font-size: 12px;
+  }
+
+
+  /* =======================================================
+     THEME SEGMENTED
+  ======================================================= */
+
+  .settings-segmented {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+
+    gap: 6px;
+  }
+
+  .settings-segmented button {
+    min-height: 42px;
+
+    padding:
+      8px
+      6px;
+
+    font-size: 9px;
+
+    border-radius: 9px;
+  }
+
+
+  /* =======================================================
+     TOGGLE ROW
+  ======================================================= */
+
+  .settings-toggle-row {
+    gap: 10px;
+
+    padding: 13px 0;
+  }
+
+  .settings-toggle-info {
+    gap: 8px;
+  }
+
+  .settings-toggle-icon {
+    width: 30px;
+    height: 30px;
+
+    border-radius: 8px;
+
+    font-size: 14px;
+  }
+
+  .settings-toggle-info strong {
+    font-size: 10.5px;
+  }
+
+  .settings-toggle-info div span {
+    font-size: 8.5px;
+    line-height: 1.45;
+  }
+
+  .settings-switch {
+    width: 42px;
+    height: 24px;
+  }
+
+  .settings-switch span {
+    width: 18px;
+    height: 18px;
+  }
+
+  .settings-switch.active span {
+    transform:
+      translateX(18px);
+  }
+
+
+  /* =======================================================
+     API / STORAGE INFO
+  ======================================================= */
+
+  .settings-api-note,
+  .settings-storage-info {
+    gap: 8px;
+
+    margin-top: 11px;
+
+    padding: 10px;
+
+    border-radius: 9px;
+  }
+
+  .settings-api-note strong,
+  .settings-storage-info strong {
+    font-size: 9px;
+  }
+
+  .settings-api-note span,
+  .settings-storage-info div span {
+    font-size: 8px;
+    line-height: 1.45;
+  }
+
+
+  /* =======================================================
+     DANGER ACTIONS
+  ======================================================= */
+
+  .settings-danger-actions {
+    display: grid;
+
+    grid-template-columns: 1fr;
+
+    gap: 7px;
+
+    margin-top: 10px;
+  }
+
+  .settings-danger-actions button {
+    width: 100%;
+
+    min-height: 42px;
+
+    padding:
+      9px
+      10px;
+
+    border-radius: 9px;
+
+    font-size: 9px;
+  }
+
+
+  /* =======================================================
+     MICROPHONE TEST
+  ======================================================= */
+
+  .mic-test-panel {
+    margin-top: 13px;
+
+    padding: 12px;
+
+    border-radius: 11px;
+  }
+
+  .mic-test-header {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: stretch;
+
+    gap: 8px;
+  }
+
+  .mic-test-header > div {
+    gap: 3px;
+  }
+
+  .mic-test-header strong {
+    font-size: 11px;
+  }
+
+  .mic-test-header div span {
+    font-size: 8px;
+    line-height: 1.45;
+  }
+
+  .mic-status-badge {
+    align-self: flex-start;
+
+    padding:
+      5px
+      8px;
+
+    font-size: 8px;
+  }
+
+
+  /* Device */
+
+  .mic-device-info {
+    gap: 8px;
+
+    margin-top: 10px;
+
+    padding:
+      9px
+      10px;
+
+    border-radius: 9px;
+  }
+
+  .mic-device-info > span {
+    font-size: 16px;
+  }
+
+  .mic-device-info strong {
+    font-size: 8px;
+  }
+
+  .mic-device-info div span {
+    font-size: 8px;
+
+    white-space: normal;
+
+    overflow-wrap: anywhere;
+  }
+
+
+  /* Level */
+
+  .mic-level-section {
+    margin-top: 11px;
+  }
+
+  .mic-level-label {
+    margin-bottom: 5px;
+
+    font-size: 8px;
+  }
+
+  .mic-level-track {
+    height: 7px;
+  }
+
+  .mic-level-meta {
+    margin-top: 4px;
+
+    font-size: 7.5px;
+  }
+
+
+  /* Message */
+
+  .mic-test-message {
+    margin-top: 10px;
+
+    padding:
+      9px
+      10px;
+
+    font-size: 8.5px;
+    line-height: 1.45;
+
+    border-radius: 8px;
+  }
+
+
+  /* Actions */
+
+  .mic-test-actions {
+    margin-top: 10px;
+  }
+
+  .mic-test-start,
+  .mic-test-stop {
+    width: 100%;
+
+    min-height: 43px;
+
+    padding:
+      9px
+      10px;
+
+    border-radius: 9px;
+
+    font-size: 9px;
+  }
+
+
+  /* =======================================================
+     SETTINGS SAFE BOTTOM
+  ======================================================= */
+
+  .settings-layout {
+    margin-bottom: 24px;
+  }
+
+}
+
+
+/* =========================================================
+   SETTINGS - EXTRA SMALL MOBILE
+========================================================= */
+
+@media (max-width: 390px) {
+
+  .settings-card {
+    padding:
+      14px
+      13px;
+  }
+
+  .settings-card-header {
+    margin-bottom: 14px;
+  }
+
+  .settings-card-icon {
+    width: 35px;
+    height: 35px;
+
+    font-size: 16px;
+  }
+
+  .settings-card-header h3 {
+    font-size: 14px;
+  }
+
+
+  /*
+    3 theme button vẫn giữ 1 hàng.
+    Nếu chữ quá dài thì nhỏ thêm chút.
+  */
+
+  .settings-segmented button {
+    padding:
+      7px
+      4px;
+
+    font-size: 8px;
+  }
+
+
+  .settings-toggle-info {
+    align-items: flex-start;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 0.4A
+   AI ASSISTANT MOBILE BOTTOM SHEET
+========================================================= */
+
+@media (max-width: 767px) {
+
+  /* =======================================================
+     FLOATING BUTTON
+  ======================================================= */
+
+  /*
+    Nút AI đặt cố định phía trên bottom navigation.
+    Tạo khoảng cách rõ hơn với content.
+  */
+
+  .ai-assistant-floating {
+    right: 16px;
+
+    bottom:
+      calc(
+        88px +
+        env(safe-area-inset-bottom)
+      );
+
+    width: 52px;
+    height: 52px;
+
+    font-size: 22px;
+
+    box-shadow:
+      0 10px 28px
+      rgba(
+        21,
+        128,
+        61,
+        0.3
+      );
+  }
+
+
+  /*
+    Khi chatbot đang mở,
+    ẩn floating button.
+    Panel đã có nút X để đóng.
+  */
+
+  .ai-assistant-floating.active {
+    opacity: 0;
+
+    pointer-events: none;
+
+    transform:
+      scale(0.8);
+  }
+
+
+  /* =======================================================
+     CHAT PANEL
+  ======================================================= */
+
+  .ai-assistant-panel {
+    position: fixed;
+
+    z-index: 600;
+
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+    width: 100%;
+
+    max-width: none;
+
+    height:
+      min(
+        88dvh,
+        760px
+      );
+
+    max-height: none;
+
+    overflow: hidden;
+
+    border-right: none;
+    border-bottom: none;
+    border-left: none;
+
+    border-radius:
+      22px
+      22px
+      0
+      0;
+
+    box-shadow:
+      0 -20px 60px
+      rgba(
+        15,
+        23,
+        42,
+        0.26
+      );
+
+    animation:
+      assistant-mobile-sheet-in
+      0.24s
+      ease;
+  }
+
+
+  @keyframes assistant-mobile-sheet-in {
+
+    from {
+      opacity: 0;
+
+      transform:
+        translateY(100%);
+    }
+
+    to {
+      opacity: 1;
+
+      transform:
+        translateY(0);
+    }
+
+  }
+
+
+  /*
+    Drag handle kiểu mobile sheet.
+  */
+
+  .ai-assistant-panel::before {
+    content: "";
+
+    position: absolute;
+
+    z-index: 20;
+
+    top: 7px;
+    left: 50%;
+
+    width: 42px;
+    height: 4px;
+
+    border-radius: 999px;
+
+    background: #cbd5e1;
+
+    transform:
+      translateX(-50%);
+
+    pointer-events: none;
+  }
+
+
+  /* =======================================================
+     HEADER
+  ======================================================= */
+
+  .ai-assistant-header {
+    flex-shrink: 0;
+
+    gap: 9px;
+
+    padding:
+      22px
+      14px
+      12px;
+
+    border-radius:
+      22px
+      22px
+      0
+      0;
+  }
+
+
+  .ai-assistant-avatar {
+    width: 36px;
+    height: 36px;
+
+    border-radius: 10px;
+
+    font-size: 18px;
+  }
+
+
+  .ai-assistant-title {
+    min-width: 0;
+
+    gap: 8px;
+  }
+
+
+  .ai-assistant-title > div:last-child {
+    min-width: 0;
+  }
+
+
+  .ai-assistant-title strong {
+    font-size: 13px;
+  }
+
+
+  .ai-assistant-title span {
+    overflow: hidden;
+
+    max-width: 210px;
+
+    font-size: 9px;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+
+  .ai-assistant-close {
+    width: 34px;
+    height: 34px;
+
+    flex-shrink: 0;
+  }
+
+
+  /* =======================================================
+     BODY / CHAT MESSAGES
+  ======================================================= */
+
+  .ai-assistant-body {
+    min-height: 0;
+
+    padding:
+      14px
+      12px
+      18px;
+
+    overscroll-behavior: contain;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+
+  .assistant-chat-messages {
+    gap: 10px;
+
+    margin-top: 10px;
+  }
+
+
+  .assistant-chat-message {
+    gap: 6px;
+  }
+
+
+  .assistant-chat-bubble {
+    max-width: 86%;
+
+    padding:
+      9px
+      10px;
+
+    border-radius: 13px;
+
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+
+  /* =======================================================
+     SUGGESTIONS
+  ======================================================= */
+
+  .assistant-suggestions {
+    display: flex;
+
+    gap: 6px;
+
+    width: 100%;
+
+    overflow-x: auto;
+
+    padding-bottom: 3px;
+
+    flex-wrap: nowrap;
+
+    scrollbar-width: none;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+
+  .assistant-suggestions::-webkit-scrollbar {
+    display: none;
+  }
+
+
+  .assistant-suggestions button {
+    flex: 0 0 auto;
+
+    white-space: nowrap;
+
+    font-size: 9px;
+  }
+
+
+  /* =======================================================
+     INPUT AREA
+  ======================================================= */
+
+  .ai-assistant-input-area {
+    flex-shrink: 0;
+
+    padding:
+      10px
+      10px
+      calc(
+        10px +
+        env(safe-area-inset-bottom)
+      );
+  }
+
+
+  .assistant-input-wrapper {
+    gap: 5px;
+
+    min-height: 46px;
+
+    padding:
+      5px
+      5px
+      5px
+      11px;
+
+    border-radius: 12px;
+  }
+
+
+  .assistant-input-wrapper input {
+    font-size: 13px;
+  }
+
+
+  .assistant-mic-btn,
+  .assistant-send-btn {
+    width: 36px;
+    height: 36px;
+
+    flex-shrink: 0;
+
+    border-radius: 9px;
+  }
+
+
+  .assistant-disclaimer {
+    margin-top: 6px;
+
+    font-size: 7.5px;
+  }
+
+
+  /* =======================================================
+     CHAT HISTORY
+  ======================================================= */
+
+  /*
+    Khi mở lịch sử trên mobile,
+    history trở thành lớp phủ bên trái trong sheet.
+  */
+
+  .assistant-history-panel {
+    position: absolute;
+
+    z-index: 30;
+
+    top: 0;
+    bottom: 0;
+    left: 0;
+
+    width:
+      min(
+        82vw,
+        300px
+      );
+
+    padding:
+      72px
+      10px
+      calc(
+        14px +
+        env(safe-area-inset-bottom)
+      );
+
+    overflow-y: auto;
+
+    border-right:
+      1px solid #e2e8f0;
+
+    box-shadow:
+      14px 0 35px
+      rgba(
+        15,
+        23,
+        42,
+        0.16
+      );
+  }
+
+
+  /*
+    Rule desktop dùng :has để tăng width.
+    Mobile luôn full width nên override.
+  */
+
+  .ai-assistant-panel:has(
+    .assistant-history-panel
+  ) {
+    width: 100%;
+  }
+
+
+  /* =======================================================
+     BOTTOM NAV
+  ======================================================= */
+
+  /*
+    Chat panel nằm z-index 600 nên phủ bottom nav.
+    Khi chat mở, người dùng tập trung vào cuộc hội thoại.
+  */
+
+  .sidebar {
+    z-index: 250;
+  }
+
+}
+
+
+/* =========================================================
+   AI ASSISTANT EXTRA SMALL PHONE
+========================================================= */
+
+@media (max-width: 390px) {
+
+  .ai-assistant-panel {
+    height: 90dvh;
+
+    border-radius:
+      18px
+      18px
+      0
+      0;
+  }
+
+
+  .ai-assistant-panel::before {
+    top: 6px;
+  }
+
+
+  .ai-assistant-header {
+    padding:
+      20px
+      12px
+      10px;
+  }
+
+
+  .ai-assistant-avatar {
+    width: 34px;
+    height: 34px;
+
+    font-size: 17px;
+  }
+
+
+  .ai-assistant-title strong {
+    font-size: 12px;
+  }
+
+
+  .ai-assistant-title span {
+    max-width: 170px;
+
+    font-size: 8px;
+  }
+
+
+  .ai-assistant-body {
+    padding:
+      12px
+      10px
+      16px;
+  }
+
+
+  .assistant-chat-bubble {
+    max-width: 88%;
+
+    font-size: 10.5px;
+  }
+
+}
+
+
+/* =========================================================
+   AI ASSISTANT MOBILE DARK MODE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  body.dark-mode
+  .ai-assistant-panel::before {
+    background: #475569;
+  }
+
+
+  body.dark-mode
+  .assistant-history-panel {
+    border-right-color: #26354a;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 1A
+   AI ASSISTANT STATUS
+========================================================= */
+
+.assistant-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  width: fit-content;
+
+  margin-top: 4px;
+  padding: 4px 7px;
+
+  border-radius: 999px;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  line-height: 1;
+}
+
+.assistant-status-icon {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* Ready */
+
+.assistant-status-ready {
+  background: #ecfdf3;
+  color: #15803d;
+}
+
+.assistant-status-ready
+.assistant-status-icon {
+  color: #22c55e;
+
+  font-size: 8px;
+}
+
+
+/* Listening - dùng ở Upgrade 1C */
+
+.assistant-status-listening {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+
+/* Thinking */
+
+.assistant-status-thinking {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.assistant-status-thinking
+.assistant-status-icon {
+  animation:
+    assistant-thinking-pulse
+    1s
+    ease-in-out
+    infinite;
+}
+
+
+/* Needs input - dùng khi nối form */
+
+.assistant-status-needsInput {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+
+/* Complete */
+
+.assistant-status-complete {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+
+@keyframes assistant-thinking-pulse {
+
+  0%,
+  100% {
+    opacity: 0.55;
+
+    transform:
+      scale(0.92);
+  }
+
+  50% {
+    opacity: 1;
+
+    transform:
+      scale(1.05);
+  }
+
+}
+
+
+/* =========================================================
+   Disabled chat controls
+========================================================= */
+
+.assistant-input-wrapper input:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.assistant-mic-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.assistant-status-ready {
+  background: #14351f;
+  color: #4ade80;
+}
+
+body.dark-mode
+.assistant-status-thinking {
+  background: #172554;
+  color: #93c5fd;
+}
+
+body.dark-mode
+.assistant-status-listening {
+  background: #3f1d1d;
+  color: #fca5a5;
+}
+
+body.dark-mode
+.assistant-status-needsInput {
+  background: #3b2f13;
+  color: #fde68a;
+}
+
+body.dark-mode
+.assistant-status-complete {
+  background: #14351f;
+  color: #86efac;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .assistant-status {
+    margin-top: 3px;
+
+    padding:
+      3px
+      6px;
+
+    font-size: 8px;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 1B
+   AI TYPING INDICATOR
+========================================================= */
+
+.assistant-typing-message {
+  animation:
+    assistant-typing-enter
+    0.18s
+    ease;
+}
+
+.assistant-typing-bubble {
+  display: flex;
+
+  align-items: center;
+
+  gap: 4px;
+
+  min-width: 48px;
+
+  padding:
+    11px
+    12px;
+
+  border: 1px solid #dcfce7;
+  border-radius:
+    14px
+    14px
+    14px
+    4px;
+
+  background: #ffffff;
+}
+
+.assistant-typing-bubble span {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #22c55e;
+
+  animation:
+    assistant-typing-dot
+    1.1s
+    infinite
+    ease-in-out;
+}
+
+.assistant-typing-bubble span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.assistant-typing-bubble span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.assistant-typing-bubble span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes assistant-typing-dot {
+
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+
+    transform:
+      translateY(0);
+  }
+
+  30% {
+    opacity: 1;
+
+    transform:
+      translateY(-4px);
+  }
+
+}
+
+@keyframes assistant-typing-enter {
+
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.assistant-typing-bubble {
+  border-color: #26354a;
+
+  background: #1e293b;
+}
+
+body.dark-mode
+.assistant-typing-bubble span {
+  background: #4ade80;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .assistant-typing-bubble {
+    min-width: 44px;
+
+    padding:
+      9px
+      10px;
+  }
+
+  .assistant-typing-bubble span {
+    width: 5px;
+    height: 5px;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 1C
+   AI ASSISTANT VOICE INPUT
+========================================================= */
+
+.assistant-mic-btn {
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.assistant-mic-btn.listening {
+  background: #fee2e2;
+  color: #dc2626;
+
+  box-shadow:
+    0 0 0 4px
+    rgba(239, 68, 68, 0.1);
+
+  animation:
+    assistant-mic-listening
+    1.25s
+    ease-in-out
+    infinite;
+}
+
+@keyframes assistant-mic-listening {
+
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px
+      rgba(239, 68, 68, 0.08);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 7px
+      rgba(239, 68, 68, 0.14);
+  }
+
+}
+
+
+/* =========================================================
+   Voice feedback
+========================================================= */
+
+.assistant-voice-feedback {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 6px;
+
+  margin-top: 7px;
+
+  padding:
+    7px
+    9px;
+
+  border-radius: 9px;
+
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.assistant-voice-feedback.listening {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.assistant-voice-feedback.error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.assistant-mic-btn.listening {
+  background: #3f1d1d;
+  color: #fca5a5;
+}
+
+body.dark-mode
+.assistant-voice-feedback.listening {
+  background: #172554;
+  color: #bfdbfe;
+}
+
+body.dark-mode
+.assistant-voice-feedback.error {
+  background: #3f1d1d;
+  color: #fecaca;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .assistant-voice-feedback {
+    margin-top: 6px;
+
+    padding:
+      6px
+      8px;
+
+    font-size: 8px;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 2A
+   AI COMPLETENESS BOX
+========================================================= */
+
+.ai-completeness-box {
+  margin-bottom: 18px;
+  padding: 12px;
+
+  border: 1px solid transparent;
+  border-radius: 11px;
+}
+
+.ai-completeness-box.error {
+  border-color: #fecaca;
+
+  background: #fef2f2;
+}
+
+.ai-completeness-box.warning {
+  border-color: #fde68a;
+
+  background: #fffbeb;
+}
+
+.ai-completeness-box.success {
+  border-color: #bbf7d0;
+
+  background: #f0fdf4;
+}
+
+
+/* Header */
+
+.ai-completeness-header {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 9px;
+}
+
+.ai-completeness-icon {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  width: 28px;
+  height: 28px;
+
+  border-radius: 8px;
+
+  font-size: 14px;
+}
+
+.ai-completeness-box.error
+.ai-completeness-icon {
+  background: #fee2e2;
+}
+
+.ai-completeness-box.warning
+.ai-completeness-icon {
+  background: #fef3c7;
+}
+
+.ai-completeness-box.success
+.ai-completeness-icon {
+  background: #dcfce7;
+}
+
+
+.ai-completeness-header > div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+
+  min-width: 0;
+}
+
+.ai-completeness-header strong {
+  font-size: 11px;
+}
+
+.ai-completeness-header span {
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+
+.ai-completeness-box.error
+.ai-completeness-header strong {
+  color: #b91c1c;
+}
+
+.ai-completeness-box.error
+.ai-completeness-header span {
+  color: #991b1b;
+}
+
+
+.ai-completeness-box.warning
+.ai-completeness-header strong {
+  color: #92400e;
+}
+
+.ai-completeness-box.warning
+.ai-completeness-header span {
+  color: #a16207;
+}
+
+
+.ai-completeness-box.success
+.ai-completeness-header strong {
+  color: #166534;
+}
+
+.ai-completeness-box.success
+.ai-completeness-header span {
+  color: #15803d;
+}
+
+
+/* =========================================================
+   Issue list
+========================================================= */
+
+.ai-completeness-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+
+  margin-top: 10px;
+  padding-top: 9px;
+
+  border-top:
+    1px solid
+    rgba(148, 163, 184, 0.22);
+}
+
+.ai-completeness-item {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 6px;
+}
+
+.ai-completeness-bullet {
+  flex-shrink: 0;
+
+  font-weight: 900;
+}
+
+.ai-completeness-item > div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 1px;
+
+  min-width: 0;
+}
+
+.ai-completeness-item strong {
+  color: #334155;
+
+  font-size: 9px;
+}
+
+.ai-completeness-item
+div span {
+  color: #64748b;
+
+  font-size: 8.5px;
+  line-height: 1.4;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.ai-completeness-box.error {
+  border-color: #7f1d1d;
+
+  background: #3f1d1d;
+}
+
+body.dark-mode
+.ai-completeness-box.warning {
+  border-color: #854d0e;
+
+  background: #3b2f13;
+}
+
+body.dark-mode
+.ai-completeness-box.success {
+  border-color: #166534;
+
+  background: #14351f;
+}
+
+
+body.dark-mode
+.ai-completeness-box.error
+.ai-completeness-icon {
+  background: #5f2020;
+}
+
+body.dark-mode
+.ai-completeness-box.warning
+.ai-completeness-icon {
+  background: #4b3715;
+}
+
+body.dark-mode
+.ai-completeness-box.success
+.ai-completeness-icon {
+  background: #14532d;
+}
+
+
+body.dark-mode
+.ai-completeness-box.error
+.ai-completeness-header strong {
+  color: #fecaca;
+}
+
+body.dark-mode
+.ai-completeness-box.error
+.ai-completeness-header span {
+  color: #fca5a5;
+}
+
+
+body.dark-mode
+.ai-completeness-box.warning
+.ai-completeness-header strong {
+  color: #fde68a;
+}
+
+body.dark-mode
+.ai-completeness-box.warning
+.ai-completeness-header span {
+  color: #fcd34d;
+}
+
+
+body.dark-mode
+.ai-completeness-box.success
+.ai-completeness-header strong {
+  color: #86efac;
+}
+
+body.dark-mode
+.ai-completeness-box.success
+.ai-completeness-header span {
+  color: #4ade80;
+}
+
+
+body.dark-mode
+.ai-completeness-item strong {
+  color: #e2e8f0;
+}
+
+body.dark-mode
+.ai-completeness-item
+div span {
+  color: #94a3b8;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .ai-completeness-box {
+    margin-bottom: 14px;
+
+    padding: 10px;
+
+    border-radius: 10px;
+  }
+
+  .ai-completeness-icon {
+    width: 26px;
+    height: 26px;
+
+    font-size: 13px;
+  }
+
+  .ai-completeness-header {
+    gap: 7px;
+  }
+
+  .ai-completeness-header strong {
+    font-size: 10px;
+  }
+
+  .ai-completeness-header span {
+    font-size: 8px;
+  }
+
+  .ai-completeness-list {
+    gap: 6px;
+
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
+  .ai-completeness-item strong {
+    font-size: 8.5px;
+  }
+
+  .ai-completeness-item
+  div span {
+    font-size: 8px;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 2B
+   AI FIELD STATUS
+========================================================= */
+
+.ai-field-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    width: 100%;
+    gap: 8px;
+
+    margin-bottom: 6px;
+  }
+
+  .ai-field-label-row label {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ai-field-status {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 28px;
+
+    width: 28px;
+    height: 28px;
+
+    padding: 0;
+
+    border-radius: 50%;
+
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .ai-field-status-icon {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    height: 100%;
+
+    font-size: 14px;
+    font-weight: 900;
+
+    line-height: 1;
+
+    background: transparent !important;
+
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .ai-field-status-text {
+    display: none;
+  }
+
+  /* ✓ */
+  .ai-field-status.success {
+    background: #14532d;
+    color: #4ade80;
+  }
+
+  /* ! */
+  .ai-field-status.warning {
+    background: #78350f;
+    color: #fbbf24;
+  }
+
+  /* ✕ */
+  .ai-field-status.error {
+    background: #7f1d1d;
+    color: #fca5a5;
+  }
+
+  /* – */
+  .ai-field-status.neutral {
+    background: #334155;
+    color: #cbd5e1;
+  }
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.ai-field-status.success {
+  background: #14351f;
+  color: #4ade80;
+}
+
+body.dark-mode
+.ai-field-status.success
+.ai-field-status-icon {
+  background: #14532d;
+}
+
+body.dark-mode
+.ai-field-status.warning {
+  background: #3b2f13;
+  color: #fde68a;
+}
+
+body.dark-mode
+.ai-field-status.warning
+.ai-field-status-icon {
+  background: #4b3715;
+}
+
+body.dark-mode
+.ai-field-status.error {
+  background: #3f1d1d;
+  color: #fca5a5;
+}
+
+body.dark-mode
+.ai-field-status.error
+.ai-field-status-icon {
+  background: #5f2020;
+}
+
+body.dark-mode
+.ai-field-status.neutral {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+body.dark-mode
+.ai-field-status.neutral
+.ai-field-status-icon {
+  background: #334155;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .ai-field-label-row {
+    gap: 6px;
+
+    margin-bottom: 6px;
+  }
+
+  /*
+    Mobile chỉ hiện icon trạng thái.
+    Không nhét thêm chữ làm form chật.
+  */
+
+  .ai-field-status {
+    width: 24px;
+    height: 24px;
+
+    justify-content: center;
+
+    padding: 0;
+  }
+
+  .ai-field-status-icon {
+    width: auto;
+    height: auto;
+
+    background: transparent !important;
+
+    font-size: 11px;
+  }
+
+  .ai-field-status-text {
+    display: none;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 2C
+   SMART CONFIRM BUTTON
+========================================================= */
+
+.btn-confirm.review {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.btn-confirm.review:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+
+.btn-confirm.ready {
+  background: #15803d;
+  color: #ffffff;
+}
+
+.btn-confirm.ready:hover:not(:disabled) {
+  background: #166534;
+}
+
+
+.btn-confirm.warning {
+  background: #d97706;
+  color: #ffffff;
+}
+
+.btn-confirm.warning:hover:not(:disabled) {
+  background: #b45309;
+}
+
+
+.btn-confirm.blocked {
+  background: #475569;
+  color: #cbd5e1;
+
+  cursor: not-allowed;
+}
+
+
+.btn-confirm.confirmed {
+  background: #166534;
+  color: #dcfce7;
+
+  cursor: default;
+}
+
+
+/* =========================================================
+   CONFIRM HELPER
+========================================================= */
+
+.confirm-helper {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+
+  grid-column: 1 / -1;
+
+  width: 100%;
+
+  margin-top: 3px;
+  padding: 9px 10px;
+
+  border-radius: 9px;
+
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.confirm-helper.error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.confirm-helper.warning {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.btn-confirm.review {
+  background: #1d4ed8;
+}
+
+body.dark-mode
+.btn-confirm.warning {
+  background: #b45309;
+}
+
+body.dark-mode
+.btn-confirm.blocked {
+  background: #334155;
+  color: #94a3b8;
+}
+
+body.dark-mode
+.confirm-helper.error {
+  background: #3f1d1d;
+  color: #fecaca;
+}
+
+body.dark-mode
+.confirm-helper.warning {
+  background: #3b2f13;
+  color: #fde68a;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .confirm-helper {
+    padding: 8px 9px;
+
+    font-size: 8px;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 2D
+   VALIDATION POLISH
+========================================================= */
+
+.ai-field {
+  position: relative;
+}
+
+
+/* =========================================================
+   LABEL + STATUS ALIGNMENT
+========================================================= */
+
+.ai-field-label-row {
+  min-height: 24px;
+}
+
+.ai-field-label-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+
+/* =========================================================
+   INPUT TRANSITIONS
+========================================================= */
+
+.ai-field input,
+.ai-field select,
+.ai-field textarea {
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+
+/* =========================================================
+   ERROR STATE
+========================================================= */
+
+.ai-field.validation-error input,
+.ai-field.validation-error select,
+.ai-field.validation-error textarea {
+  border-color: #ef4444;
+
+  background: #fffafa;
+
+  box-shadow:
+    0 0 0 2px
+    rgba(239, 68, 68, 0.08);
+}
+
+.ai-field.validation-error
+.ai-field-label-row label {
+  color: #b91c1c;
+}
+
+
+/* =========================================================
+   WARNING STATE
+========================================================= */
+
+.ai-field.validation-warning input,
+.ai-field.validation-warning select,
+.ai-field.validation-warning textarea {
+  border-color: #f59e0b;
+
+  background: #fffdf7;
+
+  box-shadow:
+    0 0 0 2px
+    rgba(245, 158, 11, 0.08);
+}
+
+.ai-field.validation-warning
+.ai-field-label-row label {
+  color: #92400e;
+}
+
+
+/* =========================================================
+   FIELD MESSAGE
+========================================================= */
+
+.field-validation-message {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 5px;
+
+  margin-top: 7px;
+
+  font-size: 9px;
+  font-weight: 600;
+
+  line-height: 1.45;
+}
+
+.field-validation-message.error {
+  color: #dc2626;
+}
+
+.field-validation-message.warning {
+  color: #d97706;
+}
+
+
+/* =========================================================
+   CONFIRMED / READONLY STATE
+========================================================= */
+
+.ai-form input[readonly],
+.ai-form select[disabled],
+.ai-form textarea[readonly] {
+  cursor: default;
+
+  opacity: 1;
+}
+
+.ai-form input[readonly] {
+  border-color: #bbf7d0;
+
+  background: #f0fdf4;
+}
+
+
+/* =========================================================
+   CONFIRMED STATUS
+========================================================= */
+
+.ai-form:has(
+  .confirmed-badge
+)
+.ai-field-status.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.ai-field.validation-error input,
+body.dark-mode
+.ai-field.validation-error select,
+body.dark-mode
+.ai-field.validation-error textarea {
+  border-color: #ef4444;
+
+  background: #2b1a1a;
+
+  box-shadow:
+    0 0 0 2px
+    rgba(239, 68, 68, 0.1);
+}
+
+body.dark-mode
+.ai-field.validation-warning input,
+body.dark-mode
+.ai-field.validation-warning select,
+body.dark-mode
+.ai-field.validation-warning textarea {
+  border-color: #f59e0b;
+
+  background: #2c2415;
+
+  box-shadow:
+    0 0 0 2px
+    rgba(245, 158, 11, 0.1);
+}
+
+body.dark-mode
+.ai-field.validation-error
+.ai-field-label-row label {
+  color: #fca5a5;
+}
+
+body.dark-mode
+.ai-field.validation-warning
+.ai-field-label-row label {
+  color: #fcd34d;
+}
+
+body.dark-mode
+.field-validation-message.error {
+  color: #fca5a5;
+}
+
+body.dark-mode
+.field-validation-message.warning {
+  color: #fcd34d;
+}
+
+body.dark-mode
+.ai-form input[readonly] {
+  border-color: #166534;
+
+  background: #14351f;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .field-validation-message {
+    margin-top: 6px;
+
+    font-size: 8px;
+    line-height: 1.4;
+  }
+
+  .ai-field.validation-error input,
+  .ai-field.validation-warning input {
+    box-shadow: none;
+  }
+
+}
+
+/* =========================================================
+   FIX CONFIRMED + VALIDATION COLOR PRIORITY
+========================================================= */
+
+/* Confirmed field bình thường */
+.ai-form
+.ai-field:not(.validation-error):not(.validation-warning)
+input[readonly] {
+  border-color: #22c55e;
+
+  background: #f0fdf4;
+
+  box-shadow:
+    inset 0 0 0 1px
+    rgba(34, 197, 94, 0.08);
+}
+
+
+/* =========================================================
+   CONFIRMED + WARNING
+========================================================= */
+
+.ai-form
+.ai-field.validation-warning
+input[readonly] {
+  border-color: #f59e0b !important;
+
+  background: #fffaf0 !important;
+
+  box-shadow:
+    inset 0 0 0 1px
+    rgba(245, 158, 11, 0.08) !important;
+}
+
+.ai-form
+.ai-field.validation-warning
+.ai-field-label-row label {
+  color: #b45309;
+}
+
+
+/* =========================================================
+   CONFIRMED + ERROR
+========================================================= */
+
+.ai-form
+.ai-field.validation-error
+input[readonly] {
+  border-color: #ef4444 !important;
+
+  background: #fff5f5 !important;
+
+  box-shadow:
+    inset 0 0 0 1px
+    rgba(239, 68, 68, 0.08) !important;
+}
+
+.ai-form
+.ai-field.validation-error
+.ai-field-label-row label {
+  color: #dc2626;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.ai-form
+.ai-field:not(.validation-error):not(.validation-warning)
+input[readonly] {
+  border-color: #15803d;
+
+  background: #14351f;
+}
+
+
+body.dark-mode
+.ai-form
+.ai-field.validation-warning
+input[readonly] {
+  border-color: #f59e0b !important;
+
+  background: #2c2415 !important;
+
+  box-shadow:
+    inset 0 0 0 1px
+    rgba(245, 158, 11, 0.12) !important;
+}
+
+
+body.dark-mode
+.ai-form
+.ai-field.validation-error
+input[readonly] {
+  border-color: #ef4444 !important;
+
+  background: #2b1a1a !important;
+
+  box-shadow:
+    inset 0 0 0 1px
+    rgba(239, 68, 68, 0.12) !important;
+}
+
+/* =========================================================
+   UI UPGRADE 3C
+   AI UPDATED FIELD HIGHLIGHT
+========================================================= */
+
+.ai-field.ai-field-updated input {
+  border-color: #22c55e !important;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(34, 197, 94, 0.14) !important;
+
+  animation:
+    ai-field-updated-pulse
+    0.65s
+    ease
+    2;
+}
+
+.ai-field.ai-field-updated
+.ai-field-label-row label {
+  color: #16a34a;
+}
+
+@keyframes ai-field-updated-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.01);
+  }
+
+}
+
+
+/* Dark mode */
+
+body.dark-mode
+.ai-field.ai-field-updated input {
+  border-color: #4ade80 !important;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(74, 222, 128, 0.12) !important;
+}
+
+body.dark-mode
+.ai-field.ai-field-updated
+.ai-field-label-row label {
+  color: #4ade80;
+}
+
+
+/* Mobile */
+
+@media (max-width: 767px) {
+
+  .ai-field.ai-field-updated input {
+    box-shadow:
+      0 0 0 2px
+      rgba(34, 197, 94, 0.14) !important;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 3D.2
+   AI AUDIT TRAIL
+========================================================= */
+
+.assistant-audit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+
+  padding: 0;
+
+  border: 1px solid transparent;
+  border-radius: 9px;
+
+  background: transparent;
+
+  font-size: 15px;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.assistant-audit-btn:hover,
+.assistant-audit-btn.active {
+  border-color: #bbf7d0;
+
+  background: #f0fdf4;
+}
+
+.assistant-audit-btn:active {
+  transform: scale(0.96);
+}
+
+
+/* =========================================================
+   PANEL
+========================================================= */
+
+.assistant-audit-panel {
+  width: 300px;
+  min-width: 300px;
+
+  padding: 12px;
+
+  overflow-y: auto;
+
+  border-right: 1px solid #e2e8f0;
+
+  background: #f8fafc;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.assistant-audit-header {
+  display: flex;
+
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-bottom: 12px;
+}
+
+.assistant-audit-header > div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+
+  min-width: 0;
+}
+
+.assistant-audit-header strong {
+  color: #0f172a;
+
+  font-size: 11px;
+}
+
+.assistant-audit-header span {
+  color: #64748b;
+
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.assistant-audit-count {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  min-width: 24px;
+  height: 24px;
+
+  padding: 0 7px;
+
+  border-radius: 999px;
+
+  background: #dcfce7 !important;
+  color: #15803d !important;
+
+  font-size: 9px !important;
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   EMPTY
+========================================================= */
+
+.assistant-audit-empty {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  gap: 5px;
+
+  padding: 28px 12px;
+
+  text-align: center;
+}
+
+.assistant-audit-empty > span:first-child {
+  font-size: 25px;
+}
+
+.assistant-audit-empty strong {
+  color: #334155;
+
+  font-size: 10px;
+}
+
+.assistant-audit-empty span:last-child {
+  color: #94a3b8;
+
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+
+/* =========================================================
+   LIST
+========================================================= */
+
+.assistant-audit-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 9px;
+}
+
+.assistant-audit-event {
+  padding: 10px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  background: #ffffff;
+}
+
+.assistant-audit-event.update {
+  border-left:
+    3px solid #22c55e;
+}
+
+.assistant-audit-event.undo {
+  border-left:
+    3px solid #3b82f6;
+}
+
+
+/* =========================================================
+   EVENT HEADER
+========================================================= */
+
+.assistant-audit-event-top {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 8px;
+
+  margin-bottom: 8px;
+}
+
+.assistant-audit-event-type {
+  color: #334155;
+
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.assistant-audit-event-top time {
+  color: #94a3b8;
+
+  font-size: 8px;
+}
+
+
+/* =========================================================
+   CHANGES
+========================================================= */
+
+.assistant-audit-changes {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+.assistant-audit-change {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+
+  padding-top: 6px;
+
+  border-top:
+    1px solid #f1f5f9;
+}
+
+.assistant-audit-change:first-child {
+  padding-top: 0;
+
+  border-top: none;
+}
+
+.assistant-audit-change strong {
+  color: #475569;
+
+  font-size: 8.5px;
+}
+
+.assistant-audit-values {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto
+    minmax(0, 1fr);
+
+  align-items: center;
+
+  gap: 5px;
+
+  font-size: 9px;
+}
+
+.assistant-audit-values span {
+  overflow: hidden;
+
+  padding: 5px 6px;
+
+  border-radius: 6px;
+
+  background: #f8fafc;
+
+  color: #334155;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistant-audit-values b {
+  color: #94a3b8;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.assistant-audit-btn:hover,
+body.dark-mode
+.assistant-audit-btn.active {
+  border-color: #166534;
+
+  background: #14351f;
+}
+
+body.dark-mode
+.assistant-audit-panel {
+  border-right-color: #26354a;
+
+  background: #0f172a;
+}
+
+body.dark-mode
+.assistant-audit-header strong,
+body.dark-mode
+.assistant-audit-event-type,
+body.dark-mode
+.assistant-audit-change strong {
+  color: #e2e8f0;
+}
+
+body.dark-mode
+.assistant-audit-event {
+  border-color: #26354a;
+
+  background: #111827;
+}
+
+body.dark-mode
+.assistant-audit-change {
+  border-top-color: #26354a;
+}
+
+body.dark-mode
+.assistant-audit-values span {
+  background: #1e293b;
+
+  color: #e2e8f0;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .assistant-audit-panel {
+    position: absolute;
+
+    z-index: 35;
+
+    inset: 0;
+
+    width: 100%;
+    min-width: 0;
+
+    padding:
+      72px
+      12px
+      calc(
+        14px +
+        env(safe-area-inset-bottom)
+      );
+
+    border-right: none;
+
+    overflow-y: auto;
+  }
+
+  .assistant-audit-header strong {
+    font-size: 10px;
+  }
+
+  .assistant-audit-event {
+    padding: 9px;
+  }
+
+  .assistant-audit-values {
+    font-size: 8.5px;
+  }
+
+}
+
+/* =========================================================
+   AI ASSISTANT
+   SECONDARY PANEL NAVIGATION
+========================================================= */
+
+.assistant-secondary-panel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 8px;
+
+  margin-bottom: 12px;
+  padding-bottom: 9px;
+
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.assistant-back-to-chat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 8px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  color: #334155;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.assistant-back-to-chat:hover {
+  border-color: #86efac;
+
+  background: #f0fdf4;
+
+  color: #15803d;
+}
+
+.assistant-back-to-chat:active {
+  transform: scale(0.97);
+}
+
+.assistant-back-to-chat > span:first-child {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.assistant-secondary-panel-title {
+  color: #64748b;
+
+  font-size: 8.5px;
+  font-weight: 700;
+
+  text-align: right;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.assistant-secondary-panel-top {
+  border-bottom-color: #26354a;
+}
+
+body.dark-mode
+.assistant-back-to-chat {
+  border-color: #334155;
+
+  background: #1e293b;
+
+  color: #cbd5e1;
+}
+
+body.dark-mode
+.assistant-back-to-chat:hover {
+  border-color: #166534;
+
+  background: #14351f;
+
+  color: #4ade80;
+}
+
+body.dark-mode
+.assistant-secondary-panel-title {
+  color: #94a3b8;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .assistant-secondary-panel-top {
+    margin-bottom: 10px;
+  }
+
+  .assistant-back-to-chat {
+    min-height: 34px;
+
+    padding: 7px 9px;
+
+    font-size: 9px;
+  }
+
+}
+
+/* =========================================================
+   FIX CHAT HISTORY PIN / DELETE
+========================================================= */
+
+.assistant-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 6px;
+
+  width: 100%;
+}
+
+.assistant-history-select {
+  flex: 1;
+  min-width: 0;
+}
+
+
+/* ĐÚNG class trong JSX hiện tại */
+
+.assistant-history-item-actions {
+  position: relative;
+  z-index: 10;
+
+  display: flex !important;
+  align-items: center;
+
+  gap: 4px;
+
+  flex-shrink: 0;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+
+  pointer-events: auto !important;
+}
+
+
+/* Hai button: ghim + xóa */
+
+.assistant-history-item-actions button {
+  display: inline-flex !important;
+
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 28px;
+
+  width: 28px;
+  height: 28px;
+
+  padding: 0;
+
+  border: 1px solid transparent;
+  border-radius: 7px;
+
+  background: transparent;
+
+  color: #64748b;
+
+  font-size: 14px;
+  line-height: 1;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+
+  pointer-events: auto !important;
+
+  cursor: pointer;
+}
+
+
+/* Nút ghim */
+
+.assistant-history-item-actions
+button:first-child {
+  color: #94a3b8 !important;
+}
+
+.assistant-history-item-actions
+button:first-child:hover {
+  background: #e2e8f0;
+
+  color: #16a34a !important;
+}
+
+
+/* Nút xóa */
+
+.assistant-history-item-actions
+button:last-child {
+  color: #ef4444 !important;
+
+  font-size: 18px;
+}
+
+.assistant-history-item-actions
+button:last-child:hover {
+  background: #fee2e2;
+
+  color: #dc2626 !important;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.assistant-history-item-actions
+button:first-child {
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode
+.assistant-history-item-actions
+button:last-child {
+  color: #f87171 !important;
+}
+
+body.dark-mode
+.assistant-history-item-actions
+button:first-child:hover {
+  background: #334155;
+
+  color: #4ade80 !important;
+}
+
+body.dark-mode
+.assistant-history-item-actions
+button:last-child:hover {
+  background: rgba(
+    239,
+    68,
+    68,
+    0.16
+  );
+
+  color: #fca5a5 !important;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .assistant-history-item-actions {
+    display: flex !important;
+
+    flex-shrink: 0;
+
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  .assistant-history-item-actions button {
+    display: inline-flex !important;
+
+    width: 30px;
+    height: 30px;
+
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+}
+
+/* =========================================================
+   UI UPGRADE 3D.3
+   MULTI-EDIT CONFIRMATION
+========================================================= */
+
+.assistant-pending-edit-card {
+  margin:
+    10px
+    10px
+    4px
+    48px;
+
+  padding: 11px;
+
+  border: 1px solid #f59e0b;
+  border-radius: 12px;
+
+  background: #fffbeb;
+}
+
+.assistant-pending-edit-header {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 8px;
+}
+
+.assistant-pending-edit-header > span {
+  flex-shrink: 0;
+
+  font-size: 15px;
+}
+
+.assistant-pending-edit-header > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+.assistant-pending-edit-header strong {
+  color: #92400e;
+
+  font-size: 10px;
+}
+
+.assistant-pending-edit-header
+div span {
+  color: #a16207;
+
+  font-size: 8.5px;
+}
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.assistant-pending-edit-actions {
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    1fr;
+
+  gap: 7px;
+
+  margin-top: 10px;
+}
+
+.assistant-pending-edit-actions
+button {
+  min-height: 34px;
+
+  border-radius: 8px;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+
+.assistant-pending-edit-cancel {
+  border: 1px solid #cbd5e1;
+
+  background: #ffffff;
+
+  color: #475569;
+}
+
+.assistant-pending-edit-cancel:hover {
+  background: #f8fafc;
+}
+
+
+.assistant-pending-edit-apply {
+  border: 1px solid #15803d;
+
+  background: #16a34a;
+
+  color: #ffffff;
+}
+
+.assistant-pending-edit-apply:hover {
+  background: #15803d;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode
+.assistant-pending-edit-card {
+  border-color: #854d0e;
+
+  background: #3b2f13;
+}
+
+body.dark-mode
+.assistant-pending-edit-header strong {
+  color: #fde68a;
+}
+
+body.dark-mode
+.assistant-pending-edit-header
+div span {
+  color: #fcd34d;
+}
+
+body.dark-mode
+.assistant-pending-edit-cancel {
+  border-color: #475569;
+
+  background: #1e293b;
+
+  color: #cbd5e1;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+
+  .assistant-pending-edit-card {
+    margin:
+      8px
+      8px
+      4px
+      42px;
+
+    padding: 10px;
+  }
+
+  .assistant-pending-edit-actions {
+    gap: 6px;
+  }
+
+  .assistant-pending-edit-actions
+  button {
+    min-height: 36px;
+  }
+
+}
+
+/* =========================================================
+   AUDIT HISTORY MANAGEMENT
+========================================================= */
+
+.assistant-audit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  margin-bottom: 10px;
+}
+
+.assistant-audit-toolbar button {
+  min-height: 30px;
+
+  padding: 6px 9px;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #475569;
+
+  font-size: 8.5px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.assistant-audit-toolbar button:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.assistant-audit-toolbar button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.assistant-audit-clear-all-btn,
+.assistant-audit-delete-selected-btn {
+  color: #dc2626 !important;
+}
+
+.assistant-audit-event {
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.assistant-audit-event.selected {
+  border-color: #22c55e;
+
+  background: #f0fdf4;
+}
+
+.assistant-audit-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  margin-bottom: 8px;
+
+  color: #475569;
+
+  font-size: 8px;
+
+  cursor: pointer;
+}
+
+.assistant-audit-checkbox input {
+  width: 15px;
+  height: 15px;
+
+  accent-color: #16a34a;
+
+  cursor: pointer;
+}
+
+
+/* Dark */
+
+body.dark-mode
+.assistant-audit-toolbar button {
+  border-color: #334155;
+
+  background: #1e293b;
+
+  color: #cbd5e1;
+}
+
+body.dark-mode
+.assistant-audit-event.selected {
+  border-color: #22c55e;
+
+  background: #14351f;
+}
+
+body.dark-mode
+.assistant-audit-checkbox {
+  color: #cbd5e1;
+}
+
+
+/* Mobile */
+
+@media (max-width: 767px) {
+
+  .assistant-audit-toolbar {
+    display: grid;
+
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    gap: 6px;
+  }
+
+  .assistant-audit-toolbar button {
+    width: 100%;
+
+    min-height: 34px;
+
+    font-size: 8px;
+  }
+
+}
+
+.ai-time-field-label {
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+}
