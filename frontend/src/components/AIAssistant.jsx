@@ -9,6 +9,13 @@ import {
   generateId,
 } from "../utils/id";
 
+import {
+  createBotSession,
+  getBotSession,
+  sendBotMessage,
+  updateBotSession,
+} from "../services/botService";
+
 const STORAGE_KEY =
   "nextfarm-ai-conversations";
 
@@ -61,6 +68,11 @@ function AIAssistant({
     useState(false);
   const [voiceMessage, setVoiceMessage] =
     useState("");
+
+  const [
+    botSessionIds,
+    setBotSessionIds,
+  ] = useState({});
 
   const [conversations, setConversations] =
     useState(() => {
@@ -1007,6 +1019,304 @@ function AIAssistant({
   };
 
   /* ===========================
+     Voice Bot API
+  =========================== */
+
+  const syncBotSession = async (
+    nextAiData = aiData
+  ) => {
+    const conversationId =
+      activeConversationId;
+
+    if (!conversationId) {
+      return null;
+    }
+
+    const currentSessionId =
+      botSessionIds[
+        conversationId
+      ];
+
+    const session =
+      currentSessionId
+        ? await updateBotSession(
+            currentSessionId,
+            nextAiData
+          )
+        : await createBotSession(
+            nextAiData
+          );
+
+    if (
+      session?.session_id &&
+      session.session_id !==
+        currentSessionId
+    ) {
+      setBotSessionIds(
+        (previous) => ({
+          ...previous,
+          [conversationId]:
+            session.session_id,
+        })
+      );
+    }
+
+    return session;
+  };
+
+  const appendBotSessionGuidance = (
+    baseText,
+    session,
+    replyInVietnamese = isVietnamese
+  ) => {
+    const text =
+      String(
+        baseText ?? ""
+      ).trim();
+
+    if (!session) {
+      return text;
+    }
+
+    const additions = [];
+
+    if (
+      Array.isArray(
+        session.warnings
+      ) &&
+      session.warnings.length > 0
+    ) {
+      additions.push(
+        replyInVietnamese
+          ? `⚠️ ${session.warnings.join(
+              "\n⚠️ "
+            )}`
+          : `⚠️ ${session.warnings.join(
+              "\n⚠️ "
+            )}`
+      );
+    }
+
+    if (
+      session.status ===
+        "collecting" &&
+      session.next_question
+    ) {
+      additions.push(
+        `🤖 ${session.next_question}`
+      );
+    } else if (
+      session.status ===
+        "completed" &&
+      !session.requires_confirmation
+    ) {
+      additions.push(
+        replyInVietnamese
+          ? "✅ Voice Bot đã đồng bộ và dữ liệu nhật ký hiện đã đầy đủ."
+          : "✅ Voice Bot is synchronized and the farming log data is complete."
+      );
+    }
+
+    return [
+      text,
+      ...additions,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  };
+
+  const syncBotSessionSafely = async (
+    nextAiData,
+    fallbackText,
+    replyInVietnamese = isVietnamese
+  ) => {
+    try {
+      const session =
+        await syncBotSession(
+          nextAiData
+        );
+
+      return {
+        session,
+        text:
+          appendBotSessionGuidance(
+            fallbackText,
+            session,
+            replyInVietnamese
+          ),
+      };
+    } catch (error) {
+      console.error(
+        "Voice Bot API error:",
+        error
+      );
+
+      return {
+        session: null,
+        text: [
+          String(
+            fallbackText ?? ""
+          ).trim(),
+          replyInVietnamese
+            ? "⚠️ Không thể đồng bộ với Voice Bot API. Kiểm tra AI Service tại cổng 8000 rồi thử lại."
+            : "⚠️ Unable to synchronize with the Voice Bot API. Check the AI Service on port 8000 and try again.",
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      };
+    }
+  };
+
+  const getAiDataFromBotSession = (
+    session
+  ) => {
+    const collectedData =
+      session?.collected_data || {};
+
+    const firstMaterial =
+      Array.isArray(
+        collectedData.materials
+      ) &&
+      collectedData.materials.length > 0
+        ? collectedData.materials[0]
+        : {};
+
+    return {
+      lot:
+        collectedData.lot_text ??
+        "",
+
+      work:
+        collectedData.activity_text ??
+        "",
+
+      material:
+        firstMaterial?.material_text ??
+        "",
+
+      quantity:
+        firstMaterial?.quantity ??
+        "",
+
+      unit:
+        firstMaterial?.unit_text ??
+        "",
+
+      time:
+        collectedData.time_text ??
+        "",
+    };
+  };
+
+
+  const isLikelyBotContextReply = (
+    message,
+    expectedField
+  ) => {
+    const text =
+      String(
+        message ?? ""
+      ).trim();
+
+    if (!text || !expectedField) {
+      return false;
+    }
+
+    if (
+      expectedField ===
+      "time_text"
+    ) {
+      return /^(?:(?:lúc|thời\s+gian(?:\s+là)?|giờ(?:\s+là)?)\s+)?\d{1,2}(?:(?::|h)\d{1,2}|\s+giờ(?:\s+\d{1,2})?)?\s*$/i.test(
+        text
+      );
+    }
+
+    if (
+      expectedField ===
+      "lot_text"
+    ) {
+      return /^(?:lô\s+)?[A-Za-z0-9_-]{1,20}$/i.test(
+        text
+      );
+    }
+
+    if (
+      expectedField ===
+      "materials.quantity"
+    ) {
+      return /^(?:số\s+lượng\s+)?\d+(?:[.,]\d+)?(?:\s*[^\d\s,;.]+)?\s*$/i.test(
+        text
+      );
+    }
+
+    if (
+      expectedField ===
+      "materials.unit_text"
+    ) {
+      return (
+        text.length <= 30 &&
+        !/[?]/.test(text)
+      );
+    }
+
+    if (
+      expectedField ===
+      "materials.material_text"
+    ) {
+      return (
+        text.length <= 80 &&
+        !/[?]/.test(text)
+      );
+    }
+
+    if (
+      expectedField ===
+      "activity_text"
+    ) {
+      return (
+        text.length <= 120 &&
+        !/[?]/.test(text)
+      );
+    }
+
+    return false;
+  };
+
+
+  const getCurrentBotSession =
+    async () => {
+      const conversationId =
+        activeConversationId;
+
+      if (!conversationId) {
+        return null;
+      }
+
+      const sessionId =
+        botSessionIds[
+          conversationId
+        ];
+
+      if (!sessionId) {
+        return null;
+      }
+
+      try {
+        return await getBotSession(
+          sessionId
+        );
+      } catch (error) {
+        console.error(
+          "Get Voice Bot session error:",
+          error
+        );
+
+        return null;
+      }
+    };
+
+
+  /* ===========================
      Local demo response
   =========================== */
 
@@ -1235,6 +1545,18 @@ function AIAssistant({
   const deleteConversation = (
     id
   ) => {
+    setBotSessionIds(
+      (previous) => {
+        const next = {
+          ...previous,
+        };
+
+        delete next[id];
+
+        return next;
+      }
+    );
+
     setConversations(
       (previous) => {
         const filtered =
@@ -1473,7 +1795,7 @@ function AIAssistant({
      Send message
   =========================== */
 
-  const sendMessage = (
+  const sendMessage = async (
     message
   ) => {
     const cleanMessage =
@@ -1532,113 +1854,85 @@ function AIAssistant({
 
     setInputValue("");
 
-    responseTimeoutRef.current =
-      setTimeout(() => {
-        const botResponse =
-          getBotResponse(
+    try {
+      const replyInVietnamese =
+        /[ăâđêôơưáàảãạéèẻẽẹíìỉĩịóòỏõọúùủũụýỳỷỹỵ]/i.test(
+          cleanMessage
+        ) ||
+        cleanMessage
+          .toLowerCase()
+          .includes(
+            "cho tôi"
+          ) ||
+        cleanMessage
+          .toLowerCase()
+          .includes(
+            "thông tin"
+          ) ||
+        isVietnamese;
+
+      const currentBotSession =
+        await getCurrentBotSession();
+
+      const shouldUseContextMessage =
+        currentBotSession?.status ===
+          "collecting" &&
+        currentBotSession
+          ?.expected_field &&
+        isLikelyBotContextReply(
+          cleanMessage,
+          currentBotSession
+            .expected_field
+        );
+
+      if (shouldUseContextMessage) {
+        const updatedSession =
+          await sendBotMessage(
+            currentBotSession
+              .session_id,
             cleanMessage
           );
 
-        const replyInVietnamese =
-          /[ăâđêôơưáàảãạéèẻẽẹíìỉĩịóòỏõọúùủũụýỳỷỹỵ]/i.test(
-            cleanMessage
-          ) ||
-          cleanMessage
-            .toLowerCase()
-            .includes(
-              "cho tôi"
-            ) ||
-          cleanMessage
-            .toLowerCase()
-            .includes(
-              "thông tin"
-            ) ||
-          isVietnamese;
+        const nextAiData =
+          getAiDataFromBotSession(
+            updatedSession
+          );
 
-        const isObjectResponse =
-          typeof botResponse ===
-            "object" &&
-          botResponse !== null;
-
-        const isEditResponse =
-          isObjectResponse &&
-          botResponse?.type ===
-            "edit";
-
-        const isUndoResponse =
-          isObjectResponse &&
-          botResponse?.type ===
-            "undo";
-
-        let responseText =
-          botResponse;
+        const botChanges =
+          getMeaningfulChanges(
+            nextAiData
+          );
 
         if (
-          isEditResponse
+          Object.keys(
+            botChanges
+          ).length > 0
         ) {
-          const meaningfulChanges =
-            getMeaningfulChanges(
-              botResponse.changes
-            );
-
-          const changeCount =
-            Object.keys(
-              meaningfulChanges
-            ).length;
-
-          if (changeCount === 0) {
-            responseText =
-              isVietnamese
-                ? "Các giá trị bạn yêu cầu đã giống dữ liệu hiện tại nên không cần thay đổi."
-                : "The requested values already match the current data, so no changes are needed.";
-          } else if (
-            changeCount === 1
-          ) {
-            onApplyAiChanges?.(
-              meaningfulChanges
-            );
-
-            responseText =
-              formatAppliedChanges(
-                meaningfulChanges,
-                replyInVietnamese
-              );
-          } else {
-            setPendingEdit({
-              changes:
-                meaningfulChanges,
-              replyInVietnamese,
-            });
-
-            responseText =
-              formatMultiEditPreview(
-                meaningfulChanges,
-                replyInVietnamese
-              );
-          }
+          onApplyAiChanges?.(
+            botChanges
+          );
         }
 
-        if (isUndoResponse) {
-          const undoResult =
-            onUndoAiChanges?.();
+        const baseText =
+          Object.keys(
+            botChanges
+          ).length > 0
+            ? formatAppliedChanges(
+                botChanges,
+                replyInVietnamese
+              )
+            : (
+                replyInVietnamese
+                  ? "Tôi chưa nhận diện được câu trả lời cho thông tin đang thiếu."
+                  : "I could not recognize the answer for the missing information."
+              );
 
-          const undoReplyInVietnamese =
-            /[ăâđêôơưáàảãạéèẻẽẹíìỉĩịóòỏõọúùủũụýỳỷỹỵ]/i.test(
-              cleanMessage
-            ) ||
-            cleanMessage
-              .toLowerCase()
-              .includes(
-                "hoàn tác"
-              ) ||
-            isVietnamese;
-
-          responseText =
-            formatUndoResult(
-              undoResult,
-              undoReplyInVietnamese
-            );
-        }
+        const responseText =
+          appendBotSessionGuidance(
+            baseText,
+            updatedSession,
+            replyInVietnamese
+          );
 
         const botMessage = {
           id: generateId(),
@@ -1660,23 +1954,228 @@ function AIAssistant({
           })
         );
 
-        responseTimeoutRef.current =
-          null;
-
         setAssistantStatus(
-          "complete"
+          updatedSession?.status ===
+            "completed"
+            ? "complete"
+            : "needsInput"
         );
 
         statusResetTimeoutRef.current =
           setTimeout(() => {
             setAssistantStatus(
-              "ready"
+              (current) =>
+                current ===
+                  "needsInput"
+                  ? current
+                  : "ready"
             );
 
             statusResetTimeoutRef.current =
               null;
           }, 1400);
-      }, 650);
+
+        return;
+      }
+
+      const botResponse =
+        getBotResponse(
+          cleanMessage
+        );
+
+      const isObjectResponse =
+        typeof botResponse ===
+          "object" &&
+        botResponse !== null;
+
+      const isEditResponse =
+        isObjectResponse &&
+        botResponse?.type ===
+          "edit";
+
+      const isUndoResponse =
+        isObjectResponse &&
+        botResponse?.type ===
+          "undo";
+
+      let responseText =
+        botResponse;
+
+      let dataForBot =
+        aiData;
+
+      let shouldSyncBot =
+        true;
+
+      if (isEditResponse) {
+        const meaningfulChanges =
+          getMeaningfulChanges(
+            botResponse.changes
+          );
+
+        const changeCount =
+          Object.keys(
+            meaningfulChanges
+          ).length;
+
+        if (changeCount === 0) {
+          responseText =
+            isVietnamese
+              ? "Các giá trị bạn yêu cầu đã giống dữ liệu hiện tại nên không cần thay đổi."
+              : "The requested values already match the current data, so no changes are needed.";
+        } else if (
+          changeCount === 1
+        ) {
+          onApplyAiChanges?.(
+            meaningfulChanges
+          );
+
+          dataForBot = {
+            ...aiData,
+            ...meaningfulChanges,
+          };
+
+          responseText =
+            formatAppliedChanges(
+              meaningfulChanges,
+              replyInVietnamese
+            );
+        } else {
+          setPendingEdit({
+            changes:
+              meaningfulChanges,
+            replyInVietnamese,
+          });
+
+          responseText =
+            formatMultiEditPreview(
+              meaningfulChanges,
+              replyInVietnamese
+            );
+
+          shouldSyncBot =
+            false;
+        }
+      }
+
+      if (isUndoResponse) {
+        const undoResult =
+          onUndoAiChanges?.();
+
+        const undoReplyInVietnamese =
+          /[ăâđêôơưáàảãạéèẻẽẹíìỉĩịóòỏõọúùủũụýỳỷỹỵ]/i.test(
+            cleanMessage
+          ) ||
+          cleanMessage
+            .toLowerCase()
+            .includes(
+              "hoàn tác"
+            ) ||
+          isVietnamese;
+
+        responseText =
+          formatUndoResult(
+            undoResult,
+            undoReplyInVietnamese
+          );
+
+        if (
+          undoResult?.success
+        ) {
+          dataForBot = {
+            ...aiData,
+            ...(
+              undoResult
+                .previousValues ||
+              {}
+            ),
+          };
+        }
+      }
+
+      if (shouldSyncBot) {
+        const botSync =
+          await syncBotSessionSafely(
+            dataForBot,
+            responseText,
+            replyInVietnamese
+          );
+
+        responseText =
+          botSync.text;
+      }
+
+      const botMessage = {
+        id: generateId(),
+        role: "assistant",
+        text: responseText,
+        createdAt:
+          new Date().toISOString(),
+      };
+
+      updateActiveConversation(
+        (conversation) => ({
+          ...conversation,
+          updatedAt:
+            new Date().toISOString(),
+          messages: [
+            ...conversation.messages,
+            botMessage,
+          ],
+        })
+      );
+
+      setAssistantStatus(
+        shouldSyncBot
+          ? "complete"
+          : "needsInput"
+      );
+    } catch (error) {
+      console.error(
+        "AI assistant error:",
+        error
+      );
+
+      const botMessage = {
+        id: generateId(),
+        role: "assistant",
+        text:
+          isVietnamese
+            ? "Không thể xử lý yêu cầu lúc này. Vui lòng thử lại."
+            : "Unable to process the request right now. Please try again.",
+        createdAt:
+          new Date().toISOString(),
+      };
+
+      updateActiveConversation(
+        (conversation) => ({
+          ...conversation,
+          updatedAt:
+            new Date().toISOString(),
+          messages: [
+            ...conversation.messages,
+            botMessage,
+          ],
+        })
+      );
+
+      setAssistantStatus(
+        "needsInput"
+      );
+    }
+
+    statusResetTimeoutRef.current =
+      setTimeout(() => {
+        setAssistantStatus(
+          (current) =>
+            current === "needsInput"
+              ? current
+              : "ready"
+        );
+
+        statusResetTimeoutRef.current =
+          null;
+      }, 1400);
   };
 
   const appendAssistantMessage = (
@@ -1704,50 +2203,66 @@ function AIAssistant({
     );
   };
 
-  const handleApplyPendingEdit = () => {
-    if (!pendingEdit) {
-      return;
-    }
+  const handleApplyPendingEdit =
+    async () => {
+      if (!pendingEdit) {
+        return;
+      }
 
-    const {
-      changes,
-      replyInVietnamese,
-    } = pendingEdit;
-
-    onApplyAiChanges?.(
-      changes
-    );
-
-    appendAssistantMessage(
-      formatAppliedChanges(
+      const {
         changes,
-        replyInVietnamese
-      )
-    );
+        replyInVietnamese,
+      } = pendingEdit;
 
-    setPendingEdit(null);
-    setAssistantStatus(
-      "complete"
-    );
-
-    if (
-      statusResetTimeoutRef.current
-    ) {
-      clearTimeout(
-        statusResetTimeoutRef.current
+      onApplyAiChanges?.(
+        changes
       );
-    }
 
-    statusResetTimeoutRef.current =
-      setTimeout(() => {
-        setAssistantStatus(
-          "ready"
+      const nextAiData = {
+        ...aiData,
+        ...changes,
+      };
+
+      const appliedText =
+        formatAppliedChanges(
+          changes,
+          replyInVietnamese
         );
 
-        statusResetTimeoutRef.current =
-          null;
-      }, 1400);
-  };
+      const botSync =
+        await syncBotSessionSafely(
+          nextAiData,
+          appliedText,
+          replyInVietnamese
+        );
+
+      appendAssistantMessage(
+        botSync.text
+      );
+
+      setPendingEdit(null);
+      setAssistantStatus(
+        "complete"
+      );
+
+      if (
+        statusResetTimeoutRef.current
+      ) {
+        clearTimeout(
+          statusResetTimeoutRef.current
+        );
+      }
+
+      statusResetTimeoutRef.current =
+        setTimeout(() => {
+          setAssistantStatus(
+            "ready"
+          );
+
+          statusResetTimeoutRef.current =
+            null;
+        }, 1400);
+    };
 
   const handleCancelPendingEdit = () => {
     if (!pendingEdit) {

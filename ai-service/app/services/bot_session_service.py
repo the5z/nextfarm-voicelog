@@ -1,81 +1,99 @@
 from uuid import uuid4
 
 from app.schemas.activity import ActivityData
-from app.schemas.bot_session import BotSession, BotSessionStatus
-from app.services.bot_service import get_next_question
+from app.schemas.bot_session import (
+    BotSession,
+    BotSessionStatus,
+)
+from app.services.bot_service import (
+    get_expected_field,
+    get_next_question,
+)
+from app.services.confidence_service import (
+    apply_confidence_rules,
+)
 
 
 _sessions: dict[str, BotSession] = {}
 
 
-def create_session(activity: ActivityData) -> BotSession:
-    session_id = str(uuid4())
+def build_session(
+    session_id: str,
+    activity: ActivityData,
+) -> BotSession:
+    # Mỗi lần build lại session, missing_fields phải được
+    # tính lại từ snapshot ActivityData hiện tại.
+    #
+    # Nếu giữ missing_fields cũ, một field đã được người dùng
+    # bổ sung vẫn có thể tiếp tục bị đánh dấu là thiếu.
+    #
+    # Không reset warnings ở đây vì warning có thể là
+    # uncertainty thật do AI phát hiện.
+    activity_for_validation = activity.model_copy(
+        update={
+            "missing_fields": [],
+            "requires_confirmation": False,
+        }
+    )
+
+    validated_activity = apply_confidence_rules(
+        activity_for_validation
+    )
 
     status = (
         BotSessionStatus.COLLECTING
-        if activity.requires_confirmation
+        if validated_activity.requires_confirmation
         else BotSessionStatus.COMPLETED
     )
 
-    session = BotSession(
-        session_id=session_id,
-        status=status,
-        collected_data=activity,
-        missing_fields=list(activity.missing_fields),
-        warnings=list(activity.warnings),
-        requires_confirmation=activity.requires_confirmation,
-        next_question=get_next_question(activity),
+    expected_field = get_expected_field(
+        validated_activity
     )
 
-    _sessions[session_id] = session
+    return BotSession(
+        session_id=session_id,
+        status=status,
+        collected_data=validated_activity,
+        missing_fields=list(
+            validated_activity.missing_fields
+        ),
+        warnings=list(
+            validated_activity.warnings
+        ),
+        requires_confirmation=(
+            validated_activity.requires_confirmation
+        ),
+        expected_field=expected_field,
+        next_question=get_next_question(
+            validated_activity
+        ),
+    )
+
+
+def create_session(
+    activity: ActivityData,
+) -> BotSession:
+    session_id = str(
+        uuid4()
+    )
+
+    session = build_session(
+        session_id,
+        activity,
+    )
+
+    _sessions[
+        session_id
+    ] = session
 
     return session
 
 
-def get_session(session_id: str) -> BotSession | None:
-    return _sessions.get(session_id)
-
-
-def merge_activity_data(
-    current: ActivityData,
-    update: ActivityData,
-) -> ActivityData:
-    activity_text = (
-        update.activity_text
-        if update.activity_text is not None
-        else current.activity_text
-    )
-
-    lot_text = (
-        update.lot_text
-        if update.lot_text is not None
-        else current.lot_text
-    )
-
-    materials = (
-        update.materials
-        if update.materials
-        else current.materials
-    )
-
-    time_text = (
-        update.time_text
-        if update.time_text is not None
-        else current.time_text
-    )
-
-    missing_fields = list(update.missing_fields)
-    warnings = list(update.warnings)
-    requires_confirmation = update.requires_confirmation
-
-    return ActivityData(
-        activity_text=activity_text,
-        lot_text=lot_text,
-        materials=materials,
-        time_text=time_text,
-        missing_fields=missing_fields,
-        warnings=warnings,
-        requires_confirmation=requires_confirmation,
+def get_session(
+    session_id: str,
+) -> BotSession | None:
+    return _sessions.get(
+        session_id
     )
 
 
@@ -83,32 +101,26 @@ def update_session(
     session_id: str,
     activity_update: ActivityData,
 ) -> BotSession | None:
-    session = get_session(session_id)
+    session = get_session(
+        session_id
+    )
 
     if session is None:
         return None
 
-    merged_activity = merge_activity_data(
-        session.collected_data,
+    # Frontend / Bot Message flow gửi snapshot ActivityData
+    # hiện tại.
+    #
+    # Giá trị null hoặc rỗng nghĩa là field hiện đang thiếu,
+    # không được kế thừa dữ liệu cũ từ session trước.
+
+    updated_session = build_session(
+        session.session_id,
         activity_update,
     )
 
-    status = (
-        BotSessionStatus.COLLECTING
-        if merged_activity.requires_confirmation
-        else BotSessionStatus.COMPLETED
-    )
-
-    updated_session = BotSession(
-        session_id=session.session_id,
-        status=status,
-        collected_data=merged_activity,
-        missing_fields=list(merged_activity.missing_fields),
-        warnings=list(merged_activity.warnings),
-        requires_confirmation=merged_activity.requires_confirmation,
-        next_question=get_next_question(merged_activity),
-    )
-
-    _sessions[session_id] = updated_session
+    _sessions[
+        session_id
+    ] = updated_session
 
     return updated_session
