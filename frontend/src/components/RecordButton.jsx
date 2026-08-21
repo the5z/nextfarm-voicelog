@@ -1,5 +1,15 @@
-import { useRef, useState } from "react";
-import AudioPlayer from "./AudioPlayer";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  chooseSupportedMimeType,
+  getRecordingErrorMessage,
+  requestMicrophoneStream,
+  stopMediaStream,
+} from "../utils/audioRecording";
 
 const EMPTY_AI_DATA = {
   lot: "",
@@ -10,6 +20,36 @@ const EMPTY_AI_DATA = {
   time: "",
 };
 
+function formatDuration(
+  totalSeconds
+) {
+  const safeSeconds =
+    Math.max(
+      0,
+      Number(totalSeconds) || 0
+    );
+
+  const minutes =
+    Math.floor(
+      safeSeconds / 60
+    );
+
+  const seconds =
+    safeSeconds % 60;
+
+  return `${String(
+    minutes
+  ).padStart(
+    2,
+    "0"
+  )}:${String(
+    seconds
+  ).padStart(
+    2,
+    "0"
+  )}`;
+}
+
 function RecordButton({
   audioUrl,
   setAudioUrl,
@@ -19,285 +59,479 @@ function RecordButton({
   setMessage,
   isConfirmed = false,
   text,
+  language = "vi",
 }) {
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordTime, setRecordTime] = useState(0);
+  const isVietnamese =
+    language === "vi";
 
-  const mediaRecorderRef = useRef(null);
-  const mediaStreamRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const timerRef = useRef(null);
+  const [
+    isRecording,
+    setIsRecording,
+  ] = useState(false);
 
-  const stopTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+  const [
+    elapsedSeconds,
+    setElapsedSeconds,
+  ] = useState(0);
+
+  const recorderRef =
+    useRef(null);
+
+  const streamRef =
+    useRef(null);
+
+  const chunksRef =
+    useRef([]);
+
+  const timerRef =
+    useRef(null);
+
+  const ownedAudioUrlRef =
+    useRef(null);
+
+  const showMessage = (
+    type,
+    messageText
+  ) => {
+    setMessage?.({
+      type,
+      text: messageText,
+    });
+  };
+
+  const clearTimer = () => {
+    if (
+      timerRef.current
+    ) {
+      window.clearInterval(
+        timerRef.current
+      );
+
+      timerRef.current =
+        null;
     }
   };
 
-  const stopMicrophone = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current
-        .getTracks()
-        .forEach((track) => track.stop());
+  const cleanupStream =
+    () => {
+      stopMediaStream(
+        streamRef.current
+      );
 
-      mediaStreamRef.current = null;
-    }
-  };
+      streamRef.current =
+        null;
+    };
 
-  const getAudioConstraints = () => {
-    const supported =
-      navigator.mediaDevices.getSupportedConstraints?.() || {};
+  const releaseRecorder =
+    () => {
+      recorderRef.current =
+        null;
 
-    const audioConstraints = {};
+      chunksRef.current = [];
+    };
 
-    if (supported.echoCancellation) {
-      audioConstraints.echoCancellation = true;
-    }
+  const revokeOwnedAudioUrl =
+    () => {
+      const url =
+        ownedAudioUrlRef.current;
 
-    if (supported.noiseSuppression) {
-      audioConstraints.noiseSuppression = true;
-    }
+      if (!url) {
+        return;
+      }
 
-    if (supported.autoGainControl) {
-      audioConstraints.autoGainControl = true;
-    }
+      try {
+        URL.revokeObjectURL(
+          url
+        );
+      } catch {
+        // Ignore cleanup error.
+      }
 
-    if (supported.channelCount) {
-      audioConstraints.channelCount = 1;
-    }
+      ownedAudioUrlRef.current =
+        null;
+    };
 
-    return Object.keys(audioConstraints).length > 0
-      ? audioConstraints
-      : true;
-  };
+  const resetResultForNewRecording =
+    () => {
+      revokeOwnedAudioUrl();
 
-  const getCurrentStatus = () => {
-    if (isConfirmed) {
-      return text.record.confirmed;
-    }
+      setAudioUrl?.(null);
 
-    if (isRecording) {
-      return text.record.recording;
-    }
+      setAudioBlob?.(null);
 
-    if (audioUrl) {
-      return text.record.recorded;
-    }
+      setTranscript?.("");
 
-    return text.record.ready;
-  };
-
-  const startRecording = async () => {
-    if (isConfirmed) {
-      setMessage({
-        type: "error",
-        text: text.record.confirmedMessage,
+      setAiData?.({
+        ...EMPTY_AI_DATA,
       });
+    };
 
-      return;
-    }
-
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error(
-          text.record.browserUnsupported
-        );
-      }
-
-      const stream =
-        await navigator.mediaDevices.getUserMedia({
-          audio: getAudioConstraints(),
-        });
-
-      mediaStreamRef.current = stream;
-
-      const mediaRecorder =
-        new MediaRecorder(stream);
-
-      mediaRecorderRef.current =
-        mediaRecorder;
-
-      audioChunksRef.current = [];
-
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
-
-      setAudioUrl(null);
-      setAudioBlob(null);
-      setTranscript("");
-      setAiData(EMPTY_AI_DATA);
-      setMessage(null);
-
-      mediaRecorder.ondataavailable = (
-        event
-      ) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(
-            event.data
-          );
-        }
-      };
-
-      mediaRecorder.onerror = (event) => {
-        console.error(
-          "MediaRecorder error:",
-          event.error
-        );
-
-        stopTimer();
-        stopMicrophone();
-
-        setIsRecording(false);
-
-        setMessage({
-          type: "error",
-          text:
-            text.record
-              .recordingErrorMessage,
-        });
-      };
-
-      mediaRecorder.onstop = () => {
-        const mimeType =
-          mediaRecorder.mimeType ||
-          "audio/webm;codecs=opus";
-
-        const recordedBlob = new Blob(
-          audioChunksRef.current,
-          {
-            type: mimeType,
-          }
-        );
-
-        if (recordedBlob.size === 0) {
-          setMessage({
-            type: "error",
-            text:
-              text.record
-                .emptyAudioMessage,
-          });
-
-          stopMicrophone();
-          return;
-        }
-
-        const recordedUrl =
-          URL.createObjectURL(
-            recordedBlob
-          );
-
-        setAudioBlob(recordedBlob);
-        setAudioUrl(recordedUrl);
-
-        setMessage({
-          type: "success",
-          text: text.record.audioReady,
-        });
-
-        stopMicrophone();
-
-        console.log(
-          "Recorded audio:",
-          recordedBlob
-        );
-      };
-
-      mediaRecorder.start();
-
-      setRecordTime(0);
-      setIsRecording(true);
-
-      timerRef.current = setInterval(
-        () => {
-          setRecordTime(
-            (previousTime) =>
-              previousTime + 1
-          );
-        },
-        1000
-      );
-    } catch (error) {
-      console.error(
-        "Microphone error:",
-        error
+  const finishRecording = (
+    recorder,
+    recordedSeconds
+  ) => {
+    const chunks =
+      chunksRef.current.filter(
+        (chunk) =>
+          chunk &&
+          chunk.size > 0
       );
 
-      stopTimer();
-      stopMicrophone();
+    clearTimer();
 
-      setIsRecording(false);
+    cleanupStream();
 
-      if (
-        error.name === "NotAllowedError"
-      ) {
-        setMessage({
-          type: "error",
-          text:
-            text.record
-              .microphoneDeniedMessage,
-        });
-      } else if (
-        error.name === "NotFoundError"
-      ) {
-        setMessage({
-          type: "error",
-          text:
-            text.record
-              .microphoneNotFoundMessage,
-        });
-      } else {
-        setMessage({
-          type: "error",
-          text:
-            error.message ||
-            text.record
-              .microphoneUnavailableMessage,
-        });
-      }
-    }
-  };
-
-  const stopRecording = () => {
-    const mediaRecorder =
-      mediaRecorderRef.current;
+    setIsRecording(
+      false
+    );
 
     if (
-      !mediaRecorder ||
-      mediaRecorder.state !== "recording"
+      chunks.length === 0
     ) {
+      releaseRecorder();
+
+      showMessage(
+        "error",
+        isVietnamese
+          ? "Không nhận được dữ liệu âm thanh. Hãy thử ghi lại."
+          : "No audio data was captured. Please record again."
+      );
+
       return;
     }
 
-    stopTimer();
-    mediaRecorder.stop();
-    setIsRecording(false);
+    const mimeType =
+      recorder?.mimeType ||
+      chunks[0]?.type ||
+      "audio/webm";
+
+    const blob =
+      new Blob(
+        chunks,
+        {
+          type: mimeType,
+        }
+      );
+
+    const url =
+      URL.createObjectURL(
+        blob
+      );
+
+    ownedAudioUrlRef.current =
+      url;
+
+    setAudioBlob?.(
+      blob
+    );
+
+    setAudioUrl?.(
+      url
+    );
+
+    releaseRecorder();
+
+    showMessage(
+      "success",
+      isVietnamese
+        ? `✅ Đã ghi âm ${formatDuration(
+            recordedSeconds
+          )}. Bạn có thể gửi bản ghi cho AI.`
+        : `✅ Recorded ${formatDuration(
+            recordedSeconds
+          )}. You can now send the recording to AI.`
+    );
   };
 
-  const handleRecord = () => {
-    if (isConfirmed) {
-      return;
-    }
+  const startRecording =
+    async () => {
+      if (
+        isRecording ||
+        isConfirmed
+      ) {
+        return;
+      }
 
-    if (isRecording) {
-      stopRecording();
-    } else {
+      try {
+        if (
+          typeof window
+            .MediaRecorder ===
+          "undefined"
+        ) {
+          throw new Error(
+            "MEDIA_RECORDER_UNAVAILABLE"
+          );
+        }
+
+        resetResultForNewRecording();
+
+        const stream =
+          await requestMicrophoneStream();
+
+        streamRef.current =
+          stream;
+
+        const mimeType =
+          chooseSupportedMimeType();
+
+        let recorder;
+
+        try {
+          recorder =
+            mimeType
+              ? new MediaRecorder(
+                  stream,
+                  {
+                    mimeType,
+                  }
+                )
+              : new MediaRecorder(
+                  stream
+                );
+        } catch {
+          /*
+            Fallback:
+            để browser tự chọn
+            encoder mặc định.
+          */
+
+          recorder =
+            new MediaRecorder(
+              stream
+            );
+        }
+
+        recorderRef.current =
+          recorder;
+
+        chunksRef.current =
+          [];
+
+        recorder.ondataavailable =
+          (event) => {
+            if (
+              event.data &&
+              event.data.size >
+                0
+            ) {
+              chunksRef.current.push(
+                event.data
+              );
+            }
+          };
+
+        recorder.onerror =
+          (event) => {
+            console.error(
+              "MediaRecorder error:",
+              event?.error ||
+                event
+            );
+
+            showMessage(
+              "error",
+              isVietnamese
+                ? "Đã xảy ra lỗi trong lúc ghi âm. Hãy thử lại."
+                : "An error occurred while recording. Please try again."
+            );
+          };
+
+        recorder.onstop =
+          () => {
+            setElapsedSeconds(
+              (seconds) => {
+                finishRecording(
+                  recorder,
+                  seconds
+                );
+
+                return seconds;
+              }
+            );
+          };
+
+        /*
+          Timeslice giúp browser
+          trả dữ liệu thành từng chunk,
+          ổn định hơn trên mobile.
+        */
+
+        recorder.start(
+          250
+        );
+
+        setElapsedSeconds(
+          0
+        );
+
+        setIsRecording(
+          true
+        );
+
+        clearTimer();
+
+        timerRef.current =
+          window.setInterval(
+            () => {
+              setElapsedSeconds(
+                (
+                  previous
+                ) =>
+                  previous +
+                  1
+              );
+            },
+            1000
+          );
+
+        showMessage(
+          "success",
+          isVietnamese
+            ? "🎙️ Đang ghi âm... Nhấn lại để dừng."
+            : "🎙️ Recording... Tap again to stop."
+        );
+      } catch (error) {
+        console.error(
+          "Start recording error:",
+          error
+        );
+
+        clearTimer();
+
+        cleanupStream();
+
+        releaseRecorder();
+
+        setIsRecording(
+          false
+        );
+
+        showMessage(
+          "error",
+          getRecordingErrorMessage(
+            error,
+            language
+          )
+        );
+      }
+    };
+
+  const stopRecording =
+    () => {
+      const recorder =
+        recorderRef.current;
+
+      if (
+        !recorder ||
+        recorder.state ===
+          "inactive"
+      ) {
+        clearTimer();
+
+        cleanupStream();
+
+        setIsRecording(
+          false
+        );
+
+        return;
+      }
+
+      try {
+        /*
+          Xin chunk cuối trước
+          khi stop nếu browser
+          hỗ trợ.
+        */
+
+        if (
+          typeof recorder.requestData ===
+          "function"
+        ) {
+          try {
+            recorder.requestData();
+          } catch {
+            // Browser may reject
+            // requestData at this instant.
+          }
+        }
+
+        recorder.stop();
+      } catch (error) {
+        console.error(
+          "Stop recording error:",
+          error
+        );
+
+        clearTimer();
+
+        cleanupStream();
+
+        releaseRecorder();
+
+        setIsRecording(
+          false
+        );
+
+        showMessage(
+          "error",
+          isVietnamese
+            ? "Không thể kết thúc bản ghi đúng cách. Hãy thử ghi lại."
+            : "The recording could not be stopped correctly. Please record again."
+        );
+      }
+    };
+
+  const handleRecordClick =
+    () => {
+      if (
+        isRecording
+      ) {
+        stopRecording();
+
+        return;
+      }
+
       startRecording();
-    }
-  };
+    };
 
-  const formatTime = (seconds) => {
-    const minutes = String(
-      Math.floor(seconds / 60)
-    ).padStart(2, "0");
+  useEffect(() => {
+    return () => {
+      clearTimer();
 
-    const remainingSeconds = String(
-      seconds % 60
-    ).padStart(2, "0");
+      const recorder =
+        recorderRef.current;
 
-    return `${minutes}:${remainingSeconds}`;
-  };
+      if (
+        recorder &&
+        recorder.state !==
+          "inactive"
+      ) {
+        try {
+          recorder.stop();
+        } catch {
+          // Ignore cleanup error.
+        }
+      }
+
+      cleanupStream();
+
+      revokeOwnedAudioUrl();
+    };
+  }, []);
+
+  const buttonLabel =
+    isConfirmed
+      ? isVietnamese
+        ? "Nhật ký đã được xác nhận"
+        : "Log confirmed"
+      : isRecording
+        ? isVietnamese
+          ? "Nhấn để dừng"
+          : "Tap to stop"
+        : isVietnamese
+          ? "Nhấn để ghi âm"
+          : "Tap to record";
 
   return (
     <div className="record-section">
@@ -308,36 +542,70 @@ function RecordButton({
             ? "recording"
             : ""
         }`}
-        onClick={handleRecord}
-        disabled={isConfirmed}
-        aria-label={
-          isConfirmed
-            ? text.record.confirmedLabel
-            : isRecording
-              ? text.record.stopLabel
-              : text.record.startLabel
+        onClick={
+          handleRecordClick
         }
-        aria-pressed={isRecording}
+        disabled={
+          isConfirmed
+        }
+        aria-pressed={
+          isRecording
+        }
+        aria-label={
+          buttonLabel
+        }
       >
-        {isRecording ? "⏹" : "🎤"}
+        {isRecording
+          ? "⏹️"
+          : "🎙️"}
       </button>
 
-      <div className="record-status">
-        <span>
-          {getCurrentStatus()}
-        </span>
-
-        {isRecording && (
-          <strong>
-            {formatTime(recordTime)}
-          </strong>
+      <div
+        className="record-status"
+        aria-live="polite"
+      >
+        {isRecording ? (
+          <span>
+            {isVietnamese
+              ? "Đang ghi"
+              : "Recording"}{" "}
+            <strong>
+              {formatDuration(
+                elapsedSeconds
+              )}
+            </strong>
+          </span>
+        ) : (
+          <span>
+            {buttonLabel}
+          </span>
         )}
       </div>
 
-      <AudioPlayer
-        audioUrl={audioUrl}
-        text={text}
-      />
+      {audioUrl && (
+        <div className="audio-player">
+          <h3>
+            {isVietnamese
+              ? "Bản ghi vừa tạo"
+              : "Latest recording"}
+          </h3>
+
+          <audio
+            controls
+            playsInline
+            preload="metadata"
+            src={
+              audioUrl
+            }
+          >
+            {text?.audio
+              ?.unsupported ||
+              (isVietnamese
+                ? "Trình duyệt không hỗ trợ phát âm thanh."
+                : "Your browser does not support audio playback.")}
+          </audio>
+        </div>
+      )}
     </div>
   );
 }

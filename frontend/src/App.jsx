@@ -1,7 +1,12 @@
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
+
+import {
+  generateId,
+} from "./utils/id";
 
 import VoiceLog from "./pages/VoiceLog";
 import MyLogs from "./pages/MyLogs";
@@ -22,6 +27,15 @@ import {
 
 import "./App.css";
 
+const EMPTY_AI_DATA = {
+  lot: "",
+  work: "",
+  material: "",
+  quantity: "",
+  unit: "",
+  time: "",
+};
+
 function App() {
   const [
     activePage,
@@ -41,6 +55,35 @@ function App() {
 
   const language =
     appSettings.language;
+
+  /* ===========================
+     Current VoiceLog AI context
+  =========================== */
+
+  const [
+    currentVoiceLogData,
+    setCurrentVoiceLogData,
+  ] = useState(
+    EMPTY_AI_DATA
+  );
+
+  const [
+    pendingAiChanges,
+    setPendingAiChanges,
+  ] = useState(null);
+
+  const [
+    highlightedField,
+    setHighlightedField,
+  ] = useState("");
+
+  const [
+    aiAuditEvents,
+    setAiAuditEvents,
+  ] = useState([]);
+
+  const aiUndoStackRef =
+    useRef([]);
 
   /* ===========================
      Logs
@@ -184,6 +227,210 @@ function App() {
   };
 
   /* ===========================
+     AI Assistant -> VoiceLog
+  =========================== */
+
+  const handleAiApplyChanges = (
+    changes
+  ) => {
+    if (
+      !changes ||
+      Object.keys(
+        changes
+      ).length === 0
+    ) {
+      return;
+    }
+
+    const changedFields =
+      Object.keys(
+        changes
+      );
+
+    const previousValues = {};
+
+    changedFields.forEach(
+      (field) => {
+        previousValues[field] =
+          currentVoiceLogData[
+            field
+          ] ?? "";
+      }
+    );
+
+    const undoEntry = {
+      previousValues,
+      appliedChanges: {
+        ...changes,
+      },
+      createdAt:
+        new Date().toISOString(),
+    };
+
+    aiUndoStackRef.current = [
+      ...aiUndoStackRef.current,
+      undoEntry,
+    ].slice(-10);
+
+    setAiAuditEvents(
+      (previous) => [
+        ...previous,
+        {
+          id: generateId(),
+          type: "update",
+          createdAt:
+            undoEntry.createdAt,
+          changes:
+            changedFields.map(
+              (field) => ({
+                field,
+                from:
+                  previousValues[
+                    field
+                  ] ?? "",
+                to:
+                  changes[
+                    field
+                  ] ?? "",
+              })
+            ),
+        },
+      ].slice(-50)
+    );
+
+    setActivePage(
+      "create"
+    );
+
+    setPendingAiChanges(
+      changes
+    );
+
+    setHighlightedField(
+      changedFields[0] ||
+        ""
+    );
+  };
+
+  const handleAiUndoChanges =
+    () => {
+      const stack =
+        aiUndoStackRef.current;
+
+      if (
+        stack.length === 0
+      ) {
+        return {
+          success: false,
+        };
+      }
+
+      const lastEdit =
+        stack[
+          stack.length - 1
+        ];
+
+      aiUndoStackRef.current =
+        stack.slice(
+          0,
+          -1
+        );
+
+      const fields =
+        Object.keys(
+          lastEdit.previousValues
+        );
+
+      setAiAuditEvents(
+        (previous) => [
+          ...previous,
+          {
+            id: generateId(),
+            type: "undo",
+            createdAt:
+              new Date().toISOString(),
+            changes:
+              fields.map(
+                (field) => ({
+                  field,
+                  from:
+                    lastEdit
+                      .appliedChanges[
+                        field
+                      ] ?? "",
+                  to:
+                    lastEdit
+                      .previousValues[
+                        field
+                      ] ?? "",
+                })
+              ),
+          },
+        ].slice(-50)
+      );
+
+      setActivePage(
+        "create"
+      );
+
+      setPendingAiChanges(
+        lastEdit.previousValues
+      );
+
+      setHighlightedField(
+        fields[0] || ""
+      );
+
+      return {
+        success: true,
+        previousValues:
+          lastEdit.previousValues,
+        appliedChanges:
+          lastEdit.appliedChanges,
+      };
+    };
+
+  const handleDeleteAiAuditEvents = (
+    eventIds
+  ) => {
+    const ids =
+      Array.isArray(
+        eventIds
+      )
+        ? eventIds
+        : [];
+
+    if (ids.length === 0) {
+      return;
+    }
+
+    const idSet =
+      new Set(ids);
+
+    setAiAuditEvents(
+      (previous) =>
+        previous.filter(
+          (event) =>
+            !idSet.has(
+              event.id
+            )
+        )
+    );
+  };
+
+  const handleClearAiAuditEvents =
+    () => {
+      setAiAuditEvents([]);
+    };
+
+  const handleAiChangesApplied =
+    () => {
+      setPendingAiChanges(
+        null
+      );
+    };
+
+  /* ===========================
      Save / Update Log
   =========================== */
 
@@ -299,6 +546,28 @@ function App() {
             appSettings
               .autoValidation
           }
+
+          onAiDataChange={
+            setCurrentVoiceLogData
+          }
+
+          externalAiChanges={
+            pendingAiChanges
+          }
+
+          onExternalAiChangesApplied={
+            handleAiChangesApplied
+          }
+
+          highlightedField={
+            highlightedField
+          }
+
+          onHighlightClear={() =>
+            setHighlightedField(
+              ""
+            )
+          }
         />
       )}
 
@@ -337,6 +606,30 @@ function App() {
         <AIAssistant
           language={
             language
+          }
+
+          aiData={
+            currentVoiceLogData
+          }
+
+          onApplyAiChanges={
+            handleAiApplyChanges
+          }
+
+          onUndoAiChanges={
+            handleAiUndoChanges
+          }
+
+          aiAuditEvents={
+            aiAuditEvents
+          }
+
+          onDeleteAiAuditEvents={
+            handleDeleteAiAuditEvents
+          }
+
+          onClearAiAuditEvents={
+            handleClearAiAuditEvents
           }
         />
       )}

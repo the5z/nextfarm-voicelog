@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
@@ -7,6 +8,8 @@ export default defineConfig({
     react(),
 
     VitePWA({
+      disable: true,
+
       registerType: "autoUpdate",
 
       includeAssets: [
@@ -16,16 +19,20 @@ export default defineConfig({
 
       manifest: {
         name: "NextFarm VoiceLog",
+
         short_name: "VoiceLog",
+
         description:
           "Ứng dụng ghi nhật ký nông nghiệp bằng giọng nói và AI.",
 
         theme_color: "#2e7d32",
+
         background_color: "#ffffff",
 
         display: "standalone",
 
         start_url: "/",
+
         scope: "/",
 
         icons: [
@@ -34,6 +41,7 @@ export default defineConfig({
             sizes: "192x192",
             type: "image/png",
           },
+
           {
             src: "/pwa-512x512.png",
             sizes: "512x512",
@@ -49,4 +57,14 @@ export default defineConfig({
       },
     }),
   ],
+
+  // Cho phép Vite Preview nhận request
+  // từ Cloudflare Quick Tunnel.
+  preview: {
+    host: "0.0.0.0",
+
+    allowedHosts: [
+      ".trycloudflare.com",
+    ],
+  },
 });

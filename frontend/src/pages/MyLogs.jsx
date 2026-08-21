@@ -843,9 +843,7 @@ function MyLogs({
                 type="button"
                 className="btn-secondary"
                 onClick={() =>
-                  setSelectedLog(
-                    null
-                  )
+                  setSelectedLog(null)
                 }
               >
                 {isVietnamese
@@ -853,21 +851,22 @@ function MyLogs({
                   : "Close"}
               </button>
 
-              {selectedLog.status ===
-                "review" && (
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={
-                    handleReviewAndEdit
-                  }
-                >
-                  ⚠️{" "}
-                  {isVietnamese
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={
+                  handleReviewAndEdit
+                }
+              >
+                ✏️{" "}
+                {selectedLog.status === "review"
+                  ? isVietnamese
                     ? "Kiểm tra & sửa"
-                    : "Review & edit"}
-                </button>
-              )}
+                    : "Review & edit"
+                  : isVietnamese
+                    ? "Chỉnh sửa"
+                    : "Edit"}
+              </button>
             </div>
           </div>
         </div>
