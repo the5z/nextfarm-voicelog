@@ -118,7 +118,7 @@ function isEditCommand(
 }
 
 
-function isQueryIntent(
+export function isQueryIntent(
   message
 ) {
   const text =

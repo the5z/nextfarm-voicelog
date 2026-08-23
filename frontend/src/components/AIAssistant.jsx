@@ -18,6 +18,7 @@ import {
 
 import {
   ASSISTANT_INTENT,
+  isQueryIntent,
   routeAssistantIntent,
 } from "../services/intentRouter";
 
@@ -1228,6 +1229,14 @@ function AIAssistant({
       ).trim();
 
     if (!text || !expectedField) {
+      return false;
+    }
+
+    if (
+      isQueryIntent(
+        text
+      )
+    ) {
       return false;
     }
 
