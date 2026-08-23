@@ -64,6 +64,19 @@ function getTodayVietnamDateKey() {
 }
 
 
+function getYesterdayVietnamDateKey() {
+  const yesterday =
+    new Date(
+      Date.now() -
+      24 * 60 * 60 * 1000
+    );
+
+  return getVietnamDateKey(
+    yesterday
+  );
+}
+
+
 function isLogOnVietnamDate(
   log,
   dateKey
@@ -538,6 +551,85 @@ function asksTodayQuery(
 }
 
 
+function asksYesterdayQuery(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    text.includes(
+      "h\u00f4m qua"
+    ) ||
+    text.includes(
+      "yesterday"
+    )
+  );
+}
+
+
+function asksYesterdayActivities(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    asksYesterdayQuery(
+      message
+    ) &&
+    (
+      text.includes(
+        "ho\u1ea1t \u0111\u1ed9ng"
+      ) ||
+      text.includes(
+        "c\u00f4ng vi\u1ec7c"
+      ) ||
+      text.includes(
+        "\u0111\u00e3 l\u00e0m"
+      ) ||
+      text.includes(
+        "l\u00e0m g\u00ec"
+      ) ||
+      text.includes(
+        "activity"
+      ) ||
+      text.includes(
+        "activities"
+      )
+    )
+  );
+}
+
+
+function asksYesterdayLogs(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    asksYesterdayQuery(
+      message
+    ) &&
+    (
+      text.includes(
+        "nh\u1eadt k\u00fd"
+      ) ||
+      text.includes(
+        "log"
+      )
+    )
+  );
+}
+
+
 function asksTodayActivities(
   message
 ) {
@@ -870,6 +962,89 @@ export async function handleQueryIntent({
       getCultivationLogs(),
       loadMasterDataLookups(),
     ]);
+
+
+  if (
+    asksYesterdayActivities(
+      message
+    ) ||
+    asksYesterdayLogs(
+      message
+    )
+  ) {
+    const yesterdayKey =
+      getYesterdayVietnamDateKey();
+
+    const yesterdayLogs =
+      logs.filter(
+        (log) =>
+          isLogOnVietnamDate(
+            log,
+            yesterdayKey
+          )
+      );
+
+    if (
+      yesterdayLogs.length === 0
+    ) {
+      return isVietnamese
+        ? "H\u00f4m qua ch\u01b0a c\u00f3 nh\u1eadt k\u00fd canh t\u00e1c n\u00e0o."
+        : "There are no cultivation logs for yesterday.";
+    }
+
+    if (
+      asksYesterdayActivities(
+        message
+      )
+    ) {
+      const activityCodes =
+        getUniqueCodes(
+          yesterdayLogs.map(
+            (log) =>
+              log?.activity_code
+          )
+        );
+
+      const activityNames =
+        activityCodes.map(
+          (code) =>
+            getDisplayName(
+              code,
+              lookups.activities
+            )
+        );
+
+      return isVietnamese
+        ? (
+            `H\u00f4m qua c\u00f3 ${yesterdayLogs.length} nh\u1eadt k\u00fd v\u1edbi `
+            + `${activityCodes.length} lo\u1ea1i ho\u1ea1t \u0111\u1ed9ng: `
+            + `${activityNames.join(", ")}.`
+          )
+        : (
+            `Yesterday there were ${yesterdayLogs.length} log(s) with `
+            + `${activityCodes.length} activity type(s): `
+            + `${activityNames.join(", ")}.`
+          );
+    }
+
+    return [
+      isVietnamese
+        ? (
+            `H\u00f4m qua c\u00f3 ${yesterdayLogs.length} nh\u1eadt k\u00fd. `
+            + "Nh\u1eadt k\u00fd g\u1ea7n nh\u1ea5t:"
+          )
+        : (
+            `There were ${yesterdayLogs.length} log(s) yesterday. `
+            + "Latest log:"
+          ),
+      "",
+      formatCultivationLog(
+        yesterdayLogs[0],
+        isVietnamese,
+        lookups
+      ),
+    ].join("\n");
+  }
 
 
   if (
