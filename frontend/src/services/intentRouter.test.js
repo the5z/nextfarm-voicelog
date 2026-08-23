@@ -106,6 +106,54 @@ expectIntent(
 );
 
 
+// Giai đoạn 5:
+// Query hoạt động theo lô.
+expectIntent(
+  {
+    message:
+      "Lô B có những hoạt động gì?",
+  },
+  ASSISTANT_INTENT
+    .QUERY
+);
+
+
+// Giai đoạn 5:
+// Đếm hoạt động.
+expectIntent(
+  {
+    message:
+      "Có bao nhiêu lần bón phân?",
+  },
+  ASSISTANT_INTENT
+    .QUERY
+);
+
+
+// Giai đoạn 5:
+// Kết hợp lô + hoạt động + đếm.
+expectIntent(
+  {
+    message:
+      "Lô A đã bón phân bao nhiêu lần?",
+  },
+  ASSISTANT_INTENT
+    .QUERY
+);
+
+
+// Giai đoạn 5:
+// Tra cứu vật tư theo lô.
+expectIntent(
+  {
+    message:
+      "NPK đã được dùng ở lô nào?",
+  },
+  ASSISTANT_INTENT
+    .QUERY
+);
+
+
 expectIntent(
   {
     message:

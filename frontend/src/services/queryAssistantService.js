@@ -128,6 +128,18 @@ async function loadMasterDataLookups() {
       createCodeNameMap(
         units
       ),
+
+    activityItems:
+      activities,
+
+    lotItems:
+      lots,
+
+    materialItems:
+      materials,
+
+    unitItems:
+      units,
   };
 }
 
@@ -151,6 +163,88 @@ function getDisplayName(
     ) ||
     code
   );
+}
+
+
+function getSearchTerms(
+  item
+) {
+  const terms = [
+    item?.name,
+    ...(Array.isArray(
+      item?.aliases
+    )
+      ? item.aliases
+      : []),
+  ];
+
+  return terms
+    .map(
+      normalizeText
+    )
+    .filter(Boolean)
+    .sort(
+      (a, b) =>
+        b.length -
+        a.length
+    );
+}
+
+
+function findMentionedCode(
+  message,
+  items
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  if (
+    !text ||
+    !Array.isArray(items)
+  ) {
+    return null;
+  }
+
+  for (
+    const item of items
+  ) {
+    const code =
+      normalizeCode(
+        item?.code
+      );
+
+    if (!code) {
+      continue;
+    }
+
+    const terms =
+      getSearchTerms(
+        item
+      );
+
+    if (
+      terms.some(
+        (term) =>
+          text.includes(
+            term
+          )
+      )
+    ) {
+      return code;
+    }
+
+    if (
+      text.includes(
+        code.toLowerCase()
+      )
+    ) {
+      return code;
+    }
+  }
+
+  return null;
 }
 
 
@@ -416,6 +510,117 @@ function asksCropByLot(
 }
 
 
+function asksActivitiesByLot(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    /\blô\s+[a-z0-9_-]+\b/i.test(
+      text
+    ) &&
+    (
+      text.includes(
+        "hoạt động"
+      ) ||
+      text.includes(
+        "công việc"
+      ) ||
+      text.includes(
+        "đã làm"
+      ) ||
+      text.includes(
+        "làm gì"
+      )
+    )
+  );
+}
+
+
+function asksCount(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    text.includes(
+      "bao nhiêu lần"
+    ) ||
+    text.includes(
+      "mấy lần"
+    ) ||
+    text.includes(
+      "how many"
+    ) ||
+    text.includes(
+      "count"
+    )
+  );
+}
+
+
+function asksMaterialUsageByLot(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    (
+      text.includes(
+        "dùng"
+      ) ||
+      text.includes(
+        "sử dụng"
+      ) ||
+      text.includes(
+        "used"
+      )
+    ) &&
+    (
+      text.includes(
+        "lô nào"
+      ) ||
+      text.includes(
+        "ở lô"
+      ) ||
+      text.includes(
+        "ở đâu"
+      ) ||
+      text.includes(
+        "which plot"
+      ) ||
+      text.includes(
+        "which field"
+      )
+    )
+  );
+}
+
+
+function getUniqueCodes(
+  values
+) {
+  return [
+    ...new Set(
+      values
+        .map(
+          normalizeCode
+        )
+        .filter(Boolean)
+    ),
+  ];
+}
+
+
 export async function handleQueryIntent({
   message,
   isVietnamese = true,
@@ -523,8 +728,15 @@ export async function handleQueryIntent({
   }
 
 
-  const logs =
-    await getCultivationLogs();
+  const [
+    logs,
+    lookups,
+  ] =
+    await Promise.all([
+      getCultivationLogs(),
+      loadMasterDataLookups(),
+    ]);
+
 
   if (
     logs.length === 0
@@ -534,15 +746,326 @@ export async function handleQueryIntent({
       : "There are no cultivation logs to query yet.";
   }
 
+
+  if (
+    asksActivitiesByLot(
+      message
+    )
+  ) {
+    const lotCode =
+      extractLotCode(
+        message
+      );
+
+    if (!lotCode) {
+      return isVietnamese
+        ? "Tôi chưa xác định được lô cần tra cứu."
+        : "I could not determine which plot to query.";
+    }
+
+    const lotLogs =
+      logs.filter(
+        (log) =>
+          normalizeCode(
+            log?.lot_code
+          ) ===
+          normalizeCode(
+            lotCode
+          )
+      );
+
+    const lotName =
+      getDisplayName(
+        lotCode,
+        lookups.lots
+      );
+
+    if (
+      lotLogs.length === 0
+    ) {
+      return isVietnamese
+        ? `Chưa tìm thấy nhật ký nào của ${lotName}.`
+        : `No cultivation logs were found for ${lotCode}.`;
+    }
+
+    const activityCodes =
+      getUniqueCodes(
+        lotLogs.map(
+          (log) =>
+            log?.activity_code
+        )
+      );
+
+    const activityNames =
+      activityCodes.map(
+        (code) =>
+          getDisplayName(
+            code,
+            lookups.activities
+          )
+      );
+
+    return isVietnamese
+      ? (
+          `${lotName} có ${activityCodes.length} loại hoạt động `
+          + `trong ${lotLogs.length} nhật ký: `
+          + `${activityNames.join(", ")}.`
+        )
+      : (
+          `${lotCode} has ${activityCodes.length} activity type(s) `
+          + `across ${lotLogs.length} log(s): `
+          + `${activityNames.join(", ")}.`
+        );
+  }
+
+
+  if (
+    asksCount(
+      message
+    )
+  ) {
+    const lotCode =
+      extractLotCode(
+        message
+      );
+
+    const activityCode =
+      findMentionedCode(
+        message,
+        lookups.activityItems
+      );
+
+    if (!activityCode) {
+      return isVietnamese
+        ? "Tôi chưa xác định được hoạt động cần thống kê."
+        : "I could not determine which activity to count.";
+    }
+
+    let matchedLogs =
+      logs.filter(
+        (log) =>
+          normalizeCode(
+            log?.activity_code
+          ) ===
+          normalizeCode(
+            activityCode
+          )
+      );
+
+    if (lotCode) {
+      matchedLogs =
+        matchedLogs.filter(
+          (log) =>
+            normalizeCode(
+              log?.lot_code
+            ) ===
+            normalizeCode(
+              lotCode
+            )
+        );
+    }
+
+    const activityName =
+      getDisplayName(
+        activityCode,
+        lookups.activities
+      );
+
+    if (lotCode) {
+      const lotName =
+        getDisplayName(
+          lotCode,
+          lookups.lots
+        );
+
+      return isVietnamese
+        ? (
+            `${lotName} có ${matchedLogs.length} lần `
+            + `${activityName.toLowerCase()} trong dữ liệu đã lưu.`
+          )
+        : (
+            `${lotCode} has ${matchedLogs.length} `
+            + `${activityName} log(s).`
+          );
+    }
+
+    return isVietnamese
+      ? (
+          `Có ${matchedLogs.length} lần `
+          + `${activityName.toLowerCase()} trong dữ liệu đã lưu.`
+        )
+      : (
+          `There are ${matchedLogs.length} `
+          + `${activityName} log(s).`
+        );
+  }
+
+
+  if (
+    asksMaterialUsageByLot(
+      message
+    )
+  ) {
+    const materialCode =
+      findMentionedCode(
+        message,
+        lookups.materialItems
+      );
+
+    if (!materialCode) {
+      return isVietnamese
+        ? "Tôi chưa xác định được vật tư cần tra cứu."
+        : "I could not determine which material to query.";
+    }
+
+    const matchedLogs =
+      logs.filter(
+        (log) =>
+          Array.isArray(
+            log?.materials
+          ) &&
+          log.materials.some(
+            (material) =>
+              normalizeCode(
+                material?.material_code
+              ) ===
+              normalizeCode(
+                materialCode
+              )
+          )
+      );
+
+    const lotCodes =
+      getUniqueCodes(
+        matchedLogs.map(
+          (log) =>
+            log?.lot_code
+        )
+      );
+
+    const materialName =
+      getDisplayName(
+        materialCode,
+        lookups.materials
+      );
+
+    if (
+      lotCodes.length === 0
+    ) {
+      return isVietnamese
+        ? `Chưa tìm thấy nhật ký nào sử dụng ${materialName}.`
+        : `No logs were found using ${materialCode}.`;
+    }
+
+    const lotNames =
+      lotCodes.map(
+        (code) =>
+          getDisplayName(
+            code,
+            lookups.lots
+          )
+      );
+
+    return isVietnamese
+      ? (
+          `${materialName} đã được sử dụng trong `
+          + `${matchedLogs.length} nhật ký, tại: `
+          + `${lotNames.join(", ")}.`
+        )
+      : (
+          `${materialCode} was used in ${matchedLogs.length} log(s), `
+          + `at: ${lotNames.join(", ")}.`
+        );
+  }
+
+
+  const activityCode =
+    findMentionedCode(
+      message,
+      lookups.activityItems
+    );
+
+  const lotCode =
+    extractLotCode(
+      message
+    );
+
+  if (
+    activityCode &&
+    lotCode
+  ) {
+    const matchedLogs =
+      logs.filter(
+        (log) =>
+          normalizeCode(
+            log?.activity_code
+          ) ===
+            normalizeCode(
+              activityCode
+            ) &&
+          normalizeCode(
+            log?.lot_code
+          ) ===
+            normalizeCode(
+              lotCode
+            )
+      );
+
+    const activityName =
+      getDisplayName(
+        activityCode,
+        lookups.activities
+      );
+
+    const lotName =
+      getDisplayName(
+        lotCode,
+        lookups.lots
+      );
+
+    if (
+      matchedLogs.length === 0
+    ) {
+      return isVietnamese
+        ? (
+            `Chưa tìm thấy nhật ký ${activityName.toLowerCase()} `
+            + `của ${lotName}.`
+          )
+        : (
+            `No ${activityName} logs were found for ${lotCode}.`
+          );
+    }
+
+    return [
+      isVietnamese
+        ? (
+            `Tìm thấy ${matchedLogs.length} nhật ký `
+            + `${activityName.toLowerCase()} của ${lotName}. `
+            + "Nhật ký gần nhất:"
+          )
+        : (
+            `Found ${matchedLogs.length} ${activityName} log(s) `
+            + `for ${lotCode}. Latest log:`
+          ),
+      "",
+      formatCultivationLog(
+        matchedLogs[0],
+        isVietnamese,
+        lookups
+      ),
+    ].join("\n");
+  }
+
+
   return isVietnamese
     ? (
         `Hiện có ${logs.length} nhật ký canh tác đã lưu. `
-        + "Bạn có thể hỏi “Cho tôi xem nhật ký gần nhất” "
-        + "hoặc “Nhật ký của lô A”."
+        + "Bạn có thể hỏi về nhật ký gần nhất, hoạt động theo lô, "
+        + "số lần thực hiện công việc hoặc vật tư đã sử dụng."
       )
     : (
         `There are currently ${logs.length} saved cultivation logs. `
-        + 'You can ask "Show me the latest log" or '
-        + '"Show me logs for plot A".'
+        + "You can ask about the latest log, activities by plot, "
+        + "activity counts, or material usage."
       );
 }

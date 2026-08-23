@@ -127,24 +127,57 @@ function isQueryIntent(
     );
 
   const queryPatterns = [
+    // Query cây trồng / trạng thái lô.
     /lô\s+.+\s+(?:trồng|đang trồng|có cây|tình trạng)/i,
 
+    // Tra cứu nhật ký nói chung.
     /(?:cho tôi|xem|tìm|tra cứu).*(?:nhật ký|lịch sử)/i,
 
+    // Nhật ký gần nhất / theo thời gian.
     /nhật ký\s+(?:gần nhất|mới nhất|hôm nay|hôm qua)/i,
 
+    // Nhật ký theo lô.
+    /nhật ký.*\blô\s+[a-z0-9_-]+\b/i,
+
+    // Thông tin lô.
     /(?:thông tin|trạng thái|diện tích)\s+lô/i,
 
+    // Hoạt động của một lô.
+    /\blô\s+[a-z0-9_-]+\b.*(?:hoạt động|công việc|đã làm|làm gì)/i,
+
+    // Query hoạt động cụ thể trên một lô.
+    /\blô\s+[a-z0-9_-]+\b.*(?:bón phân|tưới nước|làm cỏ|phun thuốc|thu hoạch|cho bò ăn)/i,
+
+    // Đếm số lần thực hiện hoạt động.
+    /(?:bao nhiêu|mấy)\s+lần.*(?:bón phân|tưới nước|làm cỏ|phun thuốc|thu hoạch|cho bò ăn)/i,
+
+    // Câu đảo: hoạt động ... bao nhiêu lần.
+    /(?:bón phân|tưới nước|làm cỏ|phun thuốc|thu hoạch|cho bò ăn).*(?:bao nhiêu|mấy)\s+lần/i,
+
+    // Tra cứu vật tư đã sử dụng.
     /(?:cây|vật tư).*(?:đã dùng|đang dùng|sử dụng)/i,
 
+    // Tên vật tư + hành động sử dụng.
+    /\b(?:npk|urê|ure|cám)\b.*(?:đã|được|dùng|sử dụng).*(?:lô|ở đâu|nào)/i,
+
+    // Hỏi lô nào đã dùng vật tư.
+    /(?:lô|ở đâu).*(?:dùng|sử dụng).*\b(?:npk|urê|ure|cám)\b/i,
+
+    // English query patterns.
     /(?:latest|recent)\s+(?:log|farming log)/i,
 
     /(?:plot|field).*(?:crop|status|area)/i,
+
+    /(?:how many|count).*(?:fertilize|water|weed|spray|harvest)/i,
+
+    /(?:npk|urea|feed).*(?:used|use).*(?:plot|field|where)/i,
   ];
 
   return queryPatterns.some(
     (pattern) =>
-      pattern.test(text)
+      pattern.test(
+        text
+      )
   );
 }
 
@@ -155,6 +188,7 @@ export function routeAssistantIntent({
   expectedField = null,
   isContextReply = false,
 }) {
+  // VoiceLog contextual answer always has highest priority.
   if (
     hasCollectingSession &&
     expectedField &&
@@ -164,6 +198,7 @@ export function routeAssistantIntent({
       .VOICELOG_CONTEXT;
   }
 
+  // Explicit commands for the current VoiceLog form.
   if (
     isUndoCommand(
       message
@@ -179,6 +214,7 @@ export function routeAssistantIntent({
       .VOICELOG_COMMAND;
   }
 
+  // Historical / reporting / farm-data queries.
   if (
     isQueryIntent(
       message
