@@ -1523,6 +1523,11 @@ export async function handleQueryIntent({
         lookups.activities
       );
 
+    const isRecent7Days =
+      asksRecent7DaysQuery(
+        message
+      );
+
     if (lotCode) {
       const lotName =
         getDisplayName(
@@ -1532,8 +1537,16 @@ export async function handleQueryIntent({
 
       return isVietnamese
         ? (
-            `${lotName} có ${matchedLogs.length} lần `
-            + `${activityName.toLowerCase()} trong dữ liệu đã lưu.`
+            isRecent7Days
+              ? (
+                  `Trong 7 ng\u00e0y g\u1ea7n \u0111\u00e2y, ${lotName} c\u00f3 `
+                  + `${matchedLogs.length} l\u1ea7n `
+                  + `${activityName.toLowerCase()}.`
+                )
+              : (
+                  `${lotName} c\u00f3 ${matchedLogs.length} l\u1ea7n `
+                  + `${activityName.toLowerCase()} trong d\u1eef li\u1ec7u \u0111\u00e3 l\u01b0u.`
+                )
           )
         : (
             `${lotCode} has ${matchedLogs.length} `
@@ -1543,13 +1556,23 @@ export async function handleQueryIntent({
 
     return isVietnamese
       ? (
-          `Có ${matchedLogs.length} lần `
-          + `${activityName.toLowerCase()} trong dữ liệu đã lưu.`
+          isRecent7Days
+            ? (
+                `Trong 7 ng\u00e0y g\u1ea7n \u0111\u00e2y c\u00f3 `
+                + `${matchedLogs.length} l\u1ea7n `
+                + `${activityName.toLowerCase()}.`
+              )
+            : (
+                `C\u00f3 ${matchedLogs.length} l\u1ea7n `
+                + `${activityName.toLowerCase()} trong d\u1eef li\u1ec7u \u0111\u00e3 l\u01b0u.`
+              )
         )
       : (
           `There are ${matchedLogs.length} `
           + `${activityName} log(s).`
         );
+
+
   }
 
 
