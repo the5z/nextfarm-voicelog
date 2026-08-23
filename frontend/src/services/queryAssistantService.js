@@ -2,6 +2,10 @@ import {
   getCultivationLogs,
   getLatestCultivationLog,
   getCultivationLogsByLotCode,
+  getActivities,
+  getLots,
+  getMaterials,
+  getUnits,
 } from "./queryService.js";
 
 
@@ -15,30 +19,188 @@ function normalizeText(value) {
 }
 
 
+function normalizeCode(value) {
+  return String(
+    value ?? ""
+  )
+    .trim()
+    .toUpperCase();
+}
+
+
+function createCodeNameMap(
+  items
+) {
+  const map =
+    new Map();
+
+  if (
+    !Array.isArray(items)
+  ) {
+    return map;
+  }
+
+  for (
+    const item of items
+  ) {
+    const code =
+      normalizeCode(
+        item?.code
+      );
+
+    const name =
+      String(
+        item?.name ?? ""
+      ).trim();
+
+    if (
+      code &&
+      name
+    ) {
+      map.set(
+        code,
+        name
+      );
+    }
+  }
+
+  return map;
+}
+
+
+async function loadMasterDataLookups() {
+  const results =
+    await Promise.allSettled([
+      getActivities(),
+      getLots(),
+      getMaterials(),
+      getUnits(),
+    ]);
+
+  const [
+    activitiesResult,
+    lotsResult,
+    materialsResult,
+    unitsResult,
+  ] = results;
+
+  const activities =
+    activitiesResult.status ===
+    "fulfilled"
+      ? activitiesResult.value
+      : [];
+
+  const lots =
+    lotsResult.status ===
+    "fulfilled"
+      ? lotsResult.value
+      : [];
+
+  const materials =
+    materialsResult.status ===
+    "fulfilled"
+      ? materialsResult.value
+      : [];
+
+  const units =
+    unitsResult.status ===
+    "fulfilled"
+      ? unitsResult.value
+      : [];
+
+  return {
+    activities:
+      createCodeNameMap(
+        activities
+      ),
+
+    lots:
+      createCodeNameMap(
+        lots
+      ),
+
+    materials:
+      createCodeNameMap(
+        materials
+      ),
+
+    units:
+      createCodeNameMap(
+        units
+      ),
+  };
+}
+
+
+function getDisplayName(
+  code,
+  map
+) {
+  const normalizedCode =
+    normalizeCode(
+      code
+    );
+
+  if (!normalizedCode) {
+    return "";
+  }
+
+  return (
+    map?.get(
+      normalizedCode
+    ) ||
+    code
+  );
+}
+
+
 function formatMaterial(
-  material
+  material,
+  lookups = null,
+  isVietnamese = true
 ) {
   if (!material) {
     return null;
   }
 
-  const code =
-    material.material_code || "";
+  const materialCode =
+    material.material_code ||
+    "";
 
   const quantity =
-    material.quantity ?? "";
+    material.quantity ??
+    "";
 
-  const unit =
-    material.unit_code || "";
+  const unitCode =
+    material.unit_code ||
+    "";
+
+  const materialName =
+    isVietnamese
+      ? getDisplayName(
+          materialCode,
+          lookups?.materials
+        )
+      : materialCode;
+
+  const unitName =
+    isVietnamese
+      ? getDisplayName(
+          unitCode,
+          lookups?.units
+        )
+      : unitCode;
 
   return [
-    code,
+    materialName,
     quantity,
-    unit,
+    unitName,
   ]
     .filter(
       (value) =>
-        String(value).trim() !== ""
+        String(
+          value
+        ).trim() !== ""
     )
     .join(" ");
 }
@@ -46,7 +208,8 @@ function formatMaterial(
 
 export function formatCultivationLog(
   log,
-  isVietnamese = true
+  isVietnamese = true,
+  lookups = null
 ) {
   if (!log) {
     return isVietnamese
@@ -54,41 +217,104 @@ export function formatCultivationLog(
       : "No cultivation logs have been saved yet.";
   }
 
+  const lotCode =
+    log.lot_code ||
+    "";
+
+  const activityCode =
+    log.activity_code ||
+    "";
+
+  const lotName =
+    isVietnamese
+      ? getDisplayName(
+          lotCode,
+          lookups?.lots
+        )
+      : lotCode;
+
+  const activityName =
+    isVietnamese
+      ? getDisplayName(
+          activityCode,
+          lookups?.activities
+        )
+      : activityCode;
+
   const materials =
-    Array.isArray(log.materials)
+    Array.isArray(
+      log.materials
+    )
       ? log.materials
-          .map(formatMaterial)
+          .map(
+            (material) =>
+              formatMaterial(
+                material,
+                lookups,
+                isVietnamese
+              )
+          )
           .filter(Boolean)
       : [];
 
   if (isVietnamese) {
     return [
       "📋 Nhật ký canh tác:",
-      `• Mã bản ghi: ${log.client_record_id || "không có"}`,
-      `• Lô: ${log.lot_code || "không có"}`,
-      `• Công việc: ${log.activity_code || "không có"}`,
+      `• Mã bản ghi: ${
+        log.client_record_id ||
+        "không có"
+      }`,
+      `• Lô: ${
+        lotName ||
+        "không có"
+      }`,
+      `• Công việc: ${
+        activityName ||
+        "không có"
+      }`,
       `• Vật tư: ${
         materials.length > 0
           ? materials.join(", ")
           : "không có"
       }`,
-      `• Thời gian: ${log.performed_at || "không có"}`,
-      `• Trạng thái: ${log.status || "không có"}`,
+      `• Thời gian: ${
+        log.performed_at ||
+        "không có"
+      }`,
+      `• Trạng thái: ${
+        log.status ||
+        "không có"
+      }`,
     ].join("\n");
   }
 
   return [
     "📋 Cultivation log:",
-    `• Record ID: ${log.client_record_id || "not available"}`,
-    `• Plot: ${log.lot_code || "not available"}`,
-    `• Activity: ${log.activity_code || "not available"}`,
+    `• Record ID: ${
+      log.client_record_id ||
+      "not available"
+    }`,
+    `• Plot: ${
+      lotName ||
+      "not available"
+    }`,
+    `• Activity: ${
+      activityName ||
+      "not available"
+    }`,
     `• Materials: ${
       materials.length > 0
         ? materials.join(", ")
         : "none"
     }`,
-    `• Performed at: ${log.performed_at || "not available"}`,
-    `• Status: ${log.status || "not available"}`,
+    `• Performed at: ${
+      log.performed_at ||
+      "not available"
+    }`,
+    `• Status: ${
+      log.status ||
+      "not available"
+    }`,
   ].join("\n");
 }
 
@@ -153,7 +379,9 @@ function asksLogsByLot(
     );
 
   return (
-    text.includes("nhật ký") &&
+    text.includes(
+      "nhật ký"
+    ) &&
     /\blô\s+[a-z0-9_-]+\b/i.test(
       text
     )
@@ -174,9 +402,15 @@ function asksCropByLot(
       text
     ) &&
     (
-      text.includes("trồng") ||
-      text.includes("cây gì") ||
-      text.includes("crop")
+      text.includes(
+        "trồng"
+      ) ||
+      text.includes(
+        "cây gì"
+      ) ||
+      text.includes(
+        "crop"
+      )
     )
   );
 }
@@ -191,14 +425,22 @@ export async function handleQueryIntent({
       message
     )
   ) {
-    const latestLog =
-      await getLatestCultivationLog();
+    const [
+      latestLog,
+      lookups,
+    ] =
+      await Promise.all([
+        getLatestCultivationLog(),
+        loadMasterDataLookups(),
+      ]);
 
     return formatCultivationLog(
       latestLog,
-      isVietnamese
+      isVietnamese,
+      lookups
     );
   }
+
 
   if (
     asksLogsByLot(
@@ -216,28 +458,52 @@ export async function handleQueryIntent({
         : "I could not determine which plot to query.";
     }
 
-    const logs =
-      await getCultivationLogsByLotCode(
-        lotCode
-      );
+    const [
+      logs,
+      lookups,
+    ] =
+      await Promise.all([
+        getCultivationLogsByLotCode(
+          lotCode
+        ),
+        loadMasterDataLookups(),
+      ]);
 
-    if (logs.length === 0) {
+    const lotName =
+      isVietnamese
+        ? getDisplayName(
+            lotCode,
+            lookups.lots
+          )
+        : lotCode;
+
+    if (
+      logs.length === 0
+    ) {
       return isVietnamese
-        ? `Chưa tìm thấy nhật ký nào của ${lotCode}.`
+        ? `Chưa tìm thấy nhật ký nào của ${lotName}.`
         : `No cultivation logs were found for ${lotCode}.`;
     }
 
     return [
       isVietnamese
-        ? `Tìm thấy ${logs.length} nhật ký của ${lotCode}. Nhật ký gần nhất:`
-        : `Found ${logs.length} log(s) for ${lotCode}. Latest log:`,
+        ? (
+            `Tìm thấy ${logs.length} nhật ký của `
+            + `${lotName}. Nhật ký gần nhất:`
+          )
+        : (
+            `Found ${logs.length} log(s) for `
+            + `${lotCode}. Latest log:`
+          ),
       "",
       formatCultivationLog(
         logs[0],
-        isVietnamese
+        isVietnamese,
+        lookups
       ),
     ].join("\n");
   }
+
 
   if (
     asksCropByLot(
@@ -256,10 +522,13 @@ export async function handleQueryIntent({
         );
   }
 
+
   const logs =
     await getCultivationLogs();
 
-  if (logs.length === 0) {
+  if (
+    logs.length === 0
+  ) {
     return isVietnamese
       ? "Chưa có nhật ký canh tác nào để tra cứu."
       : "There are no cultivation logs to query yet.";

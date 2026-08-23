@@ -86,3 +86,50 @@ export async function getCultivationLogsByLotCode(
       normalizedLotCode
   );
 }
+
+
+export async function getMasterData(
+  type
+) {
+  const response =
+    await fetch(
+      `${INTEGRATION_API_URL}/master-data/${type}`
+    );
+
+  const result =
+    await parseResponse(
+      response
+    );
+
+  return Array.isArray(result)
+    ? result
+    : [];
+}
+
+
+export async function getActivities() {
+  return getMasterData(
+    "activities"
+  );
+}
+
+
+export async function getLots() {
+  return getMasterData(
+    "lots"
+  );
+}
+
+
+export async function getMaterials() {
+  return getMasterData(
+    "materials"
+  );
+}
+
+
+export async function getUnits() {
+  return getMasterData(
+    "units"
+  );
+}
