@@ -1107,7 +1107,12 @@ export async function handleQueryIntent({
       message
     )
   ) {
-    const recentLogs =
+    const lotCode =
+      extractLotCode(
+        message
+      );
+
+    let recentLogs =
       logs
         .filter(
           (log) =>
@@ -1115,16 +1120,31 @@ export async function handleQueryIntent({
               log,
               7
             )
-        )
-        .sort(
-          (a, b) =>
-            new Date(
-              b?.performed_at ?? 0
-            ).getTime() -
-            new Date(
-              a?.performed_at ?? 0
-            ).getTime()
         );
+
+    if (lotCode) {
+      recentLogs =
+        recentLogs.filter(
+          (log) =>
+            normalizeCode(
+              log?.lot_code
+            ) ===
+            normalizeCode(
+              lotCode
+            )
+        );
+    }
+
+    recentLogs =
+      recentLogs.sort(
+        (a, b) =>
+          new Date(
+            b?.performed_at ?? 0
+          ).getTime() -
+          new Date(
+            a?.performed_at ?? 0
+          ).getTime()
+      );
 
     if (
       recentLogs.length === 0
@@ -1469,6 +1489,21 @@ export async function handleQueryIntent({
           )
       );
 
+    if (
+      asksRecent7DaysQuery(
+        message
+      )
+    ) {
+      matchedLogs =
+        matchedLogs.filter(
+          (log) =>
+            isLogInRecentVietnamDays(
+              log,
+              7
+            )
+        );
+    }
+
     if (lotCode) {
       matchedLogs =
         matchedLogs.filter(
@@ -1531,11 +1566,11 @@ export async function handleQueryIntent({
 
     if (!materialCode) {
       return isVietnamese
-        ? "Tôi chưa xác định được vật tư cần tra cứu."
+        ? "T\u00f4i ch\u01b0a x\u00e1c \u0111\u1ecbnh \u0111\u01b0\u1ee3c v\u1eadt t\u01b0 c\u1ea7n tra c\u1ee9u."
         : "I could not determine which material to query.";
     }
 
-    const matchedLogs =
+    let matchedLogs =
       logs.filter(
         (log) =>
           Array.isArray(
@@ -1551,6 +1586,22 @@ export async function handleQueryIntent({
               )
           )
       );
+
+    const isRecent7Days =
+      asksRecent7DaysQuery(
+        message
+      );
+
+    if (isRecent7Days) {
+      matchedLogs =
+        matchedLogs.filter(
+          (log) =>
+            isLogInRecentVietnamDays(
+              log,
+              7
+            )
+        );
+    }
 
     const lotCodes =
       getUniqueCodes(
@@ -1570,7 +1621,11 @@ export async function handleQueryIntent({
       lotCodes.length === 0
     ) {
       return isVietnamese
-        ? `Chưa tìm thấy nhật ký nào sử dụng ${materialName}.`
+        ? (
+            isRecent7Days
+              ? `Trong 7 ng\u00e0y g\u1ea7n \u0111\u00e2y ch\u01b0a t\u00ecm th\u1ea5y nh\u1eadt k\u00fd n\u00e0o s\u1eed d\u1ee5ng ${materialName}.`
+              : `Ch\u01b0a t\u00ecm th\u1ea5y nh\u1eadt k\u00fd n\u00e0o s\u1eed d\u1ee5ng ${materialName}.`
+          )
         : `No logs were found using ${materialCode}.`;
     }
 
@@ -1585,9 +1640,18 @@ export async function handleQueryIntent({
 
     return isVietnamese
       ? (
-          `${materialName} đã được sử dụng trong `
-          + `${matchedLogs.length} nhật ký, tại: `
-          + `${lotNames.join(", ")}.`
+          isRecent7Days
+            ? (
+                `Trong 7 ng\u00e0y g\u1ea7n \u0111\u00e2y, ${materialName} `
+                + `\u0111\u00e3 \u0111\u01b0\u1ee3c s\u1eed d\u1ee5ng trong `
+                + `${matchedLogs.length} nh\u1eadt k\u00fd, t\u1ea1i: `
+                + `${lotNames.join(", ")}.`
+              )
+            : (
+                `${materialName} \u0111\u00e3 \u0111\u01b0\u1ee3c s\u1eed d\u1ee5ng trong `
+                + `${matchedLogs.length} nh\u1eadt k\u00fd, t\u1ea1i: `
+                + `${lotNames.join(", ")}.`
+              )
         )
       : (
           `${materialCode} was used in ${matchedLogs.length} log(s), `
