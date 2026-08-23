@@ -579,6 +579,68 @@ expectIncludes(
 );
 
 
+// Giai doan 8:
+// Hoat dong trong 7 ngay gan day.
+const recentActivitiesReply =
+  await handleQueryIntent({
+    message:
+      "7 ng\u00e0y g\u1ea7n \u0111\u00e2y c\u00f3 nh\u1eefng ho\u1ea1t \u0111\u1ed9ng g\u00ec?",
+    isVietnamese: true,
+  });
+
+expectIncludes(
+  recentActivitiesReply,
+  "7 ng\u00e0y g\u1ea7n \u0111\u00e2y c\u00f3",
+  "Recent activities heading"
+);
+
+expectIncludes(
+  recentActivitiesReply,
+  "Phun thu\u1ed1c",
+  "Recent activities spraying"
+);
+
+expectIncludes(
+  recentActivitiesReply,
+  "Thu ho\u1ea1ch",
+  "Recent activities harvesting"
+);
+
+
+// Giai doan 8:
+// Nhat ky trong 7 ngay gan day.
+const recentLogsReply =
+  await handleQueryIntent({
+    message:
+      "Cho t\u00f4i xem nh\u1eadt k\u00fd 7 ng\u00e0y g\u1ea7n \u0111\u00e2y",
+    isVietnamese: true,
+  });
+
+expectIncludes(
+  recentLogsReply,
+  "7 ng\u00e0y g\u1ea7n \u0111\u00e2y c\u00f3",
+  "Recent logs heading"
+);
+
+expectIncludes(
+  recentLogsReply,
+  "today-log-002",
+  "Recent latest log"
+);
+
+expectIncludes(
+  recentLogsReply,
+  "L\u00f4 C",
+  "Recent latest lot mapping"
+);
+
+expectIncludes(
+  recentLogsReply,
+  "Thu ho\u1ea1ch",
+  "Recent latest activity mapping"
+);
+
+
 console.log(
   "Query Assistant tests passed."
 );

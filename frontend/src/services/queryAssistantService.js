@@ -77,6 +77,59 @@ function getYesterdayVietnamDateKey() {
 }
 
 
+function isLogInRecentVietnamDays(
+  log,
+  days
+) {
+  if (
+    !log?.performed_at ||
+    !Number.isInteger(days) ||
+    days <= 0
+  ) {
+    return false;
+  }
+
+  const logDateKey =
+    getVietnamDateKey(
+      log.performed_at
+    );
+
+  const todayKey =
+    getTodayVietnamDateKey();
+
+  if (
+    !logDateKey ||
+    !todayKey
+  ) {
+    return false;
+  }
+
+  const logDate =
+    new Date(
+      `${logDateKey}T00:00:00Z`
+    );
+
+  const todayDate =
+    new Date(
+      `${todayKey}T00:00:00Z`
+    );
+
+  const diffDays =
+    Math.floor(
+      (
+        todayDate.getTime() -
+        logDate.getTime()
+      ) /
+      (24 * 60 * 60 * 1000)
+    );
+
+  return (
+    diffDays >= 0 &&
+    diffDays < days
+  );
+}
+
+
 function isLogOnVietnamDate(
   log,
   dateKey
@@ -551,6 +604,88 @@ function asksTodayQuery(
 }
 
 
+function asksRecent7DaysQuery(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    text.includes(
+      "7 ng\u00e0y g\u1ea7n \u0111\u00e2y"
+    ) ||
+    text.includes(
+      "7 ng\u00e0y qua"
+    ) ||
+    text.includes(
+      "trong 7 ng\u00e0y"
+    )
+  );
+}
+
+
+function asksRecent7DaysActivities(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    asksRecent7DaysQuery(
+      message
+    ) &&
+    (
+      text.includes(
+        "ho\u1ea1t \u0111\u1ed9ng"
+      ) ||
+      text.includes(
+        "c\u00f4ng vi\u1ec7c"
+      ) ||
+      text.includes(
+        "\u0111\u00e3 l\u00e0m"
+      ) ||
+      text.includes(
+        "l\u00e0m g\u00ec"
+      ) ||
+      text.includes(
+        "activity"
+      ) ||
+      text.includes(
+        "activities"
+      )
+    )
+  );
+}
+
+
+function asksRecent7DaysLogs(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    asksRecent7DaysQuery(
+      message
+    ) &&
+    (
+      text.includes(
+        "nh\u1eadt k\u00fd"
+      ) ||
+      text.includes(
+        "log"
+      )
+    )
+  );
+}
+
+
 function asksYesterdayQuery(
   message
 ) {
@@ -962,6 +1097,96 @@ export async function handleQueryIntent({
       getCultivationLogs(),
       loadMasterDataLookups(),
     ]);
+
+
+  if (
+    asksRecent7DaysActivities(
+      message
+    ) ||
+    asksRecent7DaysLogs(
+      message
+    )
+  ) {
+    const recentLogs =
+      logs
+        .filter(
+          (log) =>
+            isLogInRecentVietnamDays(
+              log,
+              7
+            )
+        )
+        .sort(
+          (a, b) =>
+            new Date(
+              b?.performed_at ?? 0
+            ).getTime() -
+            new Date(
+              a?.performed_at ?? 0
+            ).getTime()
+        );
+
+    if (
+      recentLogs.length === 0
+    ) {
+      return isVietnamese
+        ? "7 ng\u00e0y g\u1ea7n \u0111\u00e2y ch\u01b0a c\u00f3 nh\u1eadt k\u00fd canh t\u00e1c n\u00e0o."
+        : "There are no cultivation logs in the last 7 days.";
+    }
+
+    if (
+      asksRecent7DaysActivities(
+        message
+      )
+    ) {
+      const activityCodes =
+        getUniqueCodes(
+          recentLogs.map(
+            (log) =>
+              log?.activity_code
+          )
+        );
+
+      const activityNames =
+        activityCodes.map(
+          (code) =>
+            getDisplayName(
+              code,
+              lookups.activities
+            )
+        );
+
+      return isVietnamese
+        ? (
+            `7 ng\u00e0y g\u1ea7n \u0111\u00e2y c\u00f3 ${recentLogs.length} nh\u1eadt k\u00fd v\u1edbi `
+            + `${activityCodes.length} lo\u1ea1i ho\u1ea1t \u0111\u1ed9ng: `
+            + `${activityNames.join(", ")}.`
+          )
+        : (
+            `In the last 7 days there are ${recentLogs.length} log(s) with `
+            + `${activityCodes.length} activity type(s): `
+            + `${activityNames.join(", ")}.`
+          );
+    }
+
+    return [
+      isVietnamese
+        ? (
+            `7 ng\u00e0y g\u1ea7n \u0111\u00e2y c\u00f3 ${recentLogs.length} nh\u1eadt k\u00fd. `
+            + "Nh\u1eadt k\u00fd g\u1ea7n nh\u1ea5t:"
+          )
+        : (
+            `There are ${recentLogs.length} log(s) in the last 7 days. `
+            + "Latest log:"
+          ),
+      "",
+      formatCultivationLog(
+        recentLogs[0],
+        isVietnamese,
+        lookups
+      ),
+    ].join("\n");
+  }
 
 
   if (

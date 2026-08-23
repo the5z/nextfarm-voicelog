@@ -201,6 +201,30 @@ expectIntent(
 );
 
 
+// Giai doan 8:
+// Query hoat dong trong 7 ngay gan day.
+expectIntent(
+  {
+    message:
+      "7 ng\u00e0y g\u1ea7n \u0111\u00e2y c\u00f3 nh\u1eefng ho\u1ea1t \u0111\u1ed9ng g\u00ec?",
+  },
+  ASSISTANT_INTENT
+    .QUERY
+);
+
+
+// Giai doan 8:
+// Query nhat ky trong 7 ngay gan day.
+expectIntent(
+  {
+    message:
+      "Cho t\u00f4i xem nh\u1eadt k\u00fd 7 ng\u00e0y g\u1ea7n \u0111\u00e2y",
+  },
+  ASSISTANT_INTENT
+    .QUERY
+);
+
+
 console.log(
   "Intent Router tests passed."
 );
