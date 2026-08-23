@@ -136,6 +136,10 @@ function isQueryIntent(
     // Nhật ký gần nhất / theo thời gian.
     /nhật ký\s+(?:gần nhất|mới nhất|hôm nay|hôm qua)/i,
 
+    // Giai đoạn 6:
+    // Query hoạt động / công việc / nhật ký theo ngày.
+    /(?:hôm nay|hôm qua).*(?:hoạt động|công việc|nhật ký|đã làm|làm gì)/i,
+
     // Nhật ký theo lô.
     /nhật ký.*\blô\s+[a-z0-9_-]+\b/i,
 

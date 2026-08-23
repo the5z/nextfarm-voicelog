@@ -1282,9 +1282,18 @@ function AIAssistant({
       expectedField ===
       "activity_text"
     ) {
+      const normalizedText =
+        text.toLowerCase();
+
+      const looksLikeQuery =
+        /(?:nh\u1eadt k\u00fd|l\u1ecbch s\u1eed|cho t\u00f4i xem|tra c\u1ee9u|t\u00ecm|bao nhi\u00eau|m\u1ea5y l\u1ea7n|l\u00f4 n\u00e0o|ho\u1ea1t \u0111\u1ed9ng g\u00ec|c\u00f4ng vi\u1ec7c g\u00ec|h\u00f4m nay c\u00f3|h\u00f4m qua c\u00f3)/i.test(
+          normalizedText
+        );
+
       return (
         text.length <= 120 &&
-        !/[?]/.test(text)
+        !/[?]/.test(text) &&
+        !looksLikeQuery
       );
     }
 

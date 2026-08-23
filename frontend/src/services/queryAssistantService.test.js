@@ -4,6 +4,34 @@ import {
 } from "./queryAssistantService.js";
 
 
+const VIETNAM_UTC_OFFSET_MS =
+  7 * 60 * 60 * 1000;
+
+
+function createVietnamTodayIso(
+  hour = 12
+) {
+  const vietnamNow =
+    new Date(
+      Date.now() +
+        VIETNAM_UTC_OFFSET_MS
+    );
+
+  const dateKey =
+    vietnamNow
+      .toISOString()
+      .slice(0, 10);
+
+  const hourText =
+    String(hour)
+      .padStart(2, "0");
+
+  return new Date(
+    `${dateKey}T${hourText}:00:00+07:00`
+  ).toISOString();
+}
+
+
 const sampleLogs = [
   {
     client_record_id: "log-003",
@@ -56,6 +84,38 @@ const sampleLogs = [
       "2026-08-20T08:00:00",
     status: "saved",
   },
+
+  // Giai đoạn 6:
+  // Hai log thuộc "hôm nay" theo UTC+7.
+  // Dùng LO_C để không làm thay đổi
+  // các kết quả test Giai đoạn 5.
+  {
+    client_record_id:
+      "today-log-002",
+    lot_code: "LO_C",
+    activity_code:
+      "THU_HOACH",
+    materials: [],
+    performed_at:
+      createVietnamTodayIso(
+        12
+      ),
+    status: "saved",
+  },
+
+  {
+    client_record_id:
+      "today-log-001",
+    lot_code: "LO_C",
+    activity_code:
+      "PHUN_THUOC",
+    materials: [],
+    performed_at:
+      createVietnamTodayIso(
+        11
+      ),
+    status: "saved",
+  },
 ];
 
 
@@ -86,6 +146,24 @@ const activities = [
       "nhổ cỏ",
     ],
   },
+
+  {
+    code: "PHUN_THUOC",
+    name: "Phun thuốc",
+    aliases: [
+      "phun thuốc",
+      "xịt thuốc",
+    ],
+  },
+
+  {
+    code: "THU_HOACH",
+    name: "Thu hoạch",
+    aliases: [
+      "thu hoạch",
+      "hái",
+    ],
+  },
 ];
 
 
@@ -103,6 +181,14 @@ const lots = [
     name: "Lô B",
     aliases: [
       "lô b",
+    ],
+  },
+
+  {
+    code: "LO_C",
+    name: "Lô C",
+    aliases: [
+      "lô c",
     ],
   },
 ];
@@ -224,8 +310,7 @@ function expectIncludes(
 }
 
 
-// Kiểm tra formatter cơ bản
-// vẫn fallback được khi không truyền lookups.
+// Formatter fallback.
 const formatted =
   formatCultivationLog(
     sampleLogs[2],
@@ -299,7 +384,7 @@ expectIncludes(
 );
 
 
-// Query cây trồng chưa có nguồn dữ liệu.
+// Query cây trồng chưa có nguồn.
 const cropReply =
   await handleQueryIntent({
     message:
@@ -315,7 +400,7 @@ expectIncludes(
 
 
 // Giai đoạn 5:
-// Lô B có những hoạt động gì?
+// Hoạt động theo lô.
 const activitiesByLotReply =
   await handleQueryIntent({
     message:
@@ -349,7 +434,7 @@ expectIncludes(
 
 
 // Giai đoạn 5:
-// Có bao nhiêu lần bón phân?
+// Đếm hoạt động.
 const activityCountReply =
   await handleQueryIntent({
     message:
@@ -371,7 +456,7 @@ expectIncludes(
 
 
 // Giai đoạn 5:
-// Lô A đã bón phân bao nhiêu lần?
+// Lô + hoạt động + đếm.
 const lotActivityCountReply =
   await handleQueryIntent({
     message:
@@ -399,7 +484,7 @@ expectIncludes(
 
 
 // Giai đoạn 5:
-// NPK đã được dùng ở lô nào?
+// Vật tư đã sử dụng ở lô nào.
 const materialUsageReply =
   await handleQueryIntent({
     message:
@@ -423,6 +508,74 @@ expectIncludes(
   materialUsageReply,
   "Lô A",
   "Material usage query lot"
+);
+
+
+// Giai đoạn 6:
+// Hoạt động hôm nay theo UTC+7.
+const todayActivitiesReply =
+  await handleQueryIntent({
+    message:
+      "Hôm nay có những hoạt động gì?",
+    isVietnamese: true,
+  });
+
+expectIncludes(
+  todayActivitiesReply,
+  "Hôm nay có 2 nhật ký",
+  "Today activities log count"
+);
+
+expectIncludes(
+  todayActivitiesReply,
+  "2 loại hoạt động",
+  "Today activities type count"
+);
+
+expectIncludes(
+  todayActivitiesReply,
+  "Phun thuốc",
+  "Today activities spraying"
+);
+
+expectIncludes(
+  todayActivitiesReply,
+  "Thu hoạch",
+  "Today activities harvesting"
+);
+
+
+// Giai đoạn 6:
+// Nhật ký hôm nay.
+const todayLogsReply =
+  await handleQueryIntent({
+    message:
+      "Cho tôi xem nhật ký hôm nay",
+    isVietnamese: true,
+  });
+
+expectIncludes(
+  todayLogsReply,
+  "Hôm nay có 2 nhật ký",
+  "Today logs count"
+);
+
+expectIncludes(
+  todayLogsReply,
+  "today-log-002",
+  "Today latest log"
+);
+
+expectIncludes(
+  todayLogsReply,
+  "Lô C",
+  "Today latest log lot mapping"
+);
+
+expectIncludes(
+  todayLogsReply,
+  "Thu hoạch",
+  "Today latest log activity mapping"
 );
 
 

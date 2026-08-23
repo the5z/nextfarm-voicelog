@@ -154,6 +154,30 @@ expectIntent(
 );
 
 
+// Giai đoạn 6:
+// Query hoạt động hôm nay.
+expectIntent(
+  {
+    message:
+      "Hôm nay có những hoạt động gì?",
+  },
+  ASSISTANT_INTENT
+    .QUERY
+);
+
+
+// Giai đoạn 6:
+// Query nhật ký hôm nay.
+expectIntent(
+  {
+    message:
+      "Cho tôi xem nhật ký hôm nay",
+  },
+  ASSISTANT_INTENT
+    .QUERY
+);
+
+
 expectIntent(
   {
     message:

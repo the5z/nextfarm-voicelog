@@ -28,6 +28,61 @@ function normalizeCode(value) {
 }
 
 
+const VIETNAM_UTC_OFFSET_MS =
+  7 * 60 * 60 * 1000;
+
+
+function getVietnamDateKey(
+  value
+) {
+  const date =
+    value instanceof Date
+      ? value
+      : new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  return new Date(
+    date.getTime() +
+      VIETNAM_UTC_OFFSET_MS
+  )
+    .toISOString()
+    .slice(0, 10);
+}
+
+
+function getTodayVietnamDateKey() {
+  return getVietnamDateKey(
+    new Date()
+  );
+}
+
+
+function isLogOnVietnamDate(
+  log,
+  dateKey
+) {
+  if (
+    !log?.performed_at ||
+    !dateKey
+  ) {
+    return false;
+  }
+
+  return (
+    getVietnamDateKey(
+      log.performed_at
+    ) === dateKey
+  );
+}
+
+
 function createCodeNameMap(
   items
 ) {
@@ -464,6 +519,85 @@ function asksLatestLog(
 }
 
 
+function asksTodayQuery(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    text.includes(
+      "hôm nay"
+    ) ||
+    text.includes(
+      "today"
+    )
+  );
+}
+
+
+function asksTodayActivities(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    asksTodayQuery(
+      message
+    ) &&
+    (
+      text.includes(
+        "hoạt động"
+      ) ||
+      text.includes(
+        "công việc"
+      ) ||
+      text.includes(
+        "đã làm"
+      ) ||
+      text.includes(
+        "làm gì"
+      ) ||
+      text.includes(
+        "activity"
+      ) ||
+      text.includes(
+        "activities"
+      )
+    )
+  );
+}
+
+
+function asksTodayLogs(
+  message
+) {
+  const text =
+    normalizeText(
+      message
+    );
+
+  return (
+    asksTodayQuery(
+      message
+    ) &&
+    (
+      text.includes(
+        "nhật ký"
+      ) ||
+      text.includes(
+        "log"
+      )
+    )
+  );
+}
+
+
 function asksLogsByLot(
   message
 ) {
@@ -736,6 +870,89 @@ export async function handleQueryIntent({
       getCultivationLogs(),
       loadMasterDataLookups(),
     ]);
+
+
+  if (
+    asksTodayActivities(
+      message
+    ) ||
+    asksTodayLogs(
+      message
+    )
+  ) {
+    const todayKey =
+      getTodayVietnamDateKey();
+
+    const todayLogs =
+      logs.filter(
+        (log) =>
+          isLogOnVietnamDate(
+            log,
+            todayKey
+          )
+      );
+
+    if (
+      todayLogs.length === 0
+    ) {
+      return isVietnamese
+        ? "Hôm nay chưa có nhật ký canh tác nào."
+        : "There are no cultivation logs for today.";
+    }
+
+    if (
+      asksTodayActivities(
+        message
+      )
+    ) {
+      const activityCodes =
+        getUniqueCodes(
+          todayLogs.map(
+            (log) =>
+              log?.activity_code
+          )
+        );
+
+      const activityNames =
+        activityCodes.map(
+          (code) =>
+            getDisplayName(
+              code,
+              lookups.activities
+            )
+        );
+
+      return isVietnamese
+        ? (
+            `Hôm nay có ${todayLogs.length} nhật ký với `
+            + `${activityCodes.length} loại hoạt động: `
+            + `${activityNames.join(", ")}.`
+          )
+        : (
+            `Today there are ${todayLogs.length} log(s) with `
+            + `${activityCodes.length} activity type(s): `
+            + `${activityNames.join(", ")}.`
+          );
+    }
+
+    return [
+      isVietnamese
+        ? (
+            `Hôm nay có ${todayLogs.length} nhật ký. `
+            + "Nhật ký gần nhất:"
+          )
+        : (
+            `There are ${todayLogs.length} log(s) today. `
+            + "Latest log:"
+          ),
+      "",
+      formatCultivationLog(
+        todayLogs[0],
+        isVietnamese,
+        lookups
+      ),
+    ].join("\n");
+  }
 
 
   if (
