@@ -78,12 +78,12 @@ function buildPerformedAt(
 
 const DEV_VALID_DATA = {
   transcript:
-    "HÃ´m nay tÃ´i bÃ³n 20 kg phÃ¢n NPK cho lÃ´ A01 lÃºc 8 giá» 30.",
+    "Hôm nay tôi bón 20 kg phân NPK cho lô A01 lúc 8 giờ 30.",
 
   structuredData: {
     lot: "A01",
-    work: "BÃ³n phÃ¢n",
-    material: "PhÃ¢n NPK",
+    work: "Bón phân",
+    material: "Phân NPK",
     quantity: "20",
     unit: "kg",
     time: "08:30",
@@ -92,12 +92,12 @@ const DEV_VALID_DATA = {
 
 const DEV_ERROR_DATA = {
   transcript:
-    "HÃ´m nay tÃ´i thá»±c hiá»‡n cÃ´ng viá»‡c nhÆ°ng thÃ´ng tin nháº­n dáº¡ng chÆ°a Ä‘áº§y Ä‘á»§.",
+    "Hôm nay tôi thực hiện công việc nhưng thông tin nhận dạng chưa đầy đủ.",
 
   structuredData: {
     lot: "",
     work: "",
-    material: "PhÃ¢n NPK",
+    material: "Phân NPK",
     quantity: "0",
     unit: "",
     time: "",
@@ -106,11 +106,11 @@ const DEV_ERROR_DATA = {
 
 const DEV_WARNING_DATA = {
   transcript:
-    "HÃ´m nay tÃ´i kiá»ƒm tra lÃ´ A01.",
+    "Hôm nay tôi kiểm tra lô A01.",
 
   structuredData: {
     lot: "A01",
-    work: "Kiá»ƒm tra lÃ´",
+    work: "Kiểm tra lô",
     material: "",
     quantity: "",
     unit: "",
@@ -219,8 +219,8 @@ function VoiceLog({
     showMessage(
       "success",
       isVietnamese
-        ? "ðŸ¤– NextFarm AI Ä‘Ã£ cáº­p nháº­t dá»¯ liá»‡u nháº­t kÃ½."
-        : "ðŸ¤– NextFarm AI updated the farming log data."
+        ? "🤖 NextFarm AI đã cập nhật dữ liệu nhật ký."
+        : "🤖 NextFarm AI updated the farming log data."
     );
 
     onExternalAiChangesApplied?.();
@@ -349,9 +349,9 @@ function VoiceLog({
     }
 
     const keywords = [
-      "KhÃ´ng thá»ƒ",
-      "Vui lÃ²ng",
-      "lá»—i",
+      "Không thể",
+      "Vui lòng",
+      "lỗi",
       "Unable",
       "Please",
       "error",
@@ -410,14 +410,14 @@ function VoiceLog({
     if (!lot) {
       errors.lot =
         isVietnamese
-          ? "ChÆ°a cÃ³ thÃ´ng tin lÃ´ canh tÃ¡c."
+          ? "Chưa có thông tin lô canh tác."
           : "Farm plot is required.";
     }
 
     if (!work) {
       errors.work =
         isVietnamese
-          ? "ChÆ°a cÃ³ thÃ´ng tin cÃ´ng viá»‡c."
+          ? "Chưa có thông tin công việc."
           : "Farming task is required.";
     }
 
@@ -434,21 +434,21 @@ function VoiceLog({
       ) {
         errors.quantity =
           isVietnamese
-            ? "Sá»‘ lÆ°á»£ng pháº£i lÃ  má»™t sá»‘ há»£p lá»‡."
+            ? "Số lượng phải là một số hợp lệ."
             : "Quantity must be a valid number.";
       } else if (
         quantity <= 0
       ) {
         errors.quantity =
           isVietnamese
-            ? "Sá»‘ lÆ°á»£ng pháº£i lá»›n hÆ¡n 0."
+            ? "Số lượng phải lớn hơn 0."
             : "Quantity must be greater than 0.";
       }
 
       if (!unit) {
         errors.unit =
           isVietnamese
-            ? "CÃ³ sá»‘ lÆ°á»£ng nhÆ°ng chÆ°a cÃ³ Ä‘Æ¡n vá»‹."
+            ? "Có số lượng nhưng chưa có đơn vị."
             : "Unit is required when quantity is provided.";
       }
     }
@@ -459,15 +459,14 @@ function VoiceLog({
     ) {
       errors.quantity =
         isVietnamese
-          ? "CÃ³ Ä‘Æ¡n vá»‹ nhÆ°ng chÆ°a cÃ³ sá»‘ lÆ°á»£ng."
+          ? "Có đơn vị nhưng chưa có số lượng."
           : "Quantity is required when a unit is provided.";
     }
-
 
     if (!time) {
       warnings.time =
         isVietnamese
-          ? "ChÆ°a cÃ³ thá»i gian thá»±c hiá»‡n."
+          ? "Chưa có thời gian thực hiện."
           : "No execution time was detected.";
     }
 
@@ -564,12 +563,12 @@ function VoiceLog({
     );
 
     /*
-      Náº¿u báº£n ghi Ä‘Ã£ thuá»™c
-      Cáº§n kiá»ƒm tra:
-      hiá»‡n validation ngay.
+      Nếu bản ghi đã thuộc
+      Cần kiểm tra:
+      hiện validation ngay.
 
       Draft:
-      chÆ°a cáº§n hiá»‡n lá»—i ngay.
+      chưa cần hiện lỗi ngay.
     */
 
     setHasAttemptedSubmit(
@@ -587,11 +586,11 @@ function VoiceLog({
         type: "error",
 
         text: isVietnamese
-          ? `âš ï¸ Nháº­t kÃ½ lÃ´ ${
+          ? `⚠️ Nhật ký lô ${
               logToEdit.lot ||
               "---"
-            } cáº§n Ä‘Æ°á»£c kiá»ƒm tra. HÃ£y sá»­a cÃ¡c trÆ°á»ng Ä‘Æ°á»£c Ä‘Ã¡nh dáº¥u trÆ°á»›c khi xÃ¡c nháº­n.`
-          : `âš ï¸ The log for plot ${
+            } cần được kiểm tra. Hãy sửa các trường được đánh dấu trước khi xác nhận.`
+          : `⚠️ The log for plot ${
               logToEdit.lot ||
               "---"
             } needs review. Correct the highlighted fields before confirming.`,
@@ -601,11 +600,11 @@ function VoiceLog({
         type: "success",
 
         text: isVietnamese
-          ? `ðŸ“ ÄÃ£ má»Ÿ láº¡i nháº­t kÃ½ Ä‘ang dá»Ÿ cá»§a lÃ´ ${
+          ? `📝 Đã mở lại nhật ký đang dở của lô ${
               logToEdit.lot ||
               "---"
             }.`
-          : `ðŸ“ Draft log for plot ${
+          : `📝 Draft log for plot ${
               logToEdit.lot ||
               "---"
             } has been restored.`,
@@ -734,8 +733,8 @@ function VoiceLog({
       "success",
 
       isVietnamese
-        ? `ðŸ§ª ÄÃ£ náº¡p dá»¯ liá»‡u DEV: ${name}.`
-        : `ðŸ§ª DEV test data loaded: ${name}.`
+        ? `🧪 Đã nạp dữ liệu DEV: ${name}.`
+        : `🧪 DEV test data loaded: ${name}.`
     );
   };
 
@@ -745,7 +744,7 @@ function VoiceLog({
         DEV_VALID_DATA,
 
         isVietnamese
-          ? "Dá»¯ liá»‡u há»£p lá»‡"
+          ? "Dữ liệu hợp lệ"
           : "Valid data"
       );
     };
@@ -756,7 +755,7 @@ function VoiceLog({
         DEV_WARNING_DATA,
 
         isVietnamese
-          ? "Dá»¯ liá»‡u cáº£nh bÃ¡o"
+          ? "Dữ liệu cảnh báo"
           : "Warning data"
       );
     };
@@ -767,7 +766,7 @@ function VoiceLog({
         DEV_ERROR_DATA,
 
         isVietnamese
-          ? "Dá»¯ liá»‡u lá»—i"
+          ? "Dữ liệu lỗi"
           : "Error data"
       );
     };
@@ -780,8 +779,8 @@ function VoiceLog({
         "success",
 
         isVietnamese
-          ? "ðŸ§ª ÄÃ£ reset dá»¯ liá»‡u DEV."
-          : "ðŸ§ª DEV test data reset."
+          ? "🧪 Đã reset dữ liệu DEV."
+          : "🧪 DEV test data reset."
       );
     };
 
@@ -924,7 +923,7 @@ function VoiceLog({
           "error",
 
           isVietnamese
-            ? "ChÆ°a thá»ƒ xÃ¡c nháº­n nháº­t kÃ½. Vui lÃ²ng xá»­ lÃ½ táº¥t cáº£ lá»—i vÃ  cáº£nh bÃ¡o Ä‘Æ°á»£c Ä‘Ã¡nh dáº¥u trÆ°á»›c khi xÃ¡c nháº­n."
+            ? "Chưa thể xác nhận nhật ký. Vui lòng xử lý tất cả lỗi và cảnh báo được đánh dấu trước khi xác nhận."
             : "The log cannot be confirmed yet. Please resolve all highlighted errors and warnings before confirmation."
         );
 
@@ -972,7 +971,7 @@ function VoiceLog({
           "error",
 
           isVietnamese
-            ? "ChÆ°a cÃ³ thá»i gian thá»±c hiá»‡n. Vui lÃ²ng bá»• sung thá»i gian trÆ°á»›c khi xÃ¡c nháº­n."
+            ? "Chưa có thời gian thực hiện. Vui lòng bổ sung thời gian trước khi xác nhận."
             : "Execution time is missing. Please add it before confirming."
         );
 
@@ -989,7 +988,7 @@ function VoiceLog({
           "error",
 
           isVietnamese
-            ? "CÃ³ sá»‘ lÆ°á»£ng hoáº·c Ä‘Æ¡n vá»‹ nhÆ°ng chÆ°a cÃ³ váº­t tÆ°. Vui lÃ²ng kiá»ƒm tra láº¡i."
+            ? "Có số lượng hoặc đơn vị nhưng chưa có vật tư. Vui lòng kiểm tra lại."
             : "Quantity or unit is present but the material is missing. Please review the data."
         );
 
@@ -1006,7 +1005,7 @@ function VoiceLog({
           "error",
 
           isVietnamese
-            ? "Váº­t tÆ° chÆ°a Ä‘á»§ sá»‘ lÆ°á»£ng hoáº·c Ä‘Æ¡n vá»‹. Vui lÃ²ng bá»• sung trÆ°á»›c khi xÃ¡c nháº­n."
+            ? "Vật tư chưa đủ số lượng hoặc đơn vị. Vui lòng bổ sung trước khi xác nhận."
             : "The material is missing a quantity or unit. Please complete it before confirming."
         );
 
@@ -1026,7 +1025,7 @@ function VoiceLog({
           "error",
 
           isVietnamese
-            ? "Thá»i gian khÃ´ng Ä‘Ãºng Ä‘á»‹nh dáº¡ng HH:mm. VÃ­ dá»¥: 07:30."
+            ? "Thời gian không đúng định dạng HH:mm. Ví dụ: 07:30."
             : "Time must use HH:mm format, for example 07:30."
         );
 
@@ -1043,7 +1042,7 @@ function VoiceLog({
         "success",
 
         isVietnamese
-          ? "Äang Ä‘á»‘i chiáº¿u dá»¯ liá»‡u vá»›i Integration Service..."
+          ? "Đang đối chiếu dữ liệu với Integration Service..."
           : "Validating data with the Integration Service..."
       );
 
@@ -1072,7 +1071,7 @@ function VoiceLog({
             "error",
 
             isVietnamese
-              ? `KhÃ´ng thá»ƒ xÃ¡c Ä‘á»‹nh lÃ´ "${lotText}" trong dá»¯ liá»‡u chuáº©n. Vui lÃ²ng kiá»ƒm tra láº¡i.`
+              ? `Không thể xác định lô "${lotText}" trong dữ liệu chuẩn. Vui lòng kiểm tra lại.`
               : `The plot "${lotText}" could not be resolved against master data. Please review it.`
           );
 
@@ -1090,7 +1089,7 @@ function VoiceLog({
             "error",
 
             isVietnamese
-              ? `KhÃ´ng thá»ƒ xÃ¡c Ä‘á»‹nh cÃ´ng viá»‡c "${activityText}" trong dá»¯ liá»‡u chuáº©n. Vui lÃ²ng kiá»ƒm tra láº¡i.`
+              ? `Không thể xác định công việc "${activityText}" trong dữ liệu chuẩn. Vui lòng kiểm tra lại.`
               : `The activity "${activityText}" could not be resolved against master data. Please review it.`
           );
 
@@ -1126,7 +1125,7 @@ function VoiceLog({
               "error",
 
               isVietnamese
-                ? `KhÃ´ng thá»ƒ xÃ¡c Ä‘á»‹nh váº­t tÆ° "${materialText}" trong dá»¯ liá»‡u chuáº©n. Vui lÃ²ng kiá»ƒm tra láº¡i.`
+                ? `Không thể xác định vật tư "${materialText}" trong dữ liệu chuẩn. Vui lòng kiểm tra lại.`
                 : `The material "${materialText}" could not be resolved against master data. Please review it.`
             );
 
@@ -1144,7 +1143,7 @@ function VoiceLog({
               "error",
 
               isVietnamese
-                ? `KhÃ´ng thá»ƒ xÃ¡c Ä‘á»‹nh Ä‘Æ¡n vá»‹ "${unitText}" trong dá»¯ liá»‡u chuáº©n. Vui lÃ²ng kiá»ƒm tra láº¡i.`
+                ? `Không thể xác định đơn vị "${unitText}" trong dữ liệu chuẩn. Vui lòng kiểm tra lại.`
                 : `The unit "${unitText}" could not be resolved against master data. Please review it.`
             );
 
@@ -1166,7 +1165,7 @@ function VoiceLog({
               "error",
 
               isVietnamese
-                ? "Sá»‘ lÆ°á»£ng váº­t tÆ° pháº£i lÃ  sá»‘ lá»›n hÆ¡n 0."
+                ? "Số lượng vật tư phải là số lớn hơn 0."
                 : "Material quantity must be a number greater than 0."
             );
 
@@ -1253,7 +1252,7 @@ function VoiceLog({
             "error",
 
             isVietnamese
-              ? "Integration Service tá»« chá»‘i dá»¯ liá»‡u. Vui lÃ²ng kiá»ƒm tra láº¡i cÃ¡c trÆ°á»ng trÆ°á»›c khi lÆ°u."
+              ? "Integration Service từ chối dữ liệu. Vui lòng kiểm tra lại các trường trước khi lưu."
               : "The Integration Service rejected the data. Please review the fields before saving."
           );
 
@@ -1335,8 +1334,8 @@ function VoiceLog({
           "success",
 
           isVietnamese
-            ? "âœ… Nháº­t kÃ½ Ä‘Ã£ Ä‘Æ°á»£c xÃ¡c nháº­n, lÆ°u qua Integration Service vÃ  cáº­p nháº­t vÃ o Nháº­t kÃ½ cá»§a tÃ´i."
-            : "âœ… The log was confirmed, saved through the Integration Service, and added to My Logs."
+            ? "✅ Nhật ký đã được xác nhận, lưu qua Integration Service và cập nhật vào Nhật ký của tôi."
+            : "✅ The log was confirmed, saved through the Integration Service, and added to My Logs."
         );
       } catch (error) {
         console.error(
@@ -1348,7 +1347,7 @@ function VoiceLog({
           "error",
 
           isVietnamese
-            ? "KhÃ´ng thá»ƒ lÆ°u nháº­t kÃ½ qua Integration Service. HÃ£y kiá»ƒm tra Integration Service vÃ  thá»­ láº¡i."
+            ? "Không thể lưu nhật ký qua Integration Service. Hãy kiểm tra Integration Service và thử lại."
             : "The log could not be saved through the Integration Service. Check the service and try again."
         );
 
@@ -1401,10 +1400,10 @@ function VoiceLog({
               {editingStatus ===
               "review"
                 ? isVietnamese
-                  ? "Kiá»ƒm tra vÃ  hoÃ n thiá»‡n nháº­t kÃ½"
+                  ? "Kiểm tra và hoàn thiện nhật ký"
                   : "Review and complete log"
                 : isVietnamese
-                  ? "Táº¡o nháº­t kÃ½ canh tÃ¡c báº±ng giá»ng nÃ³i"
+                  ? "Tạo nhật ký canh tác bằng giọng nói"
                   : "Create farming logs with your voice"}
             </h2>
 
@@ -1412,10 +1411,10 @@ function VoiceLog({
               {editingStatus ===
               "review"
                 ? isVietnamese
-                  ? "Kiá»ƒm tra cÃ¡c trÆ°á»ng Ä‘Æ°á»£c cáº£nh bÃ¡o, bá»• sung thÃ´ng tin cÃ²n thiáº¿u vÃ  xÃ¡c nháº­n láº¡i nháº­t kÃ½."
+                  ? "Kiểm tra các trường được cảnh báo, bổ sung thông tin còn thiếu và xác nhận lại nhật ký."
                   : "Review highlighted fields, complete missing data and confirm the log."
                 : isVietnamese
-                  ? "Ghi Ã¢m, Ä‘á»ƒ AI xá»­ lÃ½ vÃ  kiá»ƒm tra dá»¯ liá»‡u trÆ°á»›c khi xÃ¡c nháº­n."
+                  ? "Ghi âm, để AI xử lý và kiểm tra dữ liệu trước khi xác nhận."
                   : "Record your voice, let AI process it, then review the extracted data before confirming."}
             </p>
           </div>
@@ -1427,10 +1426,10 @@ function VoiceLog({
               {editingStatus ===
               "review"
                 ? isVietnamese
-                  ? "Äang kiá»ƒm tra"
+                  ? "Đang kiểm tra"
                   : "Reviewing"
                 : isVietnamese
-                  ? "Há»‡ thá»‘ng sáºµn sÃ ng"
+                  ? "Hệ thống sẵn sàng"
                   : "System ready"}
             </span>
           </div>
@@ -1442,7 +1441,7 @@ function VoiceLog({
           <section className="dev-test-panel">
             <div className="dev-test-info">
               <span className="dev-test-icon">
-                ðŸ§ª
+                🧪
               </span>
 
               <div>
@@ -1452,7 +1451,7 @@ function VoiceLog({
 
                 <span>
                   {isVietnamese
-                    ? "Kiá»ƒm thá»­ frontend khÃ´ng cáº§n AI Service."
+                    ? "Kiểm thử frontend không cần AI Service."
                     : "Test the frontend without the AI Service."}
                 </span>
               </div>
@@ -1466,9 +1465,9 @@ function VoiceLog({
                   handleLoadValidTest
                 }
               >
-                âœ…{" "}
+                ✅{" "}
                 {isVietnamese
-                  ? "Há»£p lá»‡"
+                  ? "Hợp lệ"
                   : "Valid"}
               </button>
 
@@ -1479,9 +1478,9 @@ function VoiceLog({
                   handleLoadWarningTest
                 }
               >
-                âš ï¸{" "}
+                ⚠️{" "}
                 {isVietnamese
-                  ? "Cáº£nh bÃ¡o"
+                  ? "Cảnh báo"
                   : "Warning"}
               </button>
 
@@ -1492,9 +1491,9 @@ function VoiceLog({
                   handleLoadErrorTest
                 }
               >
-                âŒ{" "}
+                ❌{" "}
                 {isVietnamese
-                  ? "Dá»¯ liá»‡u lá»—i"
+                  ? "Dữ liệu lỗi"
                   : "Error"}
               </button>
 
@@ -1505,7 +1504,7 @@ function VoiceLog({
                   handleResetDevTest
                 }
               >
-                â†º Reset
+                ↺ Reset
               </button>
             </div>
           </section>
@@ -1670,8 +1669,8 @@ function VoiceLog({
             <span className="app-toast-icon">
               {messageType ===
               "error"
-                ? "âš ï¸"
-                : "âœ…"}
+                ? "⚠️"
+                : "✅"}
             </span>
 
             <span>

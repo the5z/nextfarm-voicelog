@@ -16,6 +16,11 @@ import {
   updateBotSession,
 } from "../services/botService";
 
+import {
+  ASSISTANT_INTENT,
+  routeAssistantIntent,
+} from "../services/intentRouter";
+
 const STORAGE_KEY =
   "nextfarm-ai-conversations";
 
@@ -1874,16 +1879,39 @@ function AIAssistant({
       const currentBotSession =
         await getCurrentBotSession();
 
-      const shouldUseContextMessage =
+      const isContextReply =
         currentBotSession?.status ===
           "collecting" &&
-        currentBotSession
-          ?.expected_field &&
+        Boolean(
+          currentBotSession
+            ?.expected_field
+        ) &&
         isLikelyBotContextReply(
           cleanMessage,
           currentBotSession
             .expected_field
         );
+
+      const assistantIntent =
+        routeAssistantIntent({
+          message: cleanMessage,
+
+          hasCollectingSession:
+            currentBotSession?.status ===
+            "collecting",
+
+          expectedField:
+            currentBotSession
+              ?.expected_field ||
+            null,
+
+          isContextReply,
+        });
+
+      const shouldUseContextMessage =
+        assistantIntent ===
+        ASSISTANT_INTENT
+          .VOICELOG_CONTEXT;
 
       if (shouldUseContextMessage) {
         const updatedSession =
