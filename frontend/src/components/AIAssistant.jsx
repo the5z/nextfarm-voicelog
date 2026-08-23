@@ -21,6 +21,10 @@ import {
   routeAssistantIntent,
 } from "../services/intentRouter";
 
+import {
+  handleQueryIntent,
+} from "../services/queryAssistantService";
+
 const STORAGE_KEY =
   "nextfarm-ai-conversations";
 
@@ -1997,6 +2001,54 @@ function AIAssistant({
                   "needsInput"
                   ? current
                   : "ready"
+            );
+
+            statusResetTimeoutRef.current =
+              null;
+          }, 1400);
+
+        return;
+      }
+
+      if (
+        assistantIntent ===
+        ASSISTANT_INTENT.QUERY
+      ) {
+        const responseText =
+          await handleQueryIntent({
+            message: cleanMessage,
+            isVietnamese:
+              replyInVietnamese,
+          });
+
+        const botMessage = {
+          id: generateId(),
+          role: "assistant",
+          text: responseText,
+          createdAt:
+            new Date().toISOString(),
+        };
+
+        updateActiveConversation(
+          (conversation) => ({
+            ...conversation,
+            updatedAt:
+              new Date().toISOString(),
+            messages: [
+              ...conversation.messages,
+              botMessage,
+            ],
+          })
+        );
+
+        setAssistantStatus(
+          "complete"
+        );
+
+        statusResetTimeoutRef.current =
+          setTimeout(() => {
+            setAssistantStatus(
+              "ready"
             );
 
             statusResetTimeoutRef.current =
