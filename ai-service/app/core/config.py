@@ -43,6 +43,23 @@ class Settings:
         "base",
     )
 
+    WHISPER_LANGUAGE: str = os.getenv(
+        "WHISPER_LANGUAGE",
+        "vi",
+    )
+
+    WHISPER_INITIAL_PROMPT: str = os.getenv(
+        "WHISPER_INITIAL_PROMPT",
+        (
+            "Nhật ký canh tác NextFarm bằng tiếng Việt. "
+            "Các từ thường gặp: lô A, lô B, bón phân, "
+            "phun thuốc, tưới nước, làm cỏ, thu hoạch, "
+            "cho bò ăn, cám, phân NPK, phân urê, "
+            "kilogram, kg, gam, lít, chai, bao. "
+            "Ví dụ: Cho bò ăn 20 kg cám tại lô A lúc 7 giờ sáng."
+        ),
+    )
+
     # File upload
     UPLOAD_DIR: str = os.getenv(
         "UPLOAD_DIR",

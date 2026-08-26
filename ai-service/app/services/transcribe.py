@@ -4,6 +4,7 @@ import whisper
 
 from app.core.config import settings
 from app.services.transcript_correction import correct_transcript
+from app.utils.logger import logger
 
 
 MODEL_NAME = settings.WHISPER_MODEL
@@ -27,18 +28,43 @@ def transcribe_audio(
 
     result = _model.transcribe(
         str(audio_path),
-        language="vi",
+
+        language=settings.WHISPER_LANGUAGE,
+
         task="transcribe",
+
+        initial_prompt=(
+            settings.WHISPER_INITIAL_PROMPT
+        ),
+
         fp16=False,
+
         temperature=0,
+
         beam_size=5,
+
         condition_on_previous_text=False,
     )
 
-    raw_text = result[
-        "text"
-    ].strip()
+    raw_text = str(
+        result.get(
+            "text",
+            "",
+        )
+    ).strip()
 
-    return correct_transcript(
+    logger.info(
+        "Whisper raw transcript | text=%s",
+        raw_text,
+    )
+
+    corrected_text = correct_transcript(
         raw_text
     )
+
+    logger.info(
+        "Transcript after correction | text=%s",
+        corrected_text,
+    )
+
+    return corrected_text
