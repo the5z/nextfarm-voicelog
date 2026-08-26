@@ -70,9 +70,17 @@ function RecordButton({
   ] = useState(false);
 
   const [
+    isPreparing,
+    setIsPreparing,
+  ] = useState(false);
+
+  const [
     elapsedSeconds,
     setElapsedSeconds,
   ] = useState(0);
+
+  const elapsedSecondsRef =
+    useRef(0);
 
   const recorderRef =
     useRef(null);
@@ -234,10 +242,10 @@ function RecordButton({
     showMessage(
       "success",
       isVietnamese
-        ? `✅ Đã ghi âm ${formatDuration(
+        ? ` Đã ghi âm ${formatDuration(
             recordedSeconds
           )}. Bạn có thể gửi bản ghi cho AI.`
-        : `✅ Recorded ${formatDuration(
+        : ` Recorded ${formatDuration(
             recordedSeconds
           )}. You can now send the recording to AI.`
     );
@@ -247,12 +255,15 @@ function RecordButton({
     async () => {
       if (
         isRecording ||
+        isPreparing ||
         isConfirmed
       ) {
         return;
       }
 
       try {
+        setIsPreparing(true);
+
         if (
           typeof window
             .MediaRecorder ===
@@ -270,6 +281,13 @@ function RecordButton({
 
         streamRef.current =
           stream;
+
+        await new Promise((resolve) => {
+          window.setTimeout(
+            resolve,
+            800
+          );
+        });
 
         const mimeType =
           chooseSupportedMimeType();
@@ -338,15 +356,9 @@ function RecordButton({
 
         recorder.onstop =
           () => {
-            setElapsedSeconds(
-              (seconds) => {
-                finishRecording(
-                  recorder,
-                  seconds
-                );
-
-                return seconds;
-              }
+            finishRecording(
+              recorder,
+              elapsedSecondsRef.current
             );
           };
 
@@ -360,10 +372,14 @@ function RecordButton({
           250
         );
 
+        setIsPreparing(false);
+
+        elapsedSecondsRef.current =
+          0;
+
         setElapsedSeconds(
           0
         );
-
         setIsRecording(
           true
         );
@@ -373,12 +389,11 @@ function RecordButton({
         timerRef.current =
           window.setInterval(
             () => {
+              elapsedSecondsRef.current +=
+                1;
+
               setElapsedSeconds(
-                (
-                  previous
-                ) =>
-                  previous +
-                  1
+                elapsedSecondsRef.current
               );
             },
             1000
@@ -390,31 +405,29 @@ function RecordButton({
             ? "🎙️ Đang ghi âm... Nhấn lại để dừng."
             : "🎙️ Recording... Tap again to stop."
         );
-      } catch (error) {
-        console.error(
-          "Start recording error:",
-          error
-        );
+            } catch (error) {
+              console.error(
+                "Start recording error:",
+                error
+              );
 
-        clearTimer();
+              setIsPreparing(false);
 
-        cleanupStream();
+              clearTimer();
+              cleanupStream();
+              releaseRecorder();
 
-        releaseRecorder();
+              setIsRecording(false);
 
-        setIsRecording(
-          false
-        );
-
-        showMessage(
-          "error",
-          getRecordingErrorMessage(
-            error,
-            language
-          )
-        );
-      }
-    };
+              showMessage(
+                "error",
+                getRecordingErrorMessage(
+                  error,
+                  language
+                )
+              );
+            }
+          };
 
   const stopRecording =
     () => {
@@ -484,11 +497,12 @@ function RecordButton({
 
   const handleRecordClick =
     () => {
-      if (
-        isRecording
-      ) {
-        stopRecording();
+      if (isPreparing) {
+        return;
+      }
 
+      if (isRecording) {
+        stopRecording();
         return;
       }
 
@@ -525,13 +539,20 @@ function RecordButton({
       ? isVietnamese
         ? "Nhật ký đã được xác nhận"
         : "Log confirmed"
+
+      : isPreparing
+        ? isVietnamese
+          ? "🎙️ Đang chuẩn bị microphone..."
+          : "🎙️ Preparing microphone..."
+
       : isRecording
         ? isVietnamese
           ? "Nhấn để dừng"
           : "Tap to stop"
-        : isVietnamese
-          ? "Nhấn để ghi âm"
-          : "Tap to record";
+
+      : isVietnamese
+        ? "Nhấn để ghi âm"
+        : "Tap to record";
 
   return (
     <div className="record-section">

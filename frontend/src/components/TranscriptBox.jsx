@@ -10,18 +10,18 @@
     <div className="transcript-box">
       <div className="transcript-header">
         <h2>
-          ðŸŽ™ {text.transcript.title}
+          🎙️ {text.transcript.title}
         </h2>
 
         {hasTranscript && !isConfirmed && (
           <span className="edit-badge">
-            ðŸ¤– {text.transcript.aiProcessed}
+            🤖 {text.transcript.aiProcessed}
           </span>
         )}
 
         {isConfirmed && (
           <span className="confirmed-badge">
-            âœ… {text.transcript.confirmed}
+            ✅ {text.transcript.confirmed}
           </span>
         )}
       </div>
@@ -48,13 +48,13 @@
 
       {hasTranscript && !isConfirmed && (
         <div className="transcript-tip">
-          ðŸ’¡ {text.transcript.reviewTip}
+          💡 {text.transcript.reviewTip}
         </div>
       )}
 
       {isConfirmed && (
         <div className="transcript-success">
-          âœ… {text.transcript.success}
+          ✅ {text.transcript.success}
         </div>
       )}
     </div>
