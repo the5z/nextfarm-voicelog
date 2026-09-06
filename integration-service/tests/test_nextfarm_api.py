@@ -16,7 +16,7 @@ def build_cultivation_log(
         "schema_version": "1.0",
         "client_record_id": client_record_id,
         "transcript": "Bón 20 kg NPK cho lô A1",
-        "lot_code": "LO_A1",
+        "lot_code": "LO_A",
         "activity_code": "BON_PHAN",
         "materials": [
             {
@@ -102,12 +102,12 @@ def test_submit_saved_log_to_nextfarm_mock(
     ]
 
     assert mapped_payload["name"] == "Bón phân"
-    assert mapped_payload["location"] == "LO_A1"
+    assert mapped_payload["location"] == "LO_A"
     assert mapped_payload["assigned_to"] == "NV001"
     assert mapped_payload["category_task_id"] == (
         "BON_PHAN"
     )
-    assert mapped_payload["season_id"] == "LO_A1"
+    assert mapped_payload["season_id"] == "LO_A"
 
     assert (
         mapped_payload["metadata"][

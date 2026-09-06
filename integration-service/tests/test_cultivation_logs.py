@@ -14,8 +14,8 @@ def build_valid_log(
     return {
         "schema_version": "1.0",
         "client_record_id": client_record_id,
-        "transcript": "Bón 20 kg NPK cho lô A1",
-        "lot_code": "LO_A1",
+        "transcript": "Bón 20 kg NPK cho lô A",
+        "lot_code": "LO_A",
         "activity_code": "BON_PHAN",
         "materials": [
             {
@@ -56,7 +56,7 @@ def test_save_confirmed_log(
     stored_log = response_data["data"]
 
     assert stored_log["client_record_id"] == "test-log-001"
-    assert stored_log["lot_code"] == "LO_A1"
+    assert stored_log["lot_code"] == "LO_A"
     assert stored_log["activity_code"] == "BON_PHAN"
     assert stored_log["confirmed"] is True
     assert stored_log["status"] == "saved"
@@ -161,9 +161,9 @@ def test_list_saved_logs(
 
     second_payload = deepcopy(first_payload)
     second_payload["client_record_id"] = "test-list-002"
-    second_payload["lot_code"] = "LO_A2"
+    second_payload["lot_code"] = "LO_B"
     second_payload["transcript"] = (
-        "Tưới nước cho lô A2"
+        "Tưới nước cho lô B"
     )
     second_payload["activity_code"] = "TUOI_NUOC"
     second_payload["materials"] = []
@@ -233,7 +233,7 @@ def test_get_saved_log_detail(
     stored_log = response_data["data"]
 
     assert stored_log["client_record_id"] == "test-detail-001"
-    assert stored_log["lot_code"] == "LO_A1"
+    assert stored_log["lot_code"] == "LO_A"
     assert stored_log["activity_code"] == "BON_PHAN"
     assert stored_log["confirmed"] is True
     assert stored_log["status"] == "saved"
