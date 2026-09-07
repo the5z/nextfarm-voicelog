@@ -11,6 +11,10 @@ function ActionButtons({
 
   showValidation = false,
 
+  warningAcknowledged = false,
+  requiresConfirmation = false,
+  onAcknowledgeWarnings,
+
   onRetry,
   onUpload,
   onConfirm,
@@ -81,16 +85,43 @@ function ActionButtons({
     }
 
     /*
-      Warning không chặn xác nhận.
+      Risk-aware warning:
+      - warning nhẹ: chỉ hiển thị, KHÔNG chặn confirm
+      - warning requiresConfirmation: cần acknowledgement
     */
+    if (
+      hasWarnings &&
+      requiresConfirmation
+    ) {
+      if (!warningAcknowledged) {
+        return {
+          type: "warning",
+          icon: "⚠️",
+          label: isVietnamese
+            ? "Kiểm tra cảnh báo trước"
+            : "Review warnings first",
+          disabled: true,
+        };
+      }
+
+      return {
+        type: "ready",
+        icon: "✓",
+        label: isVietnamese
+          ? "Xác nhận nhật ký"
+          : "Confirm log",
+        disabled: !hasResult,
+      };
+    }
+
     if (hasWarnings) {
       return {
-        type: "warning",
-        icon: "⚠️",
+        type: "ready",
+        icon: "✓",
         label: isVietnamese
-          ? "Kiểm tra & xác nhận"
-          : "Review & confirm",
-        disabled: false,
+          ? "Xác nhận nhật ký"
+          : "Confirm log",
+        disabled: !hasResult,
       };
     }
 
@@ -257,15 +288,69 @@ function ActionButtons({
 
       {showValidation &&
         !hasErrors &&
-        hasWarnings && (
+        hasWarnings &&
+        !requiresConfirmation && (
           <div className="confirm-helper warning">
             <span>⚠️</span>
 
             <span>
               {isVietnamese
-                ? "Có thông tin nên kiểm tra lại. Bạn vẫn có thể xác nhận nếu dữ liệu phù hợp."
-                : "Some information should be reviewed. You can still confirm if it is correct."}
+                ? "Có cảnh báo nhẹ để bạn tham khảo. Cảnh báo này không chặn việc xác nhận."
+                : "There is a non-blocking warning for review. You can still confirm the log."}
             </span>
+          </div>
+        )}
+
+      {showValidation &&
+        !hasErrors &&
+        hasWarnings &&
+        requiresConfirmation && (
+          <div className="confirm-warning-review">
+            <div className="confirm-helper warning">
+              <span>⚠️</span>
+
+              <span>
+                {warningAcknowledged
+                  ? isVietnamese
+                    ? "Bạn đã xác nhận đã kiểm tra cảnh báo bắt buộc."
+                    : "You acknowledged the confirmation-required warning."
+                  : isVietnamese
+                    ? "Cảnh báo này cần xác nhận của người dùng trước khi lưu."
+                    : "This warning requires user acknowledgement before saving."}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className={`btn-warning-ack ${
+                warningAcknowledged
+                  ? "acknowledged"
+                  : ""
+              }`}
+              onClick={
+                onAcknowledgeWarnings
+              }
+              disabled={
+                isUploading ||
+                warningAcknowledged
+              }
+            >
+              <span>
+                {warningAcknowledged
+                  ? "✓"
+                  : "👁"}
+              </span>
+
+              <span>
+                {warningAcknowledged
+                  ? isVietnamese
+                    ? "Đã kiểm tra cảnh báo"
+                    : "Warnings reviewed"
+                  : isVietnamese
+                    ? "Tôi đã kiểm tra cảnh báo"
+                    : "I reviewed the warnings"}
+              </span>
+            </button>
           </div>
         )}
     </div>

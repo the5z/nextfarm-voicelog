@@ -3,6 +3,51 @@ import {
   useState,
 } from "react";
 
+function normalizeLogMaterials(log) {
+  if (
+    Array.isArray(log?.materials) &&
+    log.materials.length > 0
+  ) {
+    return log.materials.map(
+      (item) => ({
+        material:
+          item?.material ??
+          item?.material_text ??
+          item?.material_name ??
+          item?.material_code ??
+          "",
+        quantity:
+          item?.quantity ?? "",
+        unit:
+          item?.unit ??
+          item?.unit_text ??
+          item?.unit_name ??
+          item?.unit_code ??
+          "",
+      })
+    );
+  }
+
+  if (
+    log?.material ||
+    log?.quantity ||
+    log?.unit
+  ) {
+    return [
+      {
+        material:
+          log.material ?? "",
+        quantity:
+          log.quantity ?? "",
+        unit:
+          log.unit ?? "",
+      },
+    ];
+  }
+
+  return [];
+}
+
 function MyLogs({
   language = "vi",
   logs = [],
@@ -130,13 +175,27 @@ function MyLogs({
         result =
           result.filter(
             (log) => {
+              const materials =
+                normalizeLogMaterials(
+                  log
+                );
+
+              const materialSearchText =
+                materials
+                  .flatMap(
+                    (item) => [
+                      item.material,
+                      item.quantity,
+                      item.unit,
+                    ]
+                  )
+                  .join(" ");
+
               const combined =
                 [
                   log.lot,
                   log.work,
-                  log.material,
-                  log.quantity,
-                  log.unit,
+                  materialSearchText,
                   log.date,
                   log.transcript,
                 ]
@@ -259,7 +318,12 @@ function MyLogs({
         logToEdit
       );
     };
-
+  const selectedMaterials =
+    selectedLog
+      ? normalizeLogMaterials(
+          selectedLog
+        )
+      : [];
   return (
     <main className="workspace">
       <div className="workspace-container">
@@ -487,7 +551,8 @@ function MyLogs({
                   getStatusInfo(
                     log.status
                   );
-
+                const materials =
+                  normalizeLogMaterials(log);
                 return (
                   <article
                     key={
@@ -526,21 +591,37 @@ function MyLogs({
                     <div className="log-card-info">
                       <span>
                         🌾{" "}
-                        {log.material ||
-                          (isVietnamese
+                        {materials.length > 0
+                          ? materials
+                              .map(
+                                (item) =>
+                                  item.material
+                              )
+                              .filter(Boolean)
+                              .join(", ")
+                          : isVietnamese
                             ? "Không có vật tư"
-                            : "No material")}
+                            : "No material"}
                       </span>
 
                       <span>
                         📦{" "}
-                        {log.quantity
-                          ? `${log.quantity} ${
-                              log.unit ||
-                              ""
-                            }`
+                        {materials.length > 0
+                          ? materials
+                              .map((item) => {
+                                const quantity =
+                                  item.quantity !== ""
+                                    ? item.quantity
+                                    : "-";
+
+                                const unit =
+                                  item.unit || "";
+
+                                return `${quantity} ${unit}`.trim();
+                              })
+                              .join(", ")
                           : isVietnamese
-                            ? "Chưa có số lượng"
+                            ? "Không có số lượng"
                             : "No quantity"}
                       </span>
 
@@ -602,10 +683,10 @@ function MyLogs({
         </section>
 
         <div className="logs-dev-note">
-          💾{" "}
+          🗄️{" "}
           {isVietnamese
-            ? "Nhật ký hiện được lưu cục bộ trên trình duyệt để phục vụ phát triển frontend. Khi API production sẵn sàng, tầng lưu trữ này sẽ được thay bằng backend."
-            : "Logs are currently stored locally for frontend development. This storage layer will later be replaced by the production API."}
+            ? "Nhật ký đã lưu được tải từ Integration Service và PostgreSQL. Local storage chỉ được dùng làm bộ nhớ đệm khi được bật trong cài đặt."
+            : "Saved logs are loaded from the Integration Service and PostgreSQL. Local storage is only used as an optional cache."}
         </div>
       </div>
 
@@ -748,45 +829,42 @@ function MyLogs({
                   }
                 />
 
-                <DetailItem
-                  icon="🌾"
-                  label={
-                    isVietnamese
-                      ? "Vật tư"
-                      : "Material"
-                  }
-                  value={
-                    selectedLog.material ||
-                    "-"
-                  }
-                />
-
-                <DetailItem
-                  icon="📦"
-                  label={
-                    isVietnamese
-                      ? "Số lượng"
-                      : "Quantity"
-                  }
-                  value={
-                    selectedLog.quantity ||
-                    "-"
-                  }
-                />
-
-                <DetailItem
-                  icon="⚖️"
-                  label={
-                    isVietnamese
-                      ? "Đơn vị"
-                      : "Unit"
-                  }
-                  value={
-                    selectedLog.unit ||
-                    "-"
-                  }
-                />
-
+                {selectedMaterials.length > 0 ? (
+                  selectedMaterials.map(
+                    (item, index) => (
+                      <DetailItem
+                        key={`material-${index}`}
+                        icon="🌾"
+                        label={
+                          isVietnamese
+                            ? `Vật tư ${index + 1}`
+                            : `Material ${index + 1}`
+                        }
+                        value={[
+                          item.material,
+                          item.quantity,
+                          item.unit,
+                        ]
+                          .filter(
+                            (value) =>
+                              value !== "" &&
+                              value != null
+                          )
+                          .join(" ")}
+                      />
+                    )
+                  )
+                ) : (
+                  <DetailItem
+                    icon="🌾"
+                    label={
+                      isVietnamese
+                        ? "Vật tư"
+                        : "Material"
+                    }
+                    value="-"
+                  />
+                )}
                 <DetailItem
                   icon="🕒"
                   label={

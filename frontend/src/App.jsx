@@ -16,6 +16,7 @@ import AppSidebar from "./components/AppSidebar";
 import AIAssistant from "./components/AIAssistant";
 
 import {
+  loadBackendLogs,
   loadLogs,
   persistLogs,
 } from "./services/logService";
@@ -52,7 +53,68 @@ function App() {
   ] = useState(() =>
     loadSettings()
   );
+  
+  useEffect(() => {
+    let cancelled =
+      false;
 
+    const loadLogsFromBackend =
+      async () => {
+        try {
+          const backendLogs =
+            await loadBackendLogs();
+
+          if (cancelled) {
+            return;
+          }
+
+          /*
+            Backend thành công
+            -> backend là source of truth.
+          */
+
+          setLogs(
+            backendLogs
+          );
+
+          /*
+            Local storage chỉ là cache.
+          */
+
+          if (
+            appSettings
+              .saveLocalLogs
+          ) {
+            persistLogs(
+              backendLogs
+            );
+          }
+        } catch (error) {
+          /*
+            Backend lỗi:
+            không xóa state hiện tại.
+
+            State lúc này vẫn là
+            local fallback từ loadLogs().
+          */
+
+          console.error(
+            "Load backend logs error:",
+            error
+          );
+        }
+      };
+
+    loadLogsFromBackend();
+
+    return () => {
+      cancelled =
+        true;
+    };
+  }, [
+    appSettings
+      .saveLocalLogs,
+  ]);
   const language =
     appSettings.language;
 
@@ -568,6 +630,10 @@ function App() {
               ""
             )
           }
+
+          logs={
+            logs
+          }
         />
       )}
 
@@ -606,6 +672,10 @@ function App() {
         <AIAssistant
           language={
             language
+          }
+
+          activePage={
+            activePage
           }
 
           aiData={

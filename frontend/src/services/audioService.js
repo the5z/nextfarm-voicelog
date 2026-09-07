@@ -20,50 +20,95 @@ async function uploadAudioMock(audioBlob) {
       "Hôm nay tôi bón 20 kg phân NPK cho lô A01 vào lúc 08 giờ 30.",
 
     structured_data: {
-      lot: "A01",
-      work: "Bón phân",
-      material: "Phân NPK",
-      quantity: "20",
-      unit: "kg",
-      time: "08:30",
+      lot_text: "A01",
+
+      activity_text:
+        "Bón phân",
+
+      materials: [
+        {
+          material_text:
+            "Phân NPK",
+
+          quantity: 20,
+
+          unit_text: "kg",
+        },
+      ],
+
+      time_text: "08:30",
     },
   };
 }
 
-async function uploadAudioReal(audioBlob) {
-  const formData = new FormData();
+async function uploadAudioReal(
+  audioBlob
+) {
+  const formData =
+    new FormData();
 
-  formData.append("file", audioBlob, "record.webm");
+  formData.append(
+    "file",
+    audioBlob,
+    "record.webm"
+  );
 
-  const response = await fetch(API_URL, {
-    method: "POST",
-    body: formData,
-  });
+  /*
+    Tạm tắt noise reduction
+    để A/B test Whisper với
+    audio gốc.
+  */
+  formData.append(
+    "use_noise_reduction",
+    "false"
+  );
+
+  const response =
+    await fetch(
+      API_URL,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
 
   if (!response.ok) {
-    let message = "Upload audio thất bại.";
+    let message =
+      "Upload audio thất bại.";
 
     try {
-      const errorData = await response.json();
-      message = errorData.message || message;
+      const errorData =
+        await response.json();
+
+      message =
+        errorData.message ||
+        errorData.detail ||
+        message;
     } catch {
-      // Backend không trả JSON thì giữ thông báo mặc định.
+      // Backend không trả JSON.
     }
 
-    throw new Error(message);
-  }
-
-  const result = await response.json();
-
-  if (result.success === false) {
     throw new Error(
-      result.message || "AI Service xử lý thất bại."
+      message
     );
   }
 
-  // Hỗ trợ cả response { data: {...} }
-  // và response trả trực tiếp dữ liệu.
-  return result.data || result;
+  const result =
+    await response.json();
+
+  if (
+    result.success === false
+  ) {
+    throw new Error(
+      result.message ||
+        "AI Service xử lý thất bại."
+    );
+  }
+
+  return (
+    result.data ||
+    result
+  );
 }
 
 export async function uploadAudio(audioBlob) {

@@ -22,10 +22,10 @@ def build_nextfarm_payload() -> dict[str, Any]:
         "end": "2026-08-03T08:00:00+07:00",
         "description": "Bón 20 kg NPK",
         "images": [],
-        "location": "LO_A1",
+        "location": "LO_A",
         "assigned_to": "NV001",
         "category_task_id": "BON_PHAN",
-        "season_id": "LO_A1",
+        "season_id": "LO_A",
         "metadata": {
             "schema_version": "1.0",
             "client_record_id": "client-test-001",

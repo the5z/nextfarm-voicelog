@@ -128,6 +128,183 @@ export async function requestMicrophoneStream() {
   }
 }
 
+/*
+ * Voice Activity Detection (VAD) helper.
+ *
+ * Watches the live microphone stream and calls `onSilenceTimeout` once the
+ * user has spoken for at least `minSpeechMs` and then stayed quiet for
+ * `silenceDurationMs`. This is what lets the record button behave like a
+ * chat-app mic: tap once to start, and it turns itself off automatically
+ * when you stop talking, instead of requiring press-and-hold.
+ *
+ * Returns null when the Web Audio API isn't available (very old browsers).
+ * Callers must treat that as "no auto-stop available" and fall back to a
+ * manual tap-to-stop + a hard max-duration timer.
+ */
+export function createSilenceDetector({
+  stream,
+  onSilenceTimeout,
+  silenceThreshold = 0.015,
+  silenceDurationMs = 1400,
+  minSpeechMs = 250,
+  checkIntervalMs = 100,
+}) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const AudioContextClass =
+    window.AudioContext ||
+    window.webkitAudioContext;
+
+  if (!AudioContextClass) {
+    return null;
+  }
+
+  let audioContext;
+  let source;
+  let analyser;
+
+  try {
+    audioContext = new AudioContextClass();
+    source = audioContext.createMediaStreamSource(stream);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.85;
+    source.connect(analyser);
+  } catch {
+    // Some browsers refuse to build an AudioContext from a MediaStream in
+    // certain states; treat this the same as "unsupported".
+    try {
+      audioContext?.close();
+    } catch {
+      // Ignore cleanup error.
+    }
+
+    return null;
+  }
+
+  const dataArray = new Uint8Array(
+    analyser.fftSize
+  );
+
+  let speechDetectedAt = null;
+  let silenceStartedAt = null;
+  let intervalId = null;
+  let stopped = false;
+
+  const computeRms = () => {
+    analyser.getByteTimeDomainData(
+      dataArray
+    );
+
+    let sumSquares = 0;
+
+    for (
+      let i = 0;
+      i < dataArray.length;
+      i += 1
+    ) {
+      const normalized =
+        (dataArray[i] - 128) / 128;
+
+      sumSquares +=
+        normalized * normalized;
+    }
+
+    return Math.sqrt(
+      sumSquares / dataArray.length
+    );
+  };
+
+  const tick = () => {
+    if (stopped) {
+      return;
+    }
+
+    const rms = computeRms();
+    const now = Date.now();
+
+    if (rms >= silenceThreshold) {
+      if (!speechDetectedAt) {
+        speechDetectedAt = now;
+      }
+
+      silenceStartedAt = null;
+
+      return;
+    }
+
+    if (
+      !speechDetectedAt ||
+      now - speechDetectedAt <
+        minSpeechMs
+    ) {
+      // Not enough confirmed speech yet — ambient noise/silence at the
+      // start of the recording should not trigger an auto-stop.
+      return;
+    }
+
+    if (!silenceStartedAt) {
+      silenceStartedAt = now;
+
+      return;
+    }
+
+    if (
+      now - silenceStartedAt >=
+      silenceDurationMs
+    ) {
+      stopped = true;
+
+      if (intervalId) {
+        window.clearInterval(
+          intervalId
+        );
+      }
+
+      onSilenceTimeout?.();
+    }
+  };
+
+  intervalId = window.setInterval(
+    tick,
+    checkIntervalMs
+  );
+
+  return {
+    destroy: () => {
+      stopped = true;
+
+      if (intervalId) {
+        window.clearInterval(
+          intervalId
+        );
+
+        intervalId = null;
+      }
+
+      try {
+        source.disconnect();
+      } catch {
+        // Ignore cleanup error.
+      }
+
+      try {
+        analyser.disconnect();
+      } catch {
+        // Ignore cleanup error.
+      }
+
+      try {
+        audioContext.close();
+      } catch {
+        // Ignore cleanup error.
+      }
+    },
+  };
+}
+
 export function getRecordingErrorMessage(
   error,
   language = "vi"

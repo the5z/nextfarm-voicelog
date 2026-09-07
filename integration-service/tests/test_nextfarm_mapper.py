@@ -20,7 +20,7 @@ def build_cultivation_log() -> dict[str, Any]:
         "schema_version": "1.0",
         "client_record_id": "mapper-test-001",
         "transcript": "Bón 20 kg NPK cho lô A1",
-        "lot_code": "LO_A1",
+        "lot_code": "LO_A",
         "activity_code": "BON_PHAN",
         "materials": [
             {
@@ -74,10 +74,10 @@ def test_map_without_external_mapping() -> None:
     )
 
     assert result["name"] == "Bón phân"
-    assert result["location"] == "LO_A1"
+    assert result["location"] == "LO_A"
     assert result["assigned_to"] == "NV001"
     assert result["category_task_id"] == "BON_PHAN"
-    assert result["season_id"] == "LO_A1"
+    assert result["season_id"] == "LO_A"
 
     assert result["start"] == (
         "2026-08-03T08:00:00+07:00"
@@ -105,13 +105,13 @@ def test_map_with_external_mapping() -> None:
             "BON_PHAN": 101,
         },
         lot_mapping={
-            "LO_A1": 201,
+            "LO_A": 201,
         },
         performer_mapping={
             "NV001": 301,
         },
         season_mapping={
-            "LO_A1": 401,
+            "LO_A": 401,
         },
     )
 

@@ -99,37 +99,37 @@ NextFarm Client gửi ở chế độ mock hoặc live
 Speech/AI Service chịu trách nhiệm:
 
 - Nhận file âm thanh hoặc dữ liệu ghi âm.
+- Tiền xử lý và giảm nhiễu audio nếu được yêu cầu.
 - Chuyển giọng nói tiếng Việt thành transcript.
-- Trích xuất hoạt động canh tác.
-- Trích xuất mã lô.
-- Trích xuất vật tư.
-- Trích xuất số lượng và đơn vị.
-- Trích xuất thời điểm thực hiện.
-- Phát hiện trường chưa xác định.
-- Trả cảnh báo khi đơn vị hoặc nội dung mơ hồ.
-- Trả kết quả theo schema `contracts/ai-extraction-response.schema.json`.
-
-Ví dụ đầy đủ:
-
-```text
-contracts/examples/ai-extraction-response.json
-```
-
-Ví dụ thiếu dữ liệu:
-
-```text
-contracts/examples/ai-extraction-missing-fields.json
-```
+- Trích xuất hoạt động ở dạng `activity_text`.
+- Trích xuất lô hoặc khu vực ở dạng `lot_text`.
+- Trích xuất vật tư ở dạng `material_text`.
+- Trích xuất số lượng.
+- Trích xuất đơn vị ở dạng `unit_text`.
+- Trích xuất thông tin thời gian ở dạng `time_text`.
+- Trả `null` hoặc mảng rỗng khi không xác định được dữ liệu.
+- Không tự tạo business code.
 
 Speech/AI Service không chịu trách nhiệm tạo:
 
-- `client_record_id` của nhật ký lưu trên thiết bị.
+- `activity_code`.
+- `lot_code`.
+- `material_code`.
+- `unit_code`.
+- `client_record_id`.
 - Trạng thái `confirmed`.
 - Trạng thái đồng bộ SQLite.
 - ID trong PostgreSQL.
 - Payload NextFarm.
 
-Khi mô hình không có độ tin cậy đáng tin cậy, các trường trong `confidence` phải trả về `null`, không được tự đặt số ngẫu nhiên.
+Speech/AI Service hiện không bắt buộc cung cấp:
+
+- `request_id`.
+- `missing_fields`.
+- `warnings`.
+- `confidence`.
+
+Các thông tin còn thiếu được thể hiện trực tiếp bằng `null` hoặc mảng rỗng trong `structured_data`.
 
 ### 3.2. Flutter Application — Khoa
 
@@ -137,11 +137,9 @@ Flutter chịu trách nhiệm:
 
 - Gửi âm thanh tới Speech/AI Service.
 - Nhận kết quả AI.
-- Hiển thị transcript.
-- Hiển thị các trường AI đã trích xuất.
-- Hiển thị `missing_fields` và `warnings`.
-- Cho người dùng sửa dữ liệu.
-- Cho người dùng xác nhận dữ liệu.
+- Hiển thị transcript và dữ liệu AI đã trích xuất.
+- Nhận biết các trường có giá trị `null` hoặc còn thiếu.
+- Cho người dùng bổ sung, chỉnh sửa và xác nhận dữ liệu.
 - Tạo `client_record_id`.
 - Giữ nguyên `client_record_id` trong toàn bộ vòng đời bản ghi.
 - Gửi dữ liệu đến Integration Service.
@@ -223,7 +221,13 @@ Integration Service không chịu trách nhiệm:
 - Trích xuất dữ liệu bằng AI.
 - Hiển thị giao diện chỉnh sửa.
 - Lưu SQLite trên điện thoại.
-
+- Resolve toàn bộ dữ liệu canh tác qua `/api/master-data/resolve-cultivation`.
+- Hỗ trợ exact, alias, fuzzy, ambiguous và none khi resolve Master Data.
+- Không tự sinh business code mới.
+- Lấy danh sách nhật ký đã lưu.
+- Lấy chi tiết nhật ký theo `client_record_id`.
+- Ghi Integration History cho thao tác lưu nhật ký và submit NextFarm.
+- Cho phép tra cứu history theo `client_record_id`.
 ---
 
 ## 4. Quy tắc chung của hợp đồng JSON
@@ -300,29 +304,31 @@ Flutter có thể dùng camelCase trong class Dart nội bộ, nhưng khi serial
 
 ### 4.3. Thời gian
 
-Các trường thời gian phải dùng ISO 8601 và nên có múi giờ.
+Speech/AI Service không tự tạo `performed_at`.
 
-Ví dụ đúng:
-
-```text
-2026-08-03T07:00:00+07:00
-```
-
-Ví dụ UTC:
+AI giữ thông tin nhận dạng được trong:
 
 ```text
-2026-08-03T00:00:00Z
+time_text
 ```
 
-Không gửi các dạng mơ hồ:
+Ví dụ:
 
 ```text
-07:00 sáng nay
-03/08/2026 07:00
-7 giờ
+"07:00"
+"7 giờ sáng"
+"sáng nay"
 ```
 
-AI có thể trả `performed_at: null` khi chưa xác định được thời gian. Flutter phải yêu cầu người dùng bổ sung trước khi lưu chính thức.
+Flutter cho người dùng kiểm tra và xác nhận thời gian.
+
+Chỉ sau khi thời gian đã được xác nhận, Flutter mới tạo giá trị ISO 8601 cho:
+
+```text
+performed_at
+```
+
+và gửi Cultivation Log cuối cùng đến Integration Service.
 
 ### 4.4. Mã hoạt động
 
@@ -334,6 +340,7 @@ PHUN_THUOC
 TUOI_NUOC
 LAM_CO
 THU_HOACH
+CHO_BO_AN
 ```
 
 Mã phải viết hoa và dùng dấu gạch dưới.
@@ -376,12 +383,41 @@ công
 sào
 ```
 
-Khi gặp đơn vị mơ hồ, Speech/AI Service phải:
+Speech/AI Service giữ nguyên giá trị nghe được nếu có thể.
 
-1. Để `unit_text` bằng `null`.
-2. Thêm `materials.unit_text` vào `missing_fields`.
-3. Flutter hiển thị cảnh báo và yêu cầu người dùng chọn đơn vị chuẩn.
-4. Sau khi xác nhận, Flutter gọi API resolve để lấy `unit_code`.
+Ví dụ:
+
+```json
+{
+  "material_text": "Thuốc",
+  "quantity": 1,
+  "unit_text": "xị"
+}
+```
+
+Flutter gửi giá trị này đến Integration Service để resolve.
+
+Integration Service có thể trả:
+
+```text
+matched = false
+code = null
+match_type = ambiguous
+requires_confirmation = true
+```
+
+Hệ thống không tự chuyển:
+
+```text
+xị → ML
+xị → L
+```
+
+nếu chưa có đủ thông tin.
+
+Flutter phải yêu cầu người dùng chọn đơn vị chuẩn trước khi tạo Cultivation Log cuối cùng.
+
+
 
 ### 4.6. Số lượng vật tư
 
@@ -695,23 +731,35 @@ time_text
 ↓
 Flutter
 ↓
-POST /api/master-data/resolve
+POST /api/master-data/resolve-cultivation
 ↓
 Integration Service
 ↓
-activity_code
-lot_code
-material_code
-unit_code
+Master Data Resolution
 ↓
-Flutter hiển thị cho người dùng kiểm tra
+activity_code / lot_code / material_code / unit_code
+↓
+Flutter hiển thị kết quả
 ↓
 Người dùng xác nhận
 ↓
-Flutter tạo Cultivation Log cuối
-↓
-Integration Service
+Final Cultivation Log
 ```
+Endpoint:
+
+```http
+POST /api/master-data/resolve
+```
+
+vẫn được giữ để resolve một giá trị riêng lẻ.
+
+Khi xử lý toàn bộ dữ liệu từ AI, Flutter nên ưu tiên:
+
+```http
+POST /api/master-data/resolve-cultivation
+```
+
+để tránh phải gọi API riêng cho từng field.
 
 Ví dụ AI trả:
 
@@ -1175,8 +1223,8 @@ Cấu trúc:
 {
   "schema_version": "1.0",
   "client_record_id": "android-device-001-record-0001",
-  "transcript": "Bón 20 kg phân NPK cho lô A1 lúc 7 giờ sáng",
-  "lot_code": "LO_A1",
+  "transcript": "Bón 20 kg phân NPK cho  lúc 7 giờ sáng",
+  "lot_code": "LO_A",
   "activity_code": "BON_PHAN",
   "materials": [
     {
@@ -1232,72 +1280,56 @@ Swagger:
 http://127.0.0.1:8002/docs
 ```
 
-### Kiểm tra hệ thống
+### System
 
 ```http
 GET /health
 ```
 
-### Kiểm tra dữ liệu trước khi lưu
+### Cultivation Logs
 
 ```http
 POST /api/cultivation-logs/validate
-```
-
-Body dùng cấu trúc của:
-
-```text
-contracts/cultivation-log.schema.json
-```
-
-### Lưu nhật ký
-
-```http
 POST /api/cultivation-logs
+GET  /api/cultivation-logs
+GET  /api/cultivation-logs/{client_record_id}
 ```
 
-### Lấy danh sách nhật ký
+### Master Data
 
 ```http
-GET /api/cultivation-logs
-```
-
-### Lấy danh mục hoạt động
-
-```http
-GET /api/master-data/activities
-```
-
-### Lấy danh mục đơn vị
-
-```http
-GET /api/master-data/units
-```
-
-### Chuẩn hóa dữ liệu
-
-```http
+GET  /api/master-data/activities
+GET  /api/master-data/units
+GET  /api/master-data/lots
+GET  /api/master-data/materials
 POST /api/master-data/resolve
+POST /api/master-data/resolve-cultivation
 ```
 
-### Đồng bộ bản ghi offline
+### Offline Sync
 
 ```http
 POST /api/sync/logs
 ```
 
-### Kiểm tra router NextFarm
+### NextFarm
 
 ```http
-GET /api/nextfarm/test
-```
-
-### Gửi nhật ký đã lưu sang NextFarm
-
-```http
+GET  /api/nextfarm/test
 POST /api/nextfarm/cultivation-logs/{client_record_id}/submit
 ```
 
+### Integration History
+
+```http
+GET /api/history
+```
+
+Có thể lọc theo:
+
+```http
+GET /api/history?client_record_id={client_record_id}
+```
 ---
 
 ## 8. Quy tắc đồng bộ offline
@@ -1362,10 +1394,10 @@ Integration Service chuyển nhật ký nội bộ thành payload có dạng:
   "end": "2026-08-03T07:00:00+07:00",
   "description": "Nội dung nhật ký và vật tư",
   "images": [],
-  "location": "LO_A1",
+  "location": "LO_A",
   "assigned_to": "NV001",
   "category_task_id": "BON_PHAN",
-  "season_id": "LO_A1",
+  "season_id": "LO_A",
   "metadata": {
     "schema_version": "1.0",
     "client_record_id": "android-device-001-record-0001",
@@ -1479,16 +1511,17 @@ Các thay đổi này phải tăng `schema_version`.
 ### Speech/AI Service
 
 ```text
-[ ] Trả đúng snake_case
-[ ] Có schema_version
-[ ] Có request_id
+[ ] Trả response đúng cấu trúc hiện tại của AI Service
 [ ] Có transcript
-[ ] Có missing_fields
-[ ] Có warnings
+[ ] Có structured_data
+[ ] Dùng activity_text / lot_text / material_text / unit_text
+[ ] Có quantity khi nhận dạng được
+[ ] Có time_text khi nhận dạng được
+[ ] Trả null hoặc mảng rỗng khi không xác định được
+[ ] Không tự tạo activity_code / lot_code / material_code / unit_code
 [ ] Không tự quy đổi đơn vị mơ hồ
 [ ] Không tự tạo confidence giả
 ```
-
 ### Flutter
 
 ```text
@@ -1506,30 +1539,130 @@ Các thay đổi này phải tăng `schema_version`.
 ### Integration Service
 
 ```text
-[ ] Validate đúng schema
+[ ] Validate đúng Cultivation Log schema
+[ ] Resolve được activity / lot / material / unit
+[ ] Fuzzy match yêu cầu người dùng xác nhận
+[ ] Ambiguous hoặc none không tự sinh business code
 [ ] PostgreSQL lưu được dữ liệu
 [ ] Không lưu trùng client_record_id
+[ ] GET danh sách nhật ký hoạt động
+[ ] GET chi tiết nhật ký hoạt động
 [ ] Sync xử lý riêng từng bản ghi
-[ ] Mapper tạo đúng NextFarm payload
+[ ] Mapper tạo đúng NextFarm mock payload
 [ ] NextFarm mock trả accepted
+[ ] Integration History ghi được save và submit
+[ ] Alembic ở migration head
 [ ] Swagger hiển thị đầy đủ endpoint
 [ ] Toàn bộ pytest không có FAILED
 ```
-
 ---
 
 ## 13. Tiêu chuẩn chốt hợp đồng
 
-Hợp đồng được coi là đã chốt khi:
+Hợp đồng được coi là đã chốt khi luồng tích hợp sau hoạt động thống nhất giữa các thành phần:
 
-1. Thắng tạo được JSON đúng AI response schema.
-2. Khoa đọc được JSON đó trên Flutter.
-3. Khoa chuyển thành cultivation log.
-4. Integration Service validate thành công.
-5. PostgreSQL lưu thành công.
-6. Đồng bộ offline hoạt động.
-7. NextFarm mock trả `accepted`.
-8. Không thành phần nào phải tự đổi tên trường ngoài contract.
-9. Cả ba thành viên xác nhận sử dụng phiên bản `1.0`.
+```text
+Speech/AI Service
+        ↓
+transcript + structured_data dạng *_text
+        ↓
+Flutter
+        ↓
+POST /api/master-data/resolve-cultivation
+        ↓
+Integration Service
+        ↓
+business code suggestions
+        ↓
+Flutter hiển thị kết quả
+        ↓
+Người dùng kiểm tra và xác nhận
+        ↓
+Final Cultivation Log dạng *_code
+        ↓
+Integration Service validate
+        ↓
+PostgreSQL
+        ↓
+Sync / NextFarm mock
+```
 
-Sau khi chốt phiên bản `1.0`, mọi thay đổi phải được thông báo cho toàn nhóm trước khi merge.
+Các điều kiện cần đạt:
+
+1. Speech/AI Service trả đúng cấu trúc response đã thống nhất.
+
+2. Dữ liệu nghiệp vụ từ AI sử dụng:
+
+```text
+activity_text
+lot_text
+material_text
+unit_text
+time_text
+```
+
+3. Flutter đọc được AI response và gửi dữ liệu cần chuẩn hóa đến:
+
+```http
+POST /api/master-data/resolve-cultivation
+```
+
+4. Integration Service chỉ trả business code đã tồn tại trong Master Data.
+
+Integration Service không tự tạo mã mới khi dữ liệu không xác định được.
+
+5. Với kết quả:
+
+```text
+fuzzy
+ambiguous
+none
+```
+
+Flutter phải cho người dùng kiểm tra hoặc xác nhận trước khi tạo nhật ký cuối cùng.
+
+6. Sau khi người dùng xác nhận, Flutter tạo Cultivation Log sử dụng:
+
+```text
+activity_code
+lot_code
+material_code
+unit_code
+performed_at
+```
+
+7. Integration Service validate Cultivation Log thành công.
+
+8. PostgreSQL lưu được nhật ký và các vật tư đi kèm.
+
+9. Gửi lại cùng một:
+
+```text
+client_record_id
+```
+
+không tạo bản ghi trùng.
+
+10. Đồng bộ offline xử lý độc lập từng bản ghi và hỗ trợ các trạng thái:
+
+```text
+saved
+already_exists
+failed
+```
+
+11. NextFarm mock nhận được payload đã mapping và trả:
+
+```text
+accepted
+```
+
+12. Không thành phần nào tự đổi tên field hoặc thay đổi kiểu dữ liệu ngoài contract.
+
+13. AI Service, Flutter và Integration Service cùng sử dụng contract phiên bản:
+
+```text
+1.0
+```
+
+Sau khi contract `1.0` được chốt, mọi thay đổi không tương thích phải được thông báo cho toàn nhóm và xem xét tăng `schema_version`.

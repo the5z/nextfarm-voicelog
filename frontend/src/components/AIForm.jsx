@@ -29,17 +29,122 @@ function AIForm({
       [field]: value,
     });
   };
+  const getMaterials = () => {
+    if (
+      Array.isArray(
+        aiData.materials
+      ) &&
+      aiData.materials.length > 0
+    ) {
+      return aiData.materials;
+    }
 
+    return [
+      {
+        material: "",
+        quantity: "",
+        unit: "",
+      },
+    ];
+  };
+
+  const handleMaterialChange = (
+    index,
+    field,
+    value
+  ) => {
+    const materials =
+      getMaterials().map(
+        (item) => ({
+          ...item,
+        })
+      );
+
+    materials[index] = {
+      ...materials[index],
+      [field]: value,
+    };
+
+    onAiDataChange({
+      ...aiData,
+      materials,
+    });
+  };
+
+  const handleAddMaterial =
+    () => {
+      onAiDataChange({
+        ...aiData,
+
+        materials: [
+          ...getMaterials(),
+
+          {
+            material: "",
+            quantity: "",
+            unit: "",
+          },
+        ],
+      });
+    };
+
+  const handleRemoveMaterial = (
+    index
+  ) => {
+    const remaining =
+      getMaterials().filter(
+        (
+          _,
+          materialIndex
+        ) =>
+          materialIndex !== index
+      );
+
+    onAiDataChange({
+      ...aiData,
+
+      materials:
+        remaining.length > 0
+          ? remaining
+          : [
+              {
+                material: "",
+                quantity: "",
+                unit: "",
+              },
+            ],
+    });
+  };
   /* ===========================
      Data state
   =========================== */
 
+  const hasMaterialData =
+    (
+      aiData.materials ??
+      []
+    ).some(
+      (item) =>
+        Boolean(
+          String(
+            item?.material ??
+            ""
+          ).trim() ||
+          String(
+            item?.quantity ??
+            ""
+          ).trim() ||
+          String(
+            item?.unit ??
+            ""
+          ).trim()
+        )
+    );
+
   const hasAiData = Boolean(
     aiData.lot ||
       aiData.work ||
-      aiData.material ||
-      aiData.quantity ||
-      aiData.unit ||
+      hasMaterialData ||
       aiData.time
   );
 
@@ -102,7 +207,48 @@ function AIForm({
       ? "Thời gian"
       : "Time",
   };
+  const getFieldLabel = (
+    field
+  ) => {
+    const match =
+      String(field).match(
+        /^materials\.(\d+)\.(material|quantity|unit)$/
+      );
 
+    if (!match) {
+      return (
+        FIELD_LABELS[field] ||
+        field
+      );
+    }
+
+    const number =
+      Number(match[1]) + 1;
+
+    const child =
+      match[2];
+
+    const childLabel = {
+      material:
+        isVietnamese
+          ? "Vật tư"
+          : "Material",
+
+      quantity:
+        isVietnamese
+          ? "Số lượng"
+          : "Quantity",
+
+      unit:
+        isVietnamese
+          ? "Đơn vị"
+          : "Unit",
+    }[child];
+
+    return (
+      `${childLabel} ${number}`
+    );
+  };
   /* ===========================
      Field helpers
   =========================== */
@@ -126,9 +272,22 @@ function AIForm({
       }
     }
 
+    const legacyHighlightMap = {
+      material:
+        "materials.0.material",
+
+      quantity:
+        "materials.0.quantity",
+
+      unit:
+        "materials.0.unit",
+    };
+
     if (
-      highlightedField ===
-      field
+      highlightedField === field ||
+      legacyHighlightMap[
+        highlightedField
+      ] === field
     ) {
       classes.push(
         "ai-field-updated"
@@ -141,6 +300,33 @@ function AIForm({
   const hasFieldValue = (
     field
   ) => {
+    const materialMatch =
+      String(field).match(
+        /^materials\.(\d+)\.(material|quantity|unit)$/
+      );
+
+    if (materialMatch) {
+      const index =
+        Number(
+          materialMatch[1]
+        );
+
+      const childField =
+        materialMatch[2];
+
+      const value =
+        aiData.materials?.[
+          index
+        ]?.[childField];
+
+      return (
+        value !== null &&
+        value !== undefined &&
+        String(value).trim() !==
+          ""
+      );
+    }
+
     const value =
       aiData[field];
 
@@ -385,8 +571,9 @@ function AIForm({
 
                         <div>
                           <strong>
-                            {FIELD_LABELS[field] ||
-                              field}
+                            {getFieldLabel(
+                              field
+                            )}
                           </strong>
 
                           <span>
@@ -439,8 +626,9 @@ function AIForm({
 
                           <div>
                             <strong>
-                              {FIELD_LABELS[field] ||
-                                field}
+                              {getFieldLabel(
+                                field
+                              )}
                             </strong>
 
                             <span>
@@ -608,182 +796,359 @@ function AIForm({
       </div>
 
       {/* ===========================
-          Material
+          Materials
       =========================== */}
 
-      <div
-        className={`ai-field ${getFieldClassName(
-          "material"
-        )}`}
-      >
-        <div className="ai-field-label-row">
-          <label htmlFor="material">
-            🌾 {text.aiForm.material}
-          </label>
+      <div className="ai-materials-section">
+        <div className="ai-materials-header">
+          <strong>
+            🌾{" "}
+            {isVietnamese
+              ? "Vật tư sử dụng"
+              : "Materials used"}
+          </strong>
 
-          <FieldStatus field="material" />
-        </div>
-
-        <input
-          id="material"
-          type="text"
-          placeholder={
-            text.aiForm
-              .materialPlaceholder
-          }
-          value={
-            aiData.material ||
-            ""
-          }
-          onChange={(event) =>
-            handleChange(
-              "material",
-              event.target.value
-            )
-          }
-          readOnly={
-            isConfirmed
-          }
-        />
-
-        {showValidation &&
-          warnings.material && (
-            <span className="field-validation-message warning">
-              ⚠️{" "}
-              {
-                warnings.material
+          {!isConfirmed && (
+            <button
+              type="button"
+              className="btn-add-material"
+              onClick={
+                handleAddMaterial
               }
-            </span>
+            >
+              ＋{" "}
+              {isVietnamese
+                ? "Thêm vật tư"
+                : "Add material"}
+            </button>
           )}
-      </div>
-
-      {/* ===========================
-          Quantity + Unit
-      =========================== */}
-
-      <div className="ai-form-row">
-        <div
-          className={`ai-field ${getFieldClassName(
-            "quantity"
-          )}`}
-        >
-          <div className="ai-field-label-row">
-            <label htmlFor="quantity">
-              📦{" "}
-              {text.aiForm.quantity}
-            </label>
-
-            <FieldStatus field="quantity" />
-          </div>
-
-          <input
-            id="quantity"
-            type="number"
-            placeholder={
-              text.aiForm
-                .quantityPlaceholder
-            }
-            value={
-              aiData.quantity ||
-              ""
-            }
-            onChange={(event) =>
-              handleChange(
-                "quantity",
-                event.target.value
-              )
-            }
-            readOnly={
-              isConfirmed
-            }
-            min="0"
-            step="any"
-            aria-invalid={
-              showValidation &&
-              Boolean(
-                errors.quantity
-              )
-            }
-          />
-
-          {showValidation &&
-            errors.quantity && (
-              <span className="field-validation-message error">
-                ❌{" "}
-                {
-                  errors.quantity
-                }
-              </span>
-            )}
-
-          {showValidation &&
-            warnings.quantity &&
-            !errors.quantity && (
-              <span className="field-validation-message warning">
-                ⚠️{" "}
-                {
-                  warnings.quantity
-                }
-              </span>
-            )}
         </div>
 
-        <div
-          className={`ai-field ${getFieldClassName(
-            "unit"
-          )}`}
-        >
-          <div className="ai-field-label-row">
-            <label htmlFor="unit">
-              ⚖️ {text.aiForm.unit}
-            </label>
+        {getMaterials().map(
+          (
+            materialItem,
+            index
+          ) => {
+            const materialField =
+              `materials.${index}.material`;
 
-            <FieldStatus field="unit" />
-          </div>
+            const quantityField =
+              `materials.${index}.quantity`;
 
-          <input
-            id="unit"
-            type="text"
-            placeholder={
-              text.aiForm
-                .unitPlaceholder
-            }
-            value={
-              aiData.unit || ""
-            }
-            onChange={(event) =>
-              handleChange(
-                "unit",
-                event.target.value
-              )
-            }
-            readOnly={
-              isConfirmed
-            }
-            aria-invalid={
-              showValidation &&
-              Boolean(
-                errors.unit
-              )
-            }
-          />
+            const unitField =
+              `materials.${index}.unit`;
 
-          {showValidation &&
-            errors.unit && (
-              <span className="field-validation-message error">
-                ❌ {errors.unit}
-              </span>
-            )}
+            return (
+              <div
+                key={index}
+                className="ai-material-card"
+              >
+                <div className="ai-material-card-header">
+                  <strong>
+                    {isVietnamese
+                      ? `Vật tư ${index + 1}`
+                      : `Material ${index + 1}`}
+                  </strong>
 
-          {showValidation &&
-            warnings.unit &&
-            !errors.unit && (
-              <span className="field-validation-message warning">
-                ⚠️{" "}
-                {warnings.unit}
-              </span>
-            )}
-        </div>
+                  {!isConfirmed &&
+                    getMaterials()
+                      .length > 1 && (
+                      <button
+                        type="button"
+                        className="btn-remove-material"
+                        onClick={() =>
+                          handleRemoveMaterial(
+                            index
+                          )
+                        }
+                      >
+                        ✕{" "}
+                        {isVietnamese
+                          ? "Xóa"
+                          : "Remove"}
+                      </button>
+                    )}
+                </div>
+
+                <div
+                  className={`ai-field ${getFieldClassName(
+                    materialField
+                  )}`}
+                >
+                  <div className="ai-field-label-row">
+                    <label
+                      htmlFor={
+                        materialField
+                      }
+                    >
+                      🌾{" "}
+                      {text.aiForm.material}
+                    </label>
+
+                    <FieldStatus
+                      field={
+                        materialField
+                      }
+                    />
+                  </div>
+
+                  <input
+                    id={
+                      materialField
+                    }
+                    type="text"
+                    placeholder={
+                      text.aiForm
+                        .materialPlaceholder
+                    }
+                    value={
+                      materialItem
+                        .material || ""
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      handleMaterialChange(
+                        index,
+                        "material",
+                        event.target.value
+                      )
+                    }
+                    readOnly={
+                      isConfirmed
+                    }
+                    aria-invalid={
+                      showValidation &&
+                      Boolean(
+                        errors[
+                          materialField
+                        ]
+                      )
+                    }
+                  />
+
+                  {showValidation &&
+                    errors[
+                      materialField
+                    ] && (
+                      <span className="field-validation-message error">
+                        ❌{" "}
+                        {
+                          errors[
+                            materialField
+                          ]
+                        }
+                      </span>
+                    )}
+
+                  {showValidation &&
+                    warnings[
+                      materialField
+                    ] &&
+                    !errors[
+                      materialField
+                    ] && (
+                      <span className="field-validation-message warning">
+                        ⚠️{" "}
+                        {
+                          warnings[
+                            materialField
+                          ]
+                        }
+                      </span>
+                    )}
+                </div>
+
+                <div className="ai-form-row">
+                  <div
+                    className={`ai-field ${getFieldClassName(
+                      quantityField
+                    )}`}
+                  >
+                    <div className="ai-field-label-row">
+                      <label
+                        htmlFor={
+                          quantityField
+                        }
+                      >
+                        📦{" "}
+                        {
+                          text.aiForm
+                            .quantity
+                        }
+                      </label>
+
+                      <FieldStatus
+                        field={
+                          quantityField
+                        }
+                      />
+                    </div>
+
+                    <input
+                      id={
+                        quantityField
+                      }
+                      type="number"
+                      placeholder={
+                        text.aiForm
+                          .quantityPlaceholder
+                      }
+                      value={
+                        materialItem
+                          .quantity ?? ""
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        handleMaterialChange(
+                          index,
+                          "quantity",
+                          event.target
+                            .value
+                        )
+                      }
+                      readOnly={
+                        isConfirmed
+                      }
+                      min="0"
+                      step="any"
+                      aria-invalid={
+                        showValidation &&
+                        Boolean(
+                          errors[
+                            quantityField
+                          ]
+                        )
+                      }
+                    />
+
+                    {showValidation &&
+                      errors[
+                        quantityField
+                      ] && (
+                        <span className="field-validation-message error">
+                          ❌{" "}
+                          {
+                            errors[
+                              quantityField
+                            ]
+                          }
+                        </span>
+                      )}
+
+                    {showValidation &&
+                      warnings[
+                        quantityField
+                      ] &&
+                      !errors[
+                        quantityField
+                      ] && (
+                        <span className="field-validation-message warning">
+                          ⚠️{" "}
+                          {
+                            warnings[
+                              quantityField
+                            ]
+                          }
+                        </span>
+                      )}
+                  </div>
+
+                  <div
+                    className={`ai-field ${getFieldClassName(
+                      unitField
+                    )}`}
+                  >
+                    <div className="ai-field-label-row">
+                      <label
+                        htmlFor={
+                          unitField
+                        }
+                      >
+                        ⚖️{" "}
+                        {text.aiForm.unit}
+                      </label>
+
+                      <FieldStatus
+                        field={
+                          unitField
+                        }
+                      />
+                    </div>
+
+                    <input
+                      id={
+                        unitField
+                      }
+                      type="text"
+                      placeholder={
+                        text.aiForm
+                          .unitPlaceholder
+                      }
+                      value={
+                        materialItem
+                          .unit || ""
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        handleMaterialChange(
+                          index,
+                          "unit",
+                          event.target
+                            .value
+                        )
+                      }
+                      readOnly={
+                        isConfirmed
+                      }
+                      aria-invalid={
+                        showValidation &&
+                        Boolean(
+                          errors[
+                            unitField
+                          ]
+                        )
+                      }
+                    />
+
+                    {showValidation &&
+                      errors[
+                        unitField
+                      ] && (
+                        <span className="field-validation-message error">
+                          ❌{" "}
+                          {
+                            errors[
+                              unitField
+                            ]
+                          }
+                        </span>
+                      )}
+
+                    {showValidation &&
+                      warnings[
+                        unitField
+                      ] &&
+                      !errors[
+                        unitField
+                      ] && (
+                        <span className="field-validation-message warning">
+                          ⚠️{" "}
+                          {
+                            warnings[
+                              unitField
+                            ]
+                          }
+                        </span>
+                      )}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+        )}
       </div>
 
       {/* ===========================
@@ -828,7 +1193,15 @@ function AIForm({
         />
 
         {showValidation &&
-          warnings.time && (
+          errors.time && (
+            <span className="field-validation-message error">
+              ❌ {errors.time}
+            </span>
+          )}
+
+        {showValidation &&
+          warnings.time &&
+          !errors.time && (
             <span className="field-validation-message warning">
               ⚠️ {warnings.time}
             </span>

@@ -15,7 +15,7 @@ def build_sync_record(
         "schema_version": "1.0",
         "client_record_id": client_record_id,
         "transcript": "Bón 20 kg NPK cho lô A1",
-        "lot_code": "LO_A1",
+        "lot_code": "LO_A",
         "activity_code": "BON_PHAN",
         "materials": [
             {
@@ -59,7 +59,7 @@ def test_sync_multiple_valid_records(
 
     second_record = deepcopy(first_record)
     second_record["client_record_id"] = "sync-valid-002"
-    second_record["lot_code"] = "LO_A2"
+    second_record["lot_code"] = "LO_B"
     second_record["activity_code"] = "TUOI_NUOC"
     second_record["transcript"] = (
         "Tưới nước cho lô A2"

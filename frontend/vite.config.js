@@ -8,6 +8,8 @@ export default defineConfig({
     react(),
 
     VitePWA({
+      // Tạm tắt PWA trong giai đoạn dev/test
+      // để tránh service worker cũ cache giao diện.
       disable: true,
 
       registerType: "autoUpdate",
@@ -58,8 +60,26 @@ export default defineConfig({
     }),
   ],
 
-  // Cho phép Vite Preview nhận request
-  // từ Cloudflare Quick Tunnel.
+  // =========================================================
+  // DEVELOPMENT SERVER
+  // npm run dev
+  // =========================================================
+  server: {
+    // Cho phép truy cập Vite dev server
+    // từ thiết bị khác / Cloudflare Tunnel.
+    host: "0.0.0.0",
+
+    // Cho phép các hostname do
+    // Cloudflare Quick Tunnel tạo ra.
+    allowedHosts: [
+      ".trycloudflare.com",
+    ],
+  },
+
+  // =========================================================
+  // PRODUCTION PREVIEW
+  // npm run preview
+  // =========================================================
   preview: {
     host: "0.0.0.0",
 

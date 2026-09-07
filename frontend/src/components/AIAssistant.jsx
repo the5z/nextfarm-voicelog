@@ -143,6 +143,7 @@ function AIAssistant({
   const responseTimeoutRef = useRef(null);
   const statusResetTimeoutRef = useRef(null);
   const recognitionRef = useRef(null);
+  const voiceTranscriptRef = useRef("");
   const voiceResetTimeoutRef = useRef(null);
 
   const isVietnamese =
@@ -301,6 +302,8 @@ function AIAssistant({
 
         recognitionRef.current = null;
       }
+
+      voiceTranscriptRef.current = "";
     };
   }, []);
 
@@ -1783,14 +1786,12 @@ function AIAssistant({
   };
 
   const startVoiceInput = () => {
-    if (
-      assistantStatus === "thinking" ||
-      isListening
-    ) {
-      if (isListening) {
-        stopVoiceInput();
-      }
+    if (assistantStatus === "thinking") {
+      return;
+    }
 
+    if (isListening) {
+      stopVoiceInput();
       return;
     }
 
@@ -1821,9 +1822,10 @@ function AIAssistant({
       isVietnamese
         ? "vi-VN"
         : "en-US";
-
     recognition.continuous = false;
     recognition.interimResults = true;
+
+    voiceTranscriptRef.current = "";
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -1837,22 +1839,45 @@ function AIAssistant({
     };
 
     recognition.onresult = (event) => {
-      let transcript = "";
+      let finalTranscript =
+        voiceTranscriptRef.current;
+      let interimTranscript = "";
 
       for (
         let index = event.resultIndex;
         index < event.results.length;
         index += 1
       ) {
-        transcript +=
-          event.results[index][0]
-            .transcript;
+        const result =
+          event.results[index];
+
+        const transcript =
+          result?.[0]?.transcript?.trim() || "";
+
+        if (!transcript) {
+          continue;
+        }
+
+        if (result.isFinal) {
+          finalTranscript = `${finalTranscript} ${transcript}`.trim();
+        } else {
+          interimTranscript = `${interimTranscript} ${transcript}`.trim();
+        }
       }
 
-      if (transcript.trim()) {
-        setInputValue(
-          transcript.trim()
-        );
+      voiceTranscriptRef.current =
+        finalTranscript;
+
+      const preview = [
+        finalTranscript,
+        interimTranscript,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+      if (preview) {
+        setInputValue(preview);
       }
     };
 
@@ -1863,6 +1888,11 @@ function AIAssistant({
       );
 
       setIsListening(false);
+
+      if (event.error === "aborted") {
+        return;
+      }
+
       setAssistantStatus("needsInput");
 
       const errorMessages = {
@@ -1894,6 +1924,21 @@ function AIAssistant({
       recognitionRef.current = null;
       setIsListening(false);
 
+      const transcript =
+        voiceTranscriptRef.current.trim();
+
+      voiceTranscriptRef.current = "";
+
+      if (transcript) {
+        setInputValue(transcript);
+
+        window.setTimeout(() => {
+          void sendMessage(transcript);
+        }, 0);
+
+        return;
+      }
+
       setAssistantStatus((current) =>
         current === "listening"
           ? "ready"
@@ -1920,6 +1965,7 @@ function AIAssistant({
       );
 
       recognitionRef.current = null;
+      voiceTranscriptRef.current = "";
       setIsListening(false);
       setAssistantStatus("needsInput");
 

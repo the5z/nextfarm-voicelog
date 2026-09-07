@@ -1,101 +1,484 @@
+import {
+  getActivities,
+  getCultivationLogs,
+  getLots,
+  getMaterials,
+  getUnits,
+} from "./queryService";
+
+
 const STORAGE_KEY =
   "nextfarm-farming-logs";
 
-const INITIAL_LOGS = [
-  {
-    id: "log-001",
-    lot: "A01",
-    work: "Bón phân",
-    material: "Phân NPK",
-    quantity: "20",
-    unit: "kg",
-    time: "08:30",
-    date: "13/08/2026",
-    status: "completed",
-    transcript:
-      "Hôm nay tôi bón 20 kg phân NPK cho lô A01 lúc 8 giờ 30.",
-    createdAt:
-      "2026-08-13T08:30:00",
-    updatedAt:
-      "2026-08-13T08:30:00",
-  },
 
-  {
-    id: "log-002",
-    lot: "B02",
-    work: "Tưới nước",
-    material: "",
-    quantity: "",
-    unit: "",
-    time: "",
-    date: "13/08/2026",
-    status: "draft",
-    transcript:
-      "Hôm nay tôi tưới nước cho lô B02.",
-    createdAt:
-      "2026-08-13T09:10:00",
-    updatedAt:
-      "2026-08-13T09:10:00",
-  },
+function normalizeCode(
+  value
+) {
+  return String(
+    value ?? ""
+  )
+    .trim()
+    .toUpperCase();
+}
 
-  {
-    id: "log-003",
-    lot: "C03",
-    work: "Phun thuốc",
-    material: "Thuốc BVTV",
-    quantity: "5",
-    unit: "",
-    time: "15:20",
-    date: "12/08/2026",
-    status: "review",
-    transcript:
-      "Phun 5 thuốc bảo vệ thực vật cho lô C03 lúc 15 giờ 20.",
-    warning:
-      "Có số lượng nhưng chưa có đơn vị.",
-    createdAt:
-      "2026-08-12T15:20:00",
-    updatedAt:
-      "2026-08-12T15:20:00",
-  },
 
-  {
-    id: "log-004",
-    lot: "A05",
-    work: "Kiểm tra sâu bệnh",
-    material: "",
-    quantity: "",
-    unit: "",
-    time: "09:10",
-    date: "11/08/2026",
-    status: "completed",
-    transcript:
-      "Kiểm tra sâu bệnh tại lô A05 lúc 9 giờ 10.",
-    createdAt:
-      "2026-08-11T09:10:00",
-    updatedAt:
-      "2026-08-11T09:10:00",
-  },
+function createNameMap(
+  records
+) {
+  const map =
+    new Map();
 
-  {
-    id: "log-005",
-    lot: "D01",
-    work: "Bón phân",
-    material: "Phân hữu cơ",
-    quantity: "15",
-    unit: "kg",
-    time: "07:45",
-    date: "10/08/2026",
-    status: "completed",
+  if (
+    !Array.isArray(
+      records
+    )
+  ) {
+    return map;
+  }
+
+  records.forEach(
+    (record) => {
+      const code =
+        normalizeCode(
+          record?.code
+        );
+
+      if (!code) {
+        return;
+      }
+
+      map.set(
+        code,
+        record?.name ||
+          record?.label ||
+          code
+      );
+    }
+  );
+
+  return map;
+}
+
+
+function getDisplayName(
+  code,
+  nameMap
+) {
+  const normalized =
+    normalizeCode(code);
+
+  if (!normalized) {
+    return "";
+  }
+
+  return (
+    nameMap.get(
+      normalized
+    ) ||
+    normalized
+  );
+}
+
+
+function formatDateTime(
+  value
+) {
+  if (!value) {
+    return {
+      date: "",
+      time: "",
+    };
+  }
+
+  const parsed =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      parsed.getTime()
+    )
+  ) {
+    return {
+      date: "",
+      time: "",
+    };
+  }
+
+  const day =
+    String(
+      parsed.getDate()
+    ).padStart(
+      2,
+      "0"
+    );
+
+  const month =
+    String(
+      parsed.getMonth() +
+        1
+    ).padStart(
+      2,
+      "0"
+    );
+
+  const year =
+    parsed.getFullYear();
+
+  const hours =
+    String(
+      parsed.getHours()
+    ).padStart(
+      2,
+      "0"
+    );
+
+  const minutes =
+    String(
+      parsed.getMinutes()
+    ).padStart(
+      2,
+      "0"
+    );
+
+  return {
+    date:
+      `${day}/${month}/${year}`,
+    time:
+      `${hours}:${minutes}`,
+  };
+}
+
+
+function normalizeStatus(
+  status,
+  confirmed
+) {
+  const normalized =
+    String(
+      status ?? ""
+    )
+      .trim()
+      .toLowerCase();
+
+  if (
+    normalized ===
+      "saved" ||
+    normalized ===
+      "completed"
+  ) {
+    return "completed";
+  }
+
+  if (
+    normalized ===
+    "draft"
+  ) {
+    return "draft";
+  }
+
+  if (
+    normalized ===
+    "review"
+  ) {
+    return "review";
+  }
+
+  return confirmed
+    ? "completed"
+    : "review";
+}
+
+
+function normalizeBackendLog(
+  log,
+  lookups
+) {
+  const performed =
+    formatDateTime(
+      log?.performed_at
+    );
+
+  const lotCode =
+    normalizeCode(
+      log?.lot_code
+    );
+
+  const activityCode =
+    normalizeCode(
+      log?.activity_code
+    );
+
+  const rawMaterials =
+    Array.isArray(
+      log?.materials
+    )
+      ? log.materials
+      : [];
+
+  const materials =
+    rawMaterials.map(
+      (item) => {
+        const materialCode =
+          normalizeCode(
+            item?.material_code
+          );
+
+        const unitCode =
+          normalizeCode(
+            item?.unit_code
+          );
+
+        return {
+          material:
+            getDisplayName(
+              materialCode,
+              lookups.materials
+            ),
+
+          materialCode,
+
+          quantity:
+            item?.quantity ??
+            "",
+
+          unit:
+            getDisplayName(
+              unitCode,
+              lookups.units
+            ),
+
+          unitCode,
+        };
+      }
+    );
+
+  const firstMaterial =
+    materials[0] || {
+      material: "",
+      quantity: "",
+      unit: "",
+    };
+
+  const clientRecordId =
+    String(
+      log?.client_record_id ??
+        log?.id ??
+        ""
+    );
+
+  return {
+    /*
+      UI fields
+    */
+
+    id:
+      clientRecordId,
+
+    lot:
+      getDisplayName(
+        lotCode,
+        lookups.lots
+      ),
+
+    work:
+      getDisplayName(
+        activityCode,
+        lookups.activities
+      ),
+
+    materials,
+
+    /*
+      Compatibility với UI cũ.
+      Các component cũ vẫn có thể
+      đọc vật tư đầu tiên.
+    */
+
+    material:
+      firstMaterial.material,
+
+    quantity:
+      firstMaterial.quantity,
+
+    unit:
+      firstMaterial.unit,
+
+    date:
+      performed.date,
+
+    time:
+      performed.time,
+
+    status:
+      normalizeStatus(
+        log?.status,
+        log?.confirmed
+      ),
+
     transcript:
-      "Bón 15 kg phân hữu cơ cho lô D01 lúc 7 giờ 45.",
+      log?.transcript ??
+      "",
+
     createdAt:
-      "2026-08-10T07:45:00",
+      log?.created_at ??
+      log?.performed_at ??
+      "",
+
     updatedAt:
-      "2026-08-10T07:45:00",
-  },
-];
+      log?.updated_at ??
+      log?.created_at ??
+      log?.performed_at ??
+      "",
+
+    /*
+      Giữ raw/canonical fields
+      để edit hoặc integration
+      không bị mất code.
+    */
+
+    clientRecordId,
+    client_record_id:
+      clientRecordId,
+
+    lotCode,
+    lot_code:
+      lotCode,
+
+    activityCode,
+    activity_code:
+      activityCode,
+
+    performedAt:
+      log?.performed_at ??
+      "",
+
+    performed_at:
+      log?.performed_at ??
+      "",
+
+    performerCode:
+      log?.performer_code ??
+      null,
+
+    performer_code:
+      log?.performer_code ??
+      null,
+
+    notes:
+      log?.notes ??
+      null,
+
+    source:
+      log?.source ??
+      "voice",
+
+    confirmed:
+      Boolean(
+        log?.confirmed
+      ),
+
+    backendStatus:
+      log?.status ??
+      "",
+  };
+}
+
+
+async function safeLoad(
+  loader
+) {
+  try {
+    const result =
+      await loader();
+
+    return Array.isArray(
+      result
+    )
+      ? result
+      : [];
+  } catch (error) {
+    console.warn(
+      "Master data load error:",
+      error
+    );
+
+    return [];
+  }
+}
+
+
+export async function loadBackendLogs() {
+  /*
+    Cultivation logs là dữ liệu chính.
+
+    Master data chỉ phục vụ
+    đổi code -> tên hiển thị.
+  */
+
+  const backendLogs =
+    await getCultivationLogs();
+
+  const [
+    activities,
+    lots,
+    materials,
+    units,
+  ] =
+    await Promise.all([
+      safeLoad(
+        getActivities
+      ),
+      safeLoad(
+        getLots
+      ),
+      safeLoad(
+        getMaterials
+      ),
+      safeLoad(
+        getUnits
+      ),
+    ]);
+
+  const lookups = {
+    activities:
+      createNameMap(
+        activities
+      ),
+
+    lots:
+      createNameMap(
+        lots
+      ),
+
+    materials:
+      createNameMap(
+        materials
+      ),
+
+    units:
+      createNameMap(
+        units
+      ),
+  };
+
+  return backendLogs.map(
+    (log) =>
+      normalizeBackendLog(
+        log,
+        lookups
+      )
+  );
+}
+
 
 export function loadLogs() {
+  /*
+    Local storage chỉ còn là
+    fallback/cache.
+
+    Không tự tạo sample logs nữa.
+  */
+
   try {
     const saved =
       localStorage.getItem(
@@ -103,33 +486,27 @@ export function loadLogs() {
       );
 
     if (!saved) {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(
-          INITIAL_LOGS
-        )
-      );
-
-      return INITIAL_LOGS;
+      return [];
     }
 
     const parsed =
       JSON.parse(saved);
 
-    if (!Array.isArray(parsed)) {
-      return INITIAL_LOGS;
-    }
-
-    return parsed;
+    return Array.isArray(
+      parsed
+    )
+      ? parsed
+      : [];
   } catch (error) {
     console.error(
-      "Load logs error:",
+      "Load local logs error:",
       error
     );
 
-    return INITIAL_LOGS;
+    return [];
   }
 }
+
 
 export function persistLogs(
   logs
@@ -137,21 +514,25 @@ export function persistLogs(
   try {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify(logs)
+      JSON.stringify(
+        Array.isArray(logs)
+          ? logs
+          : []
+      )
     );
   } catch (error) {
     console.error(
-      "Save logs error:",
+      "Save local logs error:",
       error
     );
   }
 }
 
+
 export function resetLogs() {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(INITIAL_LOGS)
+  localStorage.removeItem(
+    STORAGE_KEY
   );
 
-  return INITIAL_LOGS;
+  return [];
 }
