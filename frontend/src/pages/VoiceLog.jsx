@@ -19,16 +19,60 @@ import {
   resolveMasterData,
   validateCultivationLog,
   saveCultivationLog,
+  updateCultivationLog,
 } from "../services/integrationService";
 import { TEXT } from "../constants/translations";
 
-const EMPTY_AI_DATA = {
-  lot: "",
-  work: "",
+const createEmptyMaterial = () => ({
   material: "",
   quantity: "",
   unit: "",
+});
+
+const createEmptyAiData = () => ({
+  lot: "",
+  work: "",
+
+  materials: [
+    createEmptyMaterial(),
+  ],
+
   time: "",
+});
+
+const normalizeMaterials = (
+  materials
+) => {
+  if (
+    !Array.isArray(materials) ||
+    materials.length === 0
+  ) {
+    return [
+      createEmptyMaterial(),
+    ];
+  }
+
+  return materials.map(
+    (item) => ({
+      material:
+        String(
+          item?.material ??
+          item?.material_text ??
+          ""
+        ),
+
+      quantity:
+        item?.quantity ??
+        "",
+
+      unit:
+        String(
+          item?.unit ??
+          item?.unit_text ??
+          ""
+        ),
+    })
+  );
 };
 
 function buildPerformedAt(
@@ -82,10 +126,17 @@ const DEV_VALID_DATA = {
 
   structuredData: {
     lot: "A01",
+
     work: "Bón phân",
-    material: "Phân NPK",
-    quantity: "20",
-    unit: "kg",
+
+    materials: [
+      {
+        material: "Phân NPK",
+        quantity: "20",
+        unit: "kg",
+      },
+    ],
+
     time: "08:30",
   },
 };
@@ -97,24 +148,52 @@ const DEV_ERROR_DATA = {
   structuredData: {
     lot: "",
     work: "",
-    material: "Phân NPK",
-    quantity: "0",
-    unit: "",
+
+    materials: [
+      {
+        material: "Phân NPK",
+        quantity: "0",
+        unit: "",
+      },
+    ],
+
     time: "",
   },
 };
 
 const DEV_WARNING_DATA = {
   transcript:
-    "Hôm nay tôi kiểm tra lô A01.",
+    "Hôm nay tôi bón 20 kg phân NPK cho lô A01 lúc 8 giờ 30.",
 
   structuredData: {
     lot: "A01",
-    work: "Kiểm tra lô",
-    material: "",
-    quantity: "",
-    unit: "",
-    time: "",
+
+    work: "Bón phân",
+
+    materials: [
+      {
+        material: "Phân NPK",
+        quantity: "20",
+        unit: "kg",
+      },
+    ],
+
+    time: "08:30",
+  },
+
+  /*
+   * Chỉ dùng trong DEV Test Mode để kiểm tra WARNING nhẹ.
+   * Không yêu cầu acknowledgement và KHÔNG phải ngưỡng nghiệp vụ.
+   */
+  simulateWarning: {
+    field:
+      "materials.0.quantity",
+
+    message:
+      "🧪 Cảnh báo mô phỏng DEV: đây là warning nhẹ, không chặn xác nhận.",
+
+    requiresConfirmation:
+      false,
   },
 };
 
@@ -137,6 +216,7 @@ function VoiceLog({
   onExternalAiChangesApplied,
   highlightedField = "",
   onHighlightClear,
+  logs = [],
 }) {
   const t =
     TEXT[language];
@@ -171,7 +251,7 @@ function VoiceLog({
     aiData,
     setAiData,
   ] = useState(
-    EMPTY_AI_DATA
+    createEmptyAiData
   );
 
 
@@ -180,12 +260,46 @@ function VoiceLog({
   =========================== */
 
   useEffect(() => {
-    onAiDataChange?.(
-      aiData
-    );
+    const firstMaterial =
+      aiData.materials?.[0] ??
+      createEmptyMaterial();
+
+    /*
+      material / quantity / unit
+      chỉ là compatibility fields
+      cho chatbot cũ.
+
+      materials[] mới là nguồn
+      dữ liệu chính.
+    */
+    onAiDataChange?.({
+      ...aiData,
+
+      material:
+        firstMaterial.material ??
+        "",
+
+      quantity:
+        firstMaterial.quantity ??
+        "",
+
+      unit:
+        firstMaterial.unit ??
+        "",
+    });
   }, [
     aiData,
     onAiDataChange,
+  ]);
+
+  useEffect(() => {
+    setWarningAcknowledged(false);
+    clearServerValidation();
+  }, [
+    aiData.lot,
+    aiData.work,
+    aiData.materials,
+    aiData.time,
   ]);
 
   /* ===========================
@@ -203,13 +317,91 @@ function VoiceLog({
     }
 
     setAiData(
-      (previous) => ({
-        ...previous,
-        ...externalAiChanges,
-      })
+      (previous) => {
+        const next = {
+          ...previous,
+          ...externalAiChanges,
+        };
+
+        const hasMaterialChange =
+          Object.prototype
+            .hasOwnProperty.call(
+              externalAiChanges,
+              "material"
+            );
+
+        const hasQuantityChange =
+          Object.prototype
+            .hasOwnProperty.call(
+              externalAiChanges,
+              "quantity"
+            );
+
+        const hasUnitChange =
+          Object.prototype
+            .hasOwnProperty.call(
+              externalAiChanges,
+              "unit"
+            );
+
+        if (
+          hasMaterialChange ||
+          hasQuantityChange ||
+          hasUnitChange
+        ) {
+          const materials =
+            normalizeMaterials(
+              previous.materials
+            );
+
+          const firstMaterial = {
+            ...materials[0],
+          };
+
+          if (hasMaterialChange) {
+            firstMaterial.material =
+              externalAiChanges
+                .material ?? "";
+          }
+
+          if (hasQuantityChange) {
+            firstMaterial.quantity =
+              externalAiChanges
+                .quantity ?? "";
+          }
+
+          if (hasUnitChange) {
+            firstMaterial.unit =
+              externalAiChanges
+                .unit ?? "";
+          }
+
+          next.materials = [
+            firstMaterial,
+            ...materials.slice(1),
+          ];
+        }
+
+        /*
+          Không lưu legacy fields
+          trong state chính.
+        */
+        delete next.material;
+        delete next.quantity;
+        delete next.unit;
+
+        next.materials =
+          normalizeMaterials(
+            next.materials
+          );
+
+        return next;
+      }
     );
 
     setIsConfirmed(false);
+    setWarningAcknowledged(false);
+    setDevWarning(null);
     setCurrentStep(3);
 
     if (autoValidation) {
@@ -270,6 +462,38 @@ function VoiceLog({
     setHasAttemptedSubmit,
   ] = useState(false);
 
+  /*
+   * Warning phải được người dùng xác nhận đã kiểm tra trước khi lưu.
+   * Giá trị này luôn reset khi dữ liệu form thay đổi.
+   */
+  const [
+    warningAcknowledged,
+    setWarningAcknowledged,
+  ] = useState(false);
+
+  /*
+   * Chỉ dùng cho nút "Dữ liệu cảnh báo" trong DEV Test Mode.
+   * Không phải business threshold production.
+   */
+  const [
+    devWarning,
+    setDevWarning,
+  ] = useState(null);
+
+  /*
+   * Validation trả về từ Integration Service.
+   * Frontend chỉ phản ánh canonical business rules từ backend.
+   */
+  const [
+    serverValidation,
+    setServerValidation,
+  ] = useState({
+    errors: {},
+    warnings: {},
+    requiresConfirmation: false,
+    ruleVersion: null,
+  });
+
   const [
     message,
     setMessage,
@@ -288,6 +512,11 @@ function VoiceLog({
     currentLogId,
     setCurrentLogId,
   ] = useState(null);
+
+  const [
+    isEditingExistingLog,
+    setIsEditingExistingLog,
+  ] = useState(false);
 
   const [
     currentLogDate,
@@ -348,6 +577,24 @@ function VoiceLog({
       );
     }
 
+    const warningKeywords = [
+      "cảnh báo",
+      "Cảnh báo",
+      "warning",
+      "Warning",
+    ];
+
+    if (
+      warningKeywords.some(
+        (keyword) =>
+          message.includes(
+            keyword
+          )
+      )
+    ) {
+      return "warning";
+    }
+
     const keywords = [
       "Không thể",
       "Vui lòng",
@@ -365,6 +612,198 @@ function VoiceLog({
     )
       ? "error"
       : "success";
+  };
+
+  const clearServerValidation =
+    () => {
+      setServerValidation({
+        errors: {},
+        warnings: {},
+        requiresConfirmation: false,
+        ruleVersion: null,
+      });
+    };
+
+  const mapIntegrationFieldToUi = (
+    field
+  ) => {
+    const normalized =
+      String(
+        field || ""
+      );
+
+    if (
+      normalized === "lot_code" ||
+      normalized === "lot"
+    ) {
+      return "lot";
+    }
+
+    if (
+      normalized ===
+        "activity_code" ||
+      normalized === "activity"
+    ) {
+      return "work";
+    }
+
+    if (
+      normalized ===
+        "performed_at" ||
+      normalized === "time"
+    ) {
+      return "time";
+    }
+
+    /*
+      ==========================
+      Multi-material fields
+      ==========================
+
+      Hỗ trợ các dạng backend có thể trả:
+
+      materials.0.material_code
+      materials.0.quantity
+      materials.0.unit_code
+
+      hoặc:
+
+      materials[0].material_code
+      materials[0].quantity
+      materials[0].unit_code
+    */
+    const materialMatch =
+      normalized.match(
+        /^materials(?:\[(\d+)\]|\.(\d+))\.(.+)$/
+      );
+
+    if (materialMatch) {
+      const index =
+        materialMatch[1] ??
+        materialMatch[2];
+
+      const childField =
+        materialMatch[3];
+
+      if (
+        childField.includes(
+          "material"
+        )
+      ) {
+        return (
+          `materials.${index}.material`
+        );
+      }
+
+      if (
+        childField.includes(
+          "quantity"
+        )
+      ) {
+        return (
+          `materials.${index}.quantity`
+        );
+      }
+
+      if (
+        childField.includes(
+          "unit"
+        )
+      ) {
+        return (
+          `materials.${index}.unit`
+        );
+      }
+    }
+
+    /*
+      Backend báo chung cả materials[]
+    */
+    if (
+      normalized === "materials"
+    ) {
+      return "materials";
+    }
+
+    /*
+      Fallback cho response cũ
+      chưa có index.
+
+      Tạm map về vật tư đầu tiên.
+    */
+    if (
+      normalized.includes(
+        "material_code"
+      ) ||
+      normalized === "material"
+    ) {
+      return (
+        "materials.0.material"
+      );
+    }
+
+    if (
+      normalized.includes(
+        "quantity"
+      )
+    ) {
+      return (
+        "materials.0.quantity"
+      );
+    }
+
+    if (
+      normalized.includes(
+        "unit_code"
+      ) ||
+      normalized === "unit"
+    ) {
+      return (
+        "materials.0.unit"
+      );
+    }
+
+    return "_general";
+  };
+
+  const normalizeIntegrationIssues = (
+    issues
+  ) => {
+    const mapped = {};
+
+    for (const issue of (
+      Array.isArray(issues)
+        ? issues
+        : []
+    )) {
+      const message =
+        typeof issue === "string"
+          ? issue
+          : (
+              issue?.message ||
+              issue?.detail ||
+              issue?.code ||
+              ""
+            );
+
+      if (!message) {
+        continue;
+      }
+
+      const field =
+        mapIntegrationFieldToUi(
+          typeof issue === "string"
+            ? ""
+            : issue?.field
+        );
+
+      mapped[field] =
+        mapped[field]
+          ? `${mapped[field]} ${message}`
+          : message;
+    }
+
+    return mapped;
   };
 
   /* ===========================
@@ -387,25 +826,118 @@ function VoiceLog({
         data?.work || ""
       ).trim();
 
-    const material =
-      String(
-        data?.material || ""
-      ).trim();
+    /* ---------- Materials ---------- */
 
-    const quantityRaw =
-      String(
-        data?.quantity ?? ""
-      ).trim();
+    const materials =
+      normalizeMaterials(
+        data?.materials
+      );
 
-    const unit =
-      String(
-        data?.unit || ""
-      ).trim();
+    materials.forEach(
+      (
+        materialItem,
+        index
+      ) => {
+        const material =
+          String(
+            materialItem
+              ?.material || ""
+          ).trim();
 
+        const quantityRaw =
+          String(
+            materialItem
+              ?.quantity ?? ""
+          ).trim();
+
+        const unit =
+          String(
+            materialItem
+              ?.unit || ""
+          ).trim();
+
+        const hasAnyValue =
+          Boolean(
+            material ||
+            quantityRaw ||
+            unit
+          );
+
+        /*
+          Một row hoàn toàn trống
+          không phải lỗi local.
+
+          Activity nào bắt buộc
+          phải có material sẽ do
+          Integration Service enforce.
+        */
+        if (!hasAnyValue) {
+          return;
+        }
+
+        const materialKey =
+          `materials.${index}.material`;
+
+        const quantityKey =
+          `materials.${index}.quantity`;
+
+        const unitKey =
+          `materials.${index}.unit`;
+
+        if (!material) {
+          errors[materialKey] =
+            isVietnamese
+              ? "Có số lượng hoặc đơn vị nhưng chưa có vật tư."
+              : "Material is required when quantity or unit is provided.";
+        }
+
+        if (!quantityRaw) {
+          errors[quantityKey] =
+            isVietnamese
+              ? "Đã có vật tư nhưng chưa có số lượng."
+              : "Quantity is required for this material.";
+        } else {
+          const quantity =
+            Number(
+              quantityRaw.replace(
+                ",",
+                "."
+              )
+            );
+
+          if (
+            Number.isNaN(
+              quantity
+            )
+          ) {
+            errors[quantityKey] =
+              isVietnamese
+                ? "Số lượng phải là một số hợp lệ."
+                : "Quantity must be a valid number.";
+          } else if (
+            quantity <= 0
+          ) {
+            errors[quantityKey] =
+              isVietnamese
+                ? "Số lượng phải lớn hơn 0."
+                : "Quantity must be greater than 0.";
+          }
+        }
+
+        if (!unit) {
+          errors[unitKey] =
+            isVietnamese
+              ? "Đã có vật tư nhưng chưa có đơn vị."
+              : "Unit is required for this material.";
+        }
+      }
+    );
     const time =
       String(
         data?.time || ""
       ).trim();
+
+    /* ---------- Required ---------- */
 
     if (!lot) {
       errors.lot =
@@ -421,73 +953,193 @@ function VoiceLog({
           : "Farming task is required.";
     }
 
-    if (quantityRaw) {
-      const quantity =
-        Number(
-          quantityRaw
-        );
-
-      if (
-        Number.isNaN(
-          quantity
-        )
-      ) {
-        errors.quantity =
-          isVietnamese
-            ? "Số lượng phải là một số hợp lệ."
-            : "Quantity must be a valid number.";
-      } else if (
-        quantity <= 0
-      ) {
-        errors.quantity =
-          isVietnamese
-            ? "Số lượng phải lớn hơn 0."
-            : "Quantity must be greater than 0.";
-      }
-
-      if (!unit) {
-        errors.unit =
-          isVietnamese
-            ? "Có số lượng nhưng chưa có đơn vị."
-            : "Unit is required when quantity is provided.";
-      }
-    }
-
-    if (
-      unit &&
-      !quantityRaw
-    ) {
-      errors.quantity =
-        isVietnamese
-          ? "Có đơn vị nhưng chưa có số lượng."
-          : "Quantity is required when a unit is provided.";
-    }
-
+    /*
+     * Time được yêu cầu trước khi lưu Integration Service,
+     * vì performed_at không thể tạo nếu thiếu HH:mm.
+     * Do đó time phải là ERROR, không phải WARNING.
+     */
     if (!time) {
-      warnings.time =
+      errors.time =
         isVietnamese
           ? "Chưa có thời gian thực hiện."
-          : "No execution time was detected.";
+          : "Execution time is required.";
+    } else if (
+      !/^([01]?\d|2[0-3]):([0-5]\d)$/.test(
+        time
+      )
+    ) {
+      errors.time =
+        isVietnamese
+          ? "Thời gian phải đúng định dạng HH:mm. Ví dụ: 07:30."
+          : "Time must use HH:mm format, for example 07:30.";
     }
+
+
+    /*
+     * Không hardcode quantity threshold.
+     * DEV warning chỉ kiểm tra UI và mặc định KHÔNG yêu cầu acknowledgement.
+     */
+    if (
+      import.meta.env.DEV &&
+      devWarning &&
+      Object.keys(errors).length === 0
+    ) {
+      warnings[
+        devWarning.field ||
+          "_general"
+      ] =
+        isVietnamese
+          ? devWarning.message
+          : "🧪 DEV warning simulation: non-blocking review notice.";
+    }
+
+    const hasErrors =
+      Object.keys(
+        errors
+      ).length > 0;
+
+    const hasWarnings =
+      Object.keys(
+        warnings
+      ).length > 0;
 
     return {
       errors,
       warnings,
+      hasErrors,
+      hasWarnings,
+
+      /*
+       * isValid chỉ phản ánh lỗi blocking.
+       * Warning được xử lý riêng bằng warningAcknowledged.
+       */
+      requiresConfirmation:
+        Boolean(
+          devWarning
+            ?.requiresConfirmation
+        ) &&
+        hasWarnings,
 
       isValid:
-        Object.keys(
-          errors
-        ).length === 0 &&
-        Object.keys(
-          warnings
-        ).length === 0,
+        !hasErrors,
     };
   };
 
-  const validation =
+  const localValidation =
     validateAiData(
       aiData
     );
+
+  const validation = {
+    errors: {
+      ...localValidation.errors,
+      ...serverValidation.errors,
+    },
+
+    warnings: {
+      ...localValidation.warnings,
+      ...serverValidation.warnings,
+    },
+
+    hasErrors:
+      Object.keys({
+        ...localValidation.errors,
+        ...serverValidation.errors,
+      }).length > 0,
+
+    hasWarnings:
+      Object.keys({
+        ...localValidation.warnings,
+        ...serverValidation.warnings,
+      }).length > 0,
+
+    requiresConfirmation:
+      Boolean(
+        localValidation
+          .requiresConfirmation ||
+        serverValidation
+          .requiresConfirmation
+      ),
+
+    ruleVersion:
+      serverValidation.ruleVersion,
+
+    isValid:
+      Object.keys({
+        ...localValidation.errors,
+        ...serverValidation.errors,
+      }).length === 0,
+  };
+
+  const focusFirstValidationIssue = (
+    currentValidation
+  ) => {
+    const firstField =
+      Object.keys(
+        currentValidation?.errors ||
+          {}
+      )[0] ||
+      Object.keys(
+        currentValidation?.warnings ||
+          {}
+      )[0];
+
+    if (!firstField) {
+      return;
+    }
+
+    window.setTimeout(
+      () => {
+        const target =
+          document.getElementById(
+            firstField
+          );
+
+        target?.scrollIntoView?.({
+          behavior: "smooth",
+          block: "center",
+        });
+
+        target?.focus?.();
+      },
+      80
+    );
+  };
+
+  const handleAcknowledgeWarnings =
+    () => {
+      if (
+        validation.hasErrors ||
+        !validation.hasWarnings ||
+        !validation
+          .requiresConfirmation
+      ) {
+        setWarningAcknowledged(
+          false
+        );
+
+        if (
+          validation.hasErrors
+        ) {
+          focusFirstValidationIssue(
+            validation
+          );
+        }
+
+        return;
+      }
+
+      setWarningAcknowledged(
+        true
+      );
+
+      showMessage(
+        "success",
+        isVietnamese
+          ? "✅ Đã ghi nhận bạn đã kiểm tra cảnh báo cần xác nhận."
+          : "✅ Confirmation-required warnings were acknowledged."
+      );
+    };
 
   /* ===========================
      Load Log For Editing
@@ -512,8 +1164,32 @@ function VoiceLog({
         ""
     );
 
+    const restoredMaterials =
+      Array.isArray(
+        logToEdit.materials
+      ) &&
+      logToEdit.materials.length > 0
+        ? normalizeMaterials(
+            logToEdit.materials
+          )
+        : [
+            {
+              material:
+                logToEdit.material ||
+                "",
+
+              quantity:
+                logToEdit.quantity ??
+                "",
+
+              unit:
+                logToEdit.unit ||
+                "",
+            },
+          ];
+
     setAiData({
-      ...EMPTY_AI_DATA,
+      ...createEmptyAiData(),
 
       lot:
         logToEdit.lot ||
@@ -523,17 +1199,8 @@ function VoiceLog({
         logToEdit.work ||
         "",
 
-      material:
-        logToEdit.material ||
-        "",
-
-      quantity:
-        logToEdit.quantity ||
-        "",
-
-      unit:
-        logToEdit.unit ||
-        "",
+      materials:
+        restoredMaterials,
 
       time:
         logToEdit.time ||
@@ -542,6 +1209,10 @@ function VoiceLog({
 
     setCurrentLogId(
       logToEdit.id
+    );
+
+    setIsEditingExistingLog(
+      true
     );
 
     setCurrentLogDate(
@@ -560,6 +1231,14 @@ function VoiceLog({
 
     setIsConfirmed(
       false
+    );
+
+    setWarningAcknowledged(
+      false
+    );
+
+    setDevWarning(
+      null
     );
 
     /*
@@ -633,17 +1312,20 @@ function VoiceLog({
       setTranscript("");
 
       setAiData(
-        EMPTY_AI_DATA
+        createEmptyAiData()
       );
 
       setCurrentLogId(
         null
       );
 
+      setIsEditingExistingLog(
+        false
+      );
+
       setCurrentLogDate(
         null
       );
-
       setEditingStatus(
         null
       );
@@ -698,9 +1380,16 @@ function VoiceLog({
     );
 
     setAiData({
-      ...EMPTY_AI_DATA,
+      ...createEmptyAiData(),
 
       ...testData.structuredData,
+
+      materials:
+        normalizeMaterials(
+          testData
+            .structuredData
+            ?.materials
+        ),
     });
 
     setCurrentLogId(
@@ -726,6 +1415,17 @@ function VoiceLog({
     setHasAttemptedSubmit(
       false
     );
+
+    setWarningAcknowledged(
+      false
+    );
+
+    setDevWarning(
+      testData.simulateWarning ||
+        null
+    );
+
+    clearServerValidation();
 
     setCurrentStep(3);
 
@@ -808,6 +1508,13 @@ function VoiceLog({
         false
       );
 
+      setWarningAcknowledged(
+        false
+      );
+
+      setDevWarning(null);
+      clearServerValidation();
+
       showMessage(
         "success",
         t.messages.sending
@@ -827,8 +1534,10 @@ function VoiceLog({
         const structuredData =
           data?.structured_data || {};
 
-        const firstMaterial =
-          structuredData.materials?.[0] || {};
+        const materials =
+          normalizeMaterials(
+            structuredData.materials
+          );
 
         setAiData({
           lot:
@@ -839,17 +1548,7 @@ function VoiceLog({
             structuredData.activity_text ||
             "",
 
-          material:
-            firstMaterial.material_text ||
-            "",
-
-          quantity:
-            firstMaterial.quantity ??
-            "",
-
-          unit:
-            firstMaterial.unit_text ||
-            "",
+          materials,
 
           time:
             structuredData.time_text ||
@@ -898,18 +1597,7 @@ function VoiceLog({
         true
       );
 
-      if (
-        !transcript.trim()
-      ) {
-        showMessage(
-          "error",
 
-          t.messages
-            .reviewBeforeConfirm
-        );
-
-        return;
-      }
 
       const currentValidation =
         validateAiData(
@@ -917,17 +1605,48 @@ function VoiceLog({
         );
 
       if (
-        !currentValidation.isValid
+        currentValidation.hasErrors
       ) {
         showMessage(
           "error",
 
           isVietnamese
-            ? "Chưa thể xác nhận nhật ký. Vui lòng xử lý tất cả lỗi và cảnh báo được đánh dấu trước khi xác nhận."
-            : "The log cannot be confirmed yet. Please resolve all highlighted errors and warnings before confirmation."
+            ? "Chưa thể xác nhận nhật ký. Hãy sửa các trường lỗi được đánh dấu đỏ."
+            : "The log cannot be confirmed yet. Fix the fields highlighted in red."
+        );
+
+        setWarningAcknowledged(
+          false
         );
 
         setCurrentStep(3);
+
+        focusFirstValidationIssue(
+          currentValidation
+        );
+
+        return;
+      }
+
+      if (
+        currentValidation.hasWarnings &&
+        currentValidation
+          .requiresConfirmation &&
+        !warningAcknowledged
+      ) {
+        showMessage(
+          "warning",
+
+          isVietnamese
+            ? "Có cảnh báo cần kiểm tra. Hãy chọn “Tôi đã kiểm tra cảnh báo” trước khi xác nhận."
+            : "There are warnings to review. Select “I reviewed the warnings” before confirming."
+        );
+
+        setCurrentStep(3);
+
+        focusFirstValidationIssue(
+          currentValidation
+        );
 
         return;
       }
@@ -946,73 +1665,28 @@ function VoiceLog({
         currentLogId ||
         generateId();
 
-      const materialText =
-        String(
-          aiData.material || ""
-        ).trim();
-
-      const quantityText =
-        String(
-          aiData.quantity ?? ""
-        ).trim();
-
-      const unitText =
-        String(
-          aiData.unit || ""
-        ).trim();
+      const materialItems =
+        normalizeMaterials(
+          aiData.materials
+        ).filter(
+          (item) =>
+            Boolean(
+              String(
+                item.material || ""
+              ).trim() ||
+              String(
+                item.quantity ?? ""
+              ).trim() ||
+              String(
+                item.unit || ""
+              ).trim()
+            )
+        );
 
       const timeText =
         String(
           aiData.time || ""
         ).trim();
-
-      if (!timeText) {
-        showMessage(
-          "error",
-
-          isVietnamese
-            ? "Chưa có thời gian thực hiện. Vui lòng bổ sung thời gian trước khi xác nhận."
-            : "Execution time is missing. Please add it before confirming."
-        );
-
-        setCurrentStep(3);
-
-        return;
-      }
-
-      if (
-        !materialText &&
-        (quantityText || unitText)
-      ) {
-        showMessage(
-          "error",
-
-          isVietnamese
-            ? "Có số lượng hoặc đơn vị nhưng chưa có vật tư. Vui lòng kiểm tra lại."
-            : "Quantity or unit is present but the material is missing. Please review the data."
-        );
-
-        setCurrentStep(3);
-
-        return;
-      }
-
-      if (
-        materialText &&
-        (!quantityText || !unitText)
-      ) {
-        showMessage(
-          "error",
-
-          isVietnamese
-            ? "Vật tư chưa đủ số lượng hoặc đơn vị. Vui lòng bổ sung trước khi xác nhận."
-            : "The material is missing a quantity or unit. Please complete it before confirming."
-        );
-
-        setCurrentStep(3);
-
-        return;
-      }
 
       const performedAt =
         buildPerformedAt(
@@ -1062,10 +1736,13 @@ function VoiceLog({
           ),
         ]);
 
+
+        // =========================================================
+        // HARD FAILURE: LOT
+        // =========================================================
         if (
           !lotResult?.matched ||
-          !lotResult?.code ||
-          lotResult?.requires_confirmation
+          !lotResult?.code
         ) {
           showMessage(
             "error",
@@ -1075,15 +1752,33 @@ function VoiceLog({
               : `The plot "${lotText}" could not be resolved against master data. Please review it.`
           );
 
+          setServerValidation(
+            (previous) => ({
+              ...(previous || {}),
+
+              errors: {
+                ...(previous?.errors || {}),
+
+                lot:
+                  isVietnamese
+                    ? `Không thể xác định lô "${lotText}" trong dữ liệu chuẩn.`
+                    : `The plot "${lotText}" could not be resolved against master data.`,
+              },
+            })
+          );
+
           setCurrentStep(3);
 
           return;
         }
 
+
+        // =========================================================
+        // HARD FAILURE: ACTIVITY
+        // =========================================================
         if (
           !activityResult?.matched ||
-          !activityResult?.code ||
-          activityResult?.requires_confirmation
+          !activityResult?.code
         ) {
           showMessage(
             "error",
@@ -1093,98 +1788,262 @@ function VoiceLog({
               : `The activity "${activityText}" could not be resolved against master data. Please review it.`
           );
 
+          setServerValidation(
+            (previous) => ({
+              ...(previous || {}),
+
+              errors: {
+                ...(previous?.errors || {}),
+
+                work:
+                  isVietnamese
+                    ? `Không thể xác định công việc "${activityText}" trong dữ liệu chuẩn.`
+                    : `The activity "${activityText}" could not be resolved against master data.`,
+              },
+            })
+          );
+
           setCurrentStep(3);
 
           return;
         }
 
-        const materials = [];
 
-        if (materialText) {
-          const [
-            materialResult,
-            unitResult,
-          ] = await Promise.all([
-            resolveMasterData(
-              "material",
-              materialText
-            ),
+        // =========================================================
+        // RESOLVE ALL MATERIALS
+        // =========================================================
+        const resolvedMaterialItems =
+          await Promise.all(
+            materialItems.map(
+              async (
+                materialItem,
+                index
+              ) => {
+                const materialText =
+                  String(
+                    materialItem.material || ""
+                  ).trim();
 
-            resolveMasterData(
-              "unit",
-              unitText
-            ),
-          ]);
+                const unitText =
+                  String(
+                    materialItem.unit || ""
+                  ).trim();
 
-          if (
-            !materialResult?.matched ||
-            !materialResult?.code ||
-            materialResult?.requires_confirmation
-          ) {
-            showMessage(
-              "error",
+                const quantityText =
+                  String(
+                    materialItem.quantity ?? ""
+                  ).trim();
 
-              isVietnamese
-                ? `Không thể xác định vật tư "${materialText}" trong dữ liệu chuẩn. Vui lòng kiểm tra lại.`
-                : `The material "${materialText}" could not be resolved against master data. Please review it.`
-            );
+                const [
+                  materialResult,
+                  unitResult,
+                ] = await Promise.all([
+                  resolveMasterData(
+                    "material",
+                    materialText
+                  ),
 
-            setCurrentStep(3);
+                  resolveMasterData(
+                    "unit",
+                    unitText
+                  ),
+                ]);
 
-            return;
-          }
 
-          if (
-            !unitResult?.matched ||
-            !unitResult?.code ||
-            unitResult?.requires_confirmation
-          ) {
-            showMessage(
-              "error",
+                // ---------------------------------------------
+                // Material không tìm thấy
+                // ---------------------------------------------
+                if (
+                  !materialResult?.matched ||
+                  !materialResult?.code
+                ) {
+                  throw new Error(
+                    `MATERIAL_RESOLVE:${index}:${materialText}`
+                  );
+                }
 
-              isVietnamese
-                ? `Không thể xác định đơn vị "${unitText}" trong dữ liệu chuẩn. Vui lòng kiểm tra lại.`
-                : `The unit "${unitText}" could not be resolved against master data. Please review it.`
-            );
 
-            setCurrentStep(3);
+                // ---------------------------------------------
+                // Unit không tìm thấy
+                // ---------------------------------------------
+                if (
+                  !unitResult?.matched ||
+                  !unitResult?.code
+                ) {
+                  throw new Error(
+                    `UNIT_RESOLVE:${index}:${unitText}`
+                  );
+                }
 
-            return;
-          }
 
-          const quantity =
-            Number(
-              quantityText
-            );
+                // ---------------------------------------------
+                // Quantity
+                // ---------------------------------------------
+                const quantity =
+                  Number(
+                    quantityText.replace(
+                      ",",
+                      "."
+                    )
+                  );
 
-          if (
-            Number.isNaN(quantity) ||
-            quantity <= 0
-          ) {
-            showMessage(
-              "error",
+                if (
+                  Number.isNaN(
+                    quantity
+                  ) ||
+                  quantity <= 0
+                ) {
+                  throw new Error(
+                    `QUANTITY_INVALID:${index}`
+                  );
+                }
 
-              isVietnamese
-                ? "Số lượng vật tư phải là số lớn hơn 0."
-                : "Material quantity must be a number greater than 0."
-            );
 
-            setCurrentStep(3);
+                return {
+                  index,
 
-            return;
-          }
+                  materialText,
 
-          materials.push({
-            material_code:
-              materialResult.code,
+                  unitText,
 
-            quantity,
+                  quantity,
 
-            unit_code:
-              unitResult.code,
-          });
+                  materialResult,
+
+                  unitResult,
+                };
+              }
+            )
+          );
+
+
+        // =========================================================
+        // COLLECT RESOLVER WARNINGS
+        // =========================================================
+        const resolverWarnings = {};
+
+        if (
+          lotResult?.requires_confirmation
+        ) {
+          resolverWarnings.lot =
+            isVietnamese
+              ? `Lô "${lotText}" chỉ được khớp gần đúng với "${lotResult.name}". Hãy kiểm tra trước khi xác nhận.`
+              : `The plot "${lotText}" was only approximately matched to "${lotResult.name}". Please review it.`;
         }
 
+        if (
+          activityResult?.requires_confirmation
+        ) {
+          resolverWarnings.work =
+            isVietnamese
+              ? `Công việc "${activityText}" chỉ được khớp gần đúng với "${activityResult.name}". Hãy kiểm tra trước khi xác nhận.`
+              : `The activity "${activityText}" was only approximately matched to "${activityResult.name}". Please review it.`;
+        }
+
+
+        resolvedMaterialItems.forEach(
+          (item) => {
+            if (
+              item.materialResult
+                ?.requires_confirmation
+            ) {
+              resolverWarnings[
+                `materials.${item.index}.material`
+              ] =
+                isVietnamese
+                  ? `Vật tư "${item.materialText}" chỉ được khớp gần đúng với "${item.materialResult.name}". Hãy kiểm tra trước khi xác nhận.`
+                  : `The material "${item.materialText}" was approximately matched to "${item.materialResult.name}". Please review it.`;
+            }
+
+            if (
+              item.unitResult
+                ?.requires_confirmation
+            ) {
+              resolverWarnings[
+                `materials.${item.index}.unit`
+              ] =
+                isVietnamese
+                  ? `Đơn vị "${item.unitText}" chỉ được khớp gần đúng với "${item.unitResult.name}". Hãy kiểm tra trước khi xác nhận.`
+                  : `The unit "${item.unitText}" was approximately matched to "${item.unitResult.name}". Please review it.`;
+            }
+          }
+        );
+
+
+        // =========================================================
+        // REQUIRE USER CONFIRMATION FOR FUZZY MATCH
+        // =========================================================
+        const hasResolverWarnings =
+          Object.keys(
+            resolverWarnings
+          ).length > 0;
+
+        if (
+          hasResolverWarnings &&
+          !warningAcknowledged
+        ) {
+          setServerValidation(
+            (previous) => ({
+              ...(previous || {}),
+
+              errors: {
+                ...(previous?.errors || {}),
+              },
+
+              warnings: {
+                ...(previous?.warnings || {}),
+                ...resolverWarnings,
+              },
+
+              requiresConfirmation:
+                true,
+            })
+          );
+
+          setWarningAcknowledged(
+            false
+          );
+
+          showMessage(
+            "warning",
+
+            isVietnamese
+              ? "Một số dữ liệu chỉ được khớp gần đúng với dữ liệu chuẩn. Hãy kiểm tra các cảnh báo và chọn “Tôi đã kiểm tra cảnh báo” trước khi xác nhận."
+              : "Some values were only approximately matched to master data. Review the warnings and acknowledge them before confirming."
+          );
+
+          setCurrentStep(3);
+
+          window.setTimeout(
+            () =>
+              focusFirstValidationIssue({
+                errors: {},
+                warnings:
+                  resolverWarnings,
+              }),
+            80
+          );
+
+          return;
+        }
+
+
+        // =========================================================
+        // BUILD CANONICAL MATERIAL CONTRACT
+        // =========================================================
+        const materials =
+          resolvedMaterialItems.map(
+            (item) => ({
+              material_code:
+                item.materialResult.code,
+
+              quantity:
+                item.quantity,
+
+              unit_code:
+                item.unitResult.code,
+            })
+          );
         const now =
           new Date();
 
@@ -1234,10 +2093,53 @@ function VoiceLog({
             ? integrationValidation.errors
             : [];
 
+        const integrationWarnings =
+          Array.isArray(
+            integrationValidation?.warnings
+          )
+            ? integrationValidation.warnings
+            : [];
+
         const integrationIsValid =
           integrationValidation?.is_valid ??
           integrationValidation?.valid ??
           integrationErrors.length === 0;
+
+        const backendRequiresConfirmation =
+          Boolean(
+            integrationValidation
+              ?.requires_confirmation
+          ) ||
+          integrationWarnings.some(
+            (issue) =>
+              Boolean(
+                issue?.requires_confirmation
+              )
+          );
+
+        const mappedServerValidation = {
+          errors:
+            normalizeIntegrationIssues(
+              integrationErrors
+            ),
+
+          warnings:
+            normalizeIntegrationIssues(
+              integrationWarnings
+            ),
+
+          requiresConfirmation:
+            backendRequiresConfirmation,
+
+          ruleVersion:
+            integrationValidation
+              ?.rule_version ||
+            null,
+        };
+
+        setServerValidation(
+          mappedServerValidation
+        );
 
         if (
           !integrationIsValid ||
@@ -1252,8 +2154,40 @@ function VoiceLog({
             "error",
 
             isVietnamese
-              ? "Integration Service từ chối dữ liệu. Vui lòng kiểm tra lại các trường trước khi lưu."
-              : "The Integration Service rejected the data. Please review the fields before saving."
+              ? "Integration Service từ chối dữ liệu theo business rule. Hãy sửa các trường được đánh dấu."
+              : "Integration Service rejected the data according to business rules. Fix the highlighted fields."
+          );
+
+          setWarningAcknowledged(
+            false
+          );
+
+          setCurrentStep(3);
+
+          window.setTimeout(
+            () =>
+              focusFirstValidationIssue({
+                errors:
+                  mappedServerValidation.errors,
+                warnings:
+                  mappedServerValidation.warnings,
+              }),
+            80
+          );
+
+          return;
+        }
+
+        if (
+          backendRequiresConfirmation &&
+          !warningAcknowledged
+        ) {
+          showMessage(
+            "warning",
+
+            isVietnamese
+              ? "Integration Service yêu cầu bạn kiểm tra và xác nhận cảnh báo trước khi lưu."
+              : "Integration Service requires you to review and acknowledge the warning before saving."
           );
 
           setCurrentStep(3);
@@ -1261,10 +2195,9 @@ function VoiceLog({
           return;
         }
 
-        const savedIntegrationLog =
-          await saveCultivationLog(
-            finalContract
-          );
+        const savedIntegrationLog = isEditingExistingLog
+          ? await updateCultivationLog(logId, finalContract)
+          : await saveCultivationLog(finalContract);
 
         const savedLog = {
           id: logId,
@@ -1275,14 +2208,26 @@ function VoiceLog({
           work:
             activityText,
 
+          materials:
+            materialItems,
+
+          /*
+            Compatibility tạm cho
+            My Logs hiện tại.
+            Sau khi sửa My Logs,
+            3 field này sẽ bỏ.
+          */
           material:
-            materialText,
+            materialItems[0]
+              ?.material || "",
 
           quantity:
-            quantityText,
+            materialItems[0]
+              ?.quantity ?? "",
 
           unit:
-            unitText,
+            materialItems[0]
+              ?.unit || "",
 
           time:
             timeText,
@@ -1328,6 +2273,9 @@ function VoiceLog({
           true
         );
 
+        setDevWarning(null);
+        clearServerValidation();
+
         setCurrentStep(4);
 
         showMessage(
@@ -1343,6 +2291,219 @@ function VoiceLog({
           error
         );
 
+        const errorMessage =
+          String(
+            error?.message || ""
+          );
+
+
+        // =========================================================
+        // MATERIAL RESOLVE ERROR
+        // =========================================================
+        const materialResolveMatch =
+          errorMessage.match(
+            /^MATERIAL_RESOLVE:(\d+):(.*)$/
+          );
+
+        if (materialResolveMatch) {
+          const materialIndex =
+            Number(
+              materialResolveMatch[1]
+            );
+
+          const materialText =
+            materialResolveMatch[2];
+
+          const field =
+            `materials.${materialIndex}.material`;
+
+          setServerValidation(
+            (previous) => ({
+              ...(previous || {}),
+
+              errors: {
+                ...(previous?.errors || {}),
+
+                [field]:
+                  isVietnamese
+                    ? `Không thể xác định vật tư "${materialText}" trong dữ liệu chuẩn.`
+                    : `The material "${materialText}" could not be resolved against master data.`,
+              },
+            })
+          );
+
+          showMessage(
+            "error",
+
+            isVietnamese
+              ? `Không thể xác định vật tư ${materialIndex + 1}: "${materialText}". Vui lòng kiểm tra lại.`
+              : `Material ${materialIndex + 1}, "${materialText}", could not be resolved. Please review it.`
+          );
+
+          setCurrentStep(3);
+
+          window.setTimeout(
+            () => {
+              document
+                .getElementById(
+                  field
+                )
+                ?.scrollIntoView?.({
+                  behavior: "smooth",
+                  block: "center",
+                });
+
+              document
+                .getElementById(
+                  field
+                )
+                ?.focus?.();
+            },
+            80
+          );
+
+          return;
+        }
+
+
+        // =========================================================
+        // UNIT RESOLVE ERROR
+        // =========================================================
+        const unitResolveMatch =
+          errorMessage.match(
+            /^UNIT_RESOLVE:(\d+):(.*)$/
+          );
+
+        if (unitResolveMatch) {
+          const materialIndex =
+            Number(
+              unitResolveMatch[1]
+            );
+
+          const unitText =
+            unitResolveMatch[2];
+
+          const field =
+            `materials.${materialIndex}.unit`;
+
+          setServerValidation(
+            (previous) => ({
+              ...(previous || {}),
+
+              errors: {
+                ...(previous?.errors || {}),
+
+                [field]:
+                  isVietnamese
+                    ? `Không thể xác định đơn vị "${unitText}" trong dữ liệu chuẩn.`
+                    : `The unit "${unitText}" could not be resolved against master data.`,
+              },
+            })
+          );
+
+          showMessage(
+            "error",
+
+            isVietnamese
+              ? `Không thể xác định đơn vị của vật tư ${materialIndex + 1}: "${unitText}".`
+              : `The unit for material ${materialIndex + 1}, "${unitText}", could not be resolved.`
+          );
+
+          setCurrentStep(3);
+
+          window.setTimeout(
+            () => {
+              document
+                .getElementById(
+                  field
+                )
+                ?.scrollIntoView?.({
+                  behavior: "smooth",
+                  block: "center",
+                });
+
+              document
+                .getElementById(
+                  field
+                )
+                ?.focus?.();
+            },
+            80
+          );
+
+          return;
+        }
+
+
+        // =========================================================
+        // QUANTITY INVALID ERROR
+        // =========================================================
+        const quantityInvalidMatch =
+          errorMessage.match(
+            /^QUANTITY_INVALID:(\d+)$/
+          );
+
+        if (quantityInvalidMatch) {
+          const materialIndex =
+            Number(
+              quantityInvalidMatch[1]
+            );
+
+          const field =
+            `materials.${materialIndex}.quantity`;
+
+          setServerValidation(
+            (previous) => ({
+              ...(previous || {}),
+
+              errors: {
+                ...(previous?.errors || {}),
+
+                [field]:
+                  isVietnamese
+                    ? "Số lượng phải là một số lớn hơn 0."
+                    : "Quantity must be a number greater than 0.",
+              },
+            })
+          );
+
+          showMessage(
+            "error",
+
+            isVietnamese
+              ? `Số lượng của vật tư ${materialIndex + 1} không hợp lệ.`
+              : `The quantity for material ${materialIndex + 1} is invalid.`
+          );
+
+          setCurrentStep(3);
+
+          window.setTimeout(
+            () => {
+              document
+                .getElementById(
+                  field
+                )
+                ?.scrollIntoView?.({
+                  behavior: "smooth",
+                  block: "center",
+                });
+
+              document
+                .getElementById(
+                  field
+                )
+                ?.focus?.();
+            },
+            80
+          );
+
+          return;
+        }
+
+
+        // =========================================================
+        // GENERIC ERROR
+        // =========================================================
         showMessage(
           "error",
 
@@ -1358,13 +2519,50 @@ function VoiceLog({
         );
       }
     };
-
   const messageText =
     getMessageText();
 
   const messageType =
     getMessageType();
 
+  const hasManualFormData =
+    Boolean(
+      String(
+        aiData?.lot ?? ""
+      ).trim() ||
+      String(
+        aiData?.work ?? ""
+      ).trim() ||
+      (
+        aiData?.materials ??
+        []
+      ).some(
+        (item) =>
+          Boolean(
+            String(
+              item?.material ??
+              ""
+            ).trim() ||
+            String(
+              item?.quantity ??
+              ""
+            ).trim() ||
+            String(
+              item?.unit ??
+              ""
+            ).trim()
+          )
+      ) ||
+      String(
+        aiData?.time ?? ""
+      ).trim()
+    );
+
+  const hasUsableResult =
+    Boolean(
+      transcript.trim()
+    ) ||
+    hasManualFormData;
   return (
     <main className="workspace">
       <div className="workspace-container">
@@ -1385,6 +2583,10 @@ function VoiceLog({
 
           onThemeChange={
             onThemeChange
+          }
+
+          logs={
+            logs
           }
         />
 
@@ -1624,9 +2826,7 @@ function VoiceLog({
                 }
 
                 hasResult={
-                  Boolean(
-                    transcript.trim()
-                  )
+                  hasUsableResult
                 }
 
                 isUploading={
@@ -1635,6 +2835,27 @@ function VoiceLog({
 
                 isConfirmed={
                   isConfirmed
+                }
+
+                validation={
+                  validation
+                }
+
+                showValidation={
+                  hasAttemptedSubmit
+                }
+
+                warningAcknowledged={
+                  warningAcknowledged
+                }
+
+                requiresConfirmation={
+                  validation
+                    .requiresConfirmation
+                }
+
+                onAcknowledgeWarnings={
+                  handleAcknowledgeWarnings
                 }
 
                 onRetry={
@@ -1654,6 +2875,10 @@ function VoiceLog({
                 }
 
                 text={t}
+
+                language={
+                  language
+                }
               />
             </div>
           </div>
@@ -1669,8 +2894,11 @@ function VoiceLog({
             <span className="app-toast-icon">
               {messageType ===
               "error"
-                ? "⚠️"
-                : "✅"}
+                ? "❌"
+                : messageType ===
+                    "warning"
+                  ? "⚠️"
+                  : "✅"}
             </span>
 
             <span>

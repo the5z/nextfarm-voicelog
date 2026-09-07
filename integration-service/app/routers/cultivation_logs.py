@@ -26,6 +26,7 @@ from app.services.log_service import (
     create_log,
     get_all_logs,
     get_log_by_client_record_id,
+    update_log,
 )
 
 
@@ -337,6 +338,358 @@ def save_cultivation_log(
 
     return response
 
+@router.put(
+    "/{client_record_id}",
+    response_model=SaveLogResponse,
+)
+def update_cultivation_log(
+    client_record_id: str,
+    payload: CultivationLogInput,
+
+    database_session: Session = Depends(
+        get_db
+    ),
+) -> SaveLogResponse:
+    """
+    Cập nhật một cultivation log đã tồn tại.
+
+    Backend không tin frontend:
+    - record phải tồn tại
+    - URL/body client_record_id phải khớp
+    - user phải confirmed
+    - business validation phải pass
+    - materials[] được thay toàn bộ
+    """
+
+    request_payload = (
+        payload.model_dump(
+            mode="json"
+        )
+    )
+
+    # =========================================================
+    # CLIENT RECORD ID MUST MATCH
+    # =========================================================
+
+    if (
+        client_record_id
+        != payload.client_record_id
+    ):
+        error_detail = {
+            "code":
+                "CLIENT_RECORD_ID_MISMATCH",
+
+            "message": (
+                "client_record_id trong URL "
+                "không khớp với payload."
+            ),
+        }
+
+        create_history(
+            database_session=(
+                database_session
+            ),
+
+            event_type=(
+                "update_cultivation_log"
+            ),
+
+            client_record_id=(
+                client_record_id
+            ),
+
+            request_payload=(
+                request_payload
+            ),
+
+            response_payload={
+                "detail":
+                    error_detail,
+            },
+
+            status="failed",
+
+            http_status=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+        )
+
+        raise HTTPException(
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+
+            detail=error_detail,
+        )
+
+    # =========================================================
+    # RECORD MUST EXIST
+    # =========================================================
+
+    existing_record = (
+        get_log_by_client_record_id(
+            database_session=(
+                database_session
+            ),
+
+            client_record_id=(
+                client_record_id
+            ),
+        )
+    )
+
+    if existing_record is None:
+        error_detail = {
+            "code":
+                "CULTIVATION_LOG_NOT_FOUND",
+
+            "message":
+                "Không tìm thấy nhật ký.",
+        }
+
+        create_history(
+            database_session=(
+                database_session
+            ),
+
+            event_type=(
+                "update_cultivation_log"
+            ),
+
+            client_record_id=(
+                client_record_id
+            ),
+
+            request_payload=(
+                request_payload
+            ),
+
+            response_payload={
+                "detail":
+                    error_detail,
+            },
+
+            status="failed",
+
+            http_status=(
+                status.HTTP_404_NOT_FOUND
+            ),
+        )
+
+        raise HTTPException(
+            status_code=(
+                status.HTTP_404_NOT_FOUND
+            ),
+
+            detail=error_detail,
+        )
+
+    # =========================================================
+    # BACKEND BUSINESS VALIDATION
+    # =========================================================
+
+    validation = (
+        validate_business_rules(
+            payload
+        )
+    )
+
+    # =========================================================
+    # USER CONFIRMATION
+    # =========================================================
+
+    if not payload.confirmed:
+        error_detail = {
+            "code":
+                "UNCONFIRMED_RECORD",
+
+            "message": (
+                "Nhật ký chưa được "
+                "người dùng xác nhận."
+            ),
+
+            "rule_version":
+                validation[
+                    "rule_version"
+                ],
+        }
+
+        create_history(
+            database_session=(
+                database_session
+            ),
+
+            event_type=(
+                "update_cultivation_log"
+            ),
+
+            client_record_id=(
+                client_record_id
+            ),
+
+            request_payload=(
+                request_payload
+            ),
+
+            response_payload={
+                "detail":
+                    error_detail,
+            },
+
+            status="failed",
+
+            http_status=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+        )
+
+        raise HTTPException(
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+
+            detail=error_detail,
+        )
+
+    # =========================================================
+    # BUSINESS VALIDATION FAILED
+    # =========================================================
+
+    if not validation["valid"]:
+        error_detail = {
+            "code":
+                "BUSINESS_VALIDATION_FAILED",
+
+            "message": (
+                "Dữ liệu không đạt "
+                "business validation."
+            ),
+
+            "rule_version":
+                validation[
+                    "rule_version"
+                ],
+
+            "errors":
+                validation[
+                    "errors"
+                ],
+
+            "warnings":
+                validation[
+                    "warnings"
+                ],
+        }
+
+        create_history(
+            database_session=(
+                database_session
+            ),
+
+            event_type=(
+                "update_cultivation_log"
+            ),
+
+            client_record_id=(
+                client_record_id
+            ),
+
+            request_payload=(
+                request_payload
+            ),
+
+            response_payload={
+                "detail":
+                    error_detail,
+            },
+
+            status="failed",
+
+            http_status=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+        )
+
+        raise HTTPException(
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+
+            detail=error_detail,
+        )
+
+    # =========================================================
+    # UPDATE
+    # =========================================================
+
+    updated_record = update_log(
+        database_session=(
+            database_session
+        ),
+
+        client_record_id=(
+            client_record_id
+        ),
+
+        payload=payload,
+    )
+
+    if updated_record is None:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_404_NOT_FOUND
+            ),
+
+            detail={
+                "code":
+                    "CULTIVATION_LOG_NOT_FOUND",
+
+                "message":
+                    "Không tìm thấy nhật ký.",
+            },
+        )
+
+    response = SaveLogResponse(
+        success=True,
+        status="updated",
+        data=updated_record,
+    )
+
+    # =========================================================
+    # HISTORY SUCCESS
+    # =========================================================
+
+    create_history(
+        database_session=(
+            database_session
+        ),
+
+        event_type=(
+            "update_cultivation_log"
+        ),
+
+        client_record_id=(
+            client_record_id
+        ),
+
+        request_payload=(
+            request_payload
+        ),
+
+        response_payload=(
+            response.model_dump(
+                mode="json"
+            )
+        ),
+
+        status="success",
+
+        http_status=(
+            status.HTTP_200_OK
+        ),
+    )
+
+    return response
 
 @router.get(
     "",

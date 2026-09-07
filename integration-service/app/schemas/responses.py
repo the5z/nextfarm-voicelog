@@ -47,19 +47,17 @@ class ValidationResponse(BaseModel):
 
 
 class SaveLogResponse(BaseModel):
-    """
-    Kết quả lưu một nhật ký.
-    """
+    """Kết quả lưu hoặc cập nhật một nhật ký."""
 
     success: bool
 
     status: Literal[
         "saved",
         "already_exists",
+        "updated",
     ]
 
     data: dict[str, Any]
-
 
 class ListLogsResponse(BaseModel):
     """
