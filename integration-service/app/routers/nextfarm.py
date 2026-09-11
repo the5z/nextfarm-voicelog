@@ -16,10 +16,10 @@ from app.database import get_db
 from app.schemas.nextfarm import NextFarmSubmitResponse
 from app.services.history_service import create_history
 from app.services.nextfarm_service import (
+    NextFarmContextValidationError,
     NextFarmLogNotFoundError,
     submit_saved_log_to_nextfarm,
 )
-
 
 router = APIRouter(
     prefix="/api/nextfarm",
@@ -131,7 +131,28 @@ def submit_cultivation_log_to_nextfarm(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=error_detail,
         ) from error
+    except NextFarmContextValidationError as error:
+        error_detail = {
+            "code": "NEXTFARM_SUBMIT_FAILED",
+            "message": str(error),
+        }
 
+        create_history(
+            database_session=database_session,
+            event_type="submit_nextfarm",
+            client_record_id=client_record_id,
+            request_payload=request_payload,
+            response_payload={
+                "detail": error_detail,
+            },
+            status="failed",
+            http_status=status.HTTP_400_BAD_REQUEST,
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_detail,
+    ) from error
     except ValueError as error:
         error_detail = {
             "code": "NEXTFARM_MAPPING_ERROR",

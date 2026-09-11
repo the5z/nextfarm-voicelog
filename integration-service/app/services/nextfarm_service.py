@@ -18,7 +18,10 @@ class NextFarmLogNotFoundError(LookupError):
     """
     Không tìm thấy nhật ký cần gửi sang NextFarm.
     """
-
+class NextFarmContextValidationError(ValueError):
+    """
+    NextFarm context không đầy đủ hoặc không hợp lệ để submit live.
+    """
 
 def submit_saved_log_to_nextfarm(
     database_session: Session,
@@ -58,12 +61,6 @@ def submit_saved_log_to_nextfarm(
 
     serialized_log = serialize_log(stored_log)
 
-    mapped_payload = (
-        map_cultivation_log_to_nextfarm(
-            serialized_log
-        )
-    )
-
     owns_client = nextfarm_client is None
 
     client = (
@@ -73,11 +70,33 @@ def submit_saved_log_to_nextfarm(
     )
 
     try:
-        nextfarm_response = (
-            client.submit_production_diary(
-                mapped_payload
-            )
+        if client.config.mode == "live":
+            context = serialized_log.get("context")
+
+            if not isinstance(context, dict) or any(
+                not isinstance(context.get(field), str)
+                or not context.get(field).strip()
+                for field in (
+                    "tenant_id",
+                    "user_id",
+                    "season_id",
+                    "plot_id",
+                    "task_id",
+                )
+            ):
+                raise NextFarmContextValidationError(
+                    "Thiếu NextFarm context đầy đủ cho chế độ live "
+                    "(tenant_id, user_id, season_id, plot_id, task_id)"
+                )
+
+        mapped_payload = map_cultivation_log_to_nextfarm(
+            serialized_log
         )
+
+        nextfarm_response = client.submit_production_diary(
+            mapped_payload
+        )
+
     finally:
         if owns_client:
             client.close()
