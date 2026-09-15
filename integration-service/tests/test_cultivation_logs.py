@@ -14,6 +14,13 @@ def build_valid_log(
     return {
         "schema_version": "1.0",
         "client_record_id": client_record_id,
+        "context": {
+            "tenant_id": "tenant-001",
+            "user_id": "user-001",
+            "season_id": "season-2026",
+            "plot_id": "plot-001",
+            "task_id": "task-001",
+        },
         "transcript": "Bón 20 kg NPK cho lô A",
         "lot_code": "LO_A",
         "activity_code": "BON_PHAN",
@@ -663,3 +670,131 @@ def test_update_log_rejects_invalid_business_rule(
         == "NPK"
     )
     assert stored_log["materials"][0]["quantity"] == 20
+
+def test_context_persists_across_create_read_update_read(
+    client: TestClient,
+) -> None:
+    """
+    NextFarm context phải được giữ nguyên qua:
+    CREATE -> READ -> UPDATE -> READ.
+    """
+
+    payload = build_valid_log(
+        client_record_id="test-context-roundtrip-001"
+    )
+
+    payload["context"] = {
+        "tenant_id": "tenant-demo",
+        "user_id": "user-001",
+        "season_id": "season-2026-01",
+        "plot_id": "plot-A01",
+        "task_id": "task-bon-phan",
+    }
+
+    # =========================================================
+    # CREATE
+    # =========================================================
+
+    create_response = client.post(
+        "/api/cultivation-logs",
+        json=payload,
+    )
+
+    assert create_response.status_code == 201
+
+    created_log = create_response.json()["data"]
+
+    assert created_log["context"] == {
+        "tenant_id": "tenant-demo",
+        "user_id": "user-001",
+        "season_id": "season-2026-01",
+        "plot_id": "plot-A01",
+        "task_id": "task-bon-phan",
+    }
+
+    # =========================================================
+    # READ
+    # =========================================================
+
+    read_response = client.get(
+        "/api/cultivation-logs/"
+        "test-context-roundtrip-001"
+    )
+
+    assert read_response.status_code == 200
+
+    stored_log = read_response.json()["data"]
+
+    assert stored_log["context"] == {
+        "tenant_id": "tenant-demo",
+        "user_id": "user-001",
+        "season_id": "season-2026-01",
+        "plot_id": "plot-A01",
+        "task_id": "task-bon-phan",
+    }
+
+    # =========================================================
+    # UPDATE
+    # =========================================================
+
+    update_payload = payload.copy()
+
+    update_payload["transcript"] = (
+        "Bón 18 kg NPK cho lô A"
+    )
+    update_payload["materials"] = [
+        {
+            "material_code": "NPK",
+            "quantity": 18,
+            "unit_code": "KG",
+        }
+    ]
+
+    # Đổi context để chứng minh UPDATE thực sự persist
+    # context mới, thay vì chỉ giữ context cũ.
+    update_payload["context"] = {
+        "tenant_id": "tenant-demo",
+        "user_id": "user-002",
+        "season_id": "season-2026-02",
+        "plot_id": "plot-B02",
+        "task_id": "task-bon-phan-002",
+    }
+
+    update_response = client.put(
+        "/api/cultivation-logs/"
+        "test-context-roundtrip-001",
+        json=update_payload,
+    )
+
+    assert update_response.status_code == 200
+
+    updated_log = update_response.json()["data"]
+
+    assert updated_log["context"] == {
+        "tenant_id": "tenant-demo",
+        "user_id": "user-002",
+        "season_id": "season-2026-02",
+        "plot_id": "plot-B02",
+        "task_id": "task-bon-phan-002",
+    }
+
+    # =========================================================
+    # READ AFTER UPDATE
+    # =========================================================
+
+    final_response = client.get(
+        "/api/cultivation-logs/"
+        "test-context-roundtrip-001"
+    )
+
+    assert final_response.status_code == 200
+
+    final_log = final_response.json()["data"]
+
+    assert final_log["context"] == {
+        "tenant_id": "tenant-demo",
+        "user_id": "user-002",
+        "season_id": "season-2026-02",
+        "plot_id": "plot-B02",
+        "task_id": "task-bon-phan-002",
+    }

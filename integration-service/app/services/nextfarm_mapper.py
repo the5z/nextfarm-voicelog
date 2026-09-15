@@ -188,11 +188,10 @@ def resolve_mapping_value(
     source_code: str | None,
     mapping: Mapping[str, Any] | None,
 ) -> Any:
-    """
-    Tìm ID NextFarm dựa trên mã nội bộ.
+    """Resolve một mã nội bộ sang ID external nếu có mapping.
 
-    Nếu chưa có bảng ánh xạ, trả lại mã nội bộ để phục vụ
-    chế độ mock và demo.
+    Hàm này vẫn giữ fallback cho mock/backward compatibility. Live mode
+    phải kiểm tra context và mapping ở service layer trước khi gửi.
     """
 
     if not source_code:
@@ -201,10 +200,7 @@ def resolve_mapping_value(
     if mapping is None:
         return source_code
 
-    return mapping.get(
-        source_code,
-        source_code,
-    )
+    return mapping.get(source_code, source_code)
 
 
 def map_cultivation_log_to_nextfarm(
@@ -213,118 +209,96 @@ def map_cultivation_log_to_nextfarm(
     activity_mapping: Mapping[str, Any] | None = None,
     lot_mapping: Mapping[str, Any] | None = None,
     performer_mapping: Mapping[str, Any] | None = None,
-    season_mapping: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """
-    Chuyển nhật ký nội bộ sang JSON NextFarm mô phỏng.
+    """Chuyển nhật ký nội bộ sang payload NextFarm.
 
-    Các bảng mapping cho phép thay mã nội bộ bằng ID thật của
-    NextFarm khi nhóm có tài khoản hoặc dữ liệu môi trường test.
+    Context NextFarm được lấy từ ``cultivation_log["context"]``.
+    Không suy ra season từ lot hoặc task từ activity.
 
-    Khi chưa có mapping, hàm giữ nguyên mã nội bộ để vẫn có thể
-    chạy demo.
+    Mapping arguments cũ vẫn được giữ cho activity/lot/performer để
+    hỗ trợ môi trường mock/test cho tới khi adapter thật có resolver riêng.
     """
 
     activity_code = str(
-        cultivation_log.get(
-            "activity_code",
-            "",
-        )
+        cultivation_log.get("activity_code", "")
     ).strip()
-
     lot_code = str(
-        cultivation_log.get(
-            "lot_code",
-            "",
-        )
+        cultivation_log.get("lot_code", "")
     ).strip()
-
-    performer_value = cultivation_log.get(
-        "performer_code"
-    )
-
+    performer_value = cultivation_log.get("performer_code")
     performer_code = (
         str(performer_value).strip()
         if performer_value is not None
         else None
     )
-
     client_record_id = str(
-        cultivation_log.get(
-            "client_record_id",
-            "",
-        )
+        cultivation_log.get("client_record_id", "")
     ).strip()
 
     if not client_record_id:
-        raise ValueError(
-            "Thiếu client_record_id"
-        )
-
+        raise ValueError("Thiếu client_record_id")
     if not activity_code:
-        raise ValueError(
-            "Thiếu activity_code"
-        )
-
+        raise ValueError("Thiếu activity_code")
     if not lot_code:
-        raise ValueError(
-            "Thiếu lot_code"
-        )
+        raise ValueError("Thiếu lot_code")
 
     performed_at = normalize_datetime(
         cultivation_log.get("performed_at")
     )
-
     activity_name = ACTIVITY_NAMES.get(
         activity_code,
         activity_code.replace("_", " ").title(),
     )
 
-    location = resolve_mapping_value(
-        source_code=lot_code,
-        mapping=lot_mapping,
-    )
+    context = cultivation_log.get("context")
+    if not isinstance(context, Mapping):
+        context = None
 
+    location = resolve_mapping_value(lot_code, lot_mapping)
     category_task_id = resolve_mapping_value(
-        source_code=activity_code,
-        mapping=activity_mapping,
+        activity_code, activity_mapping
     )
-
     assigned_to = resolve_mapping_value(
-        source_code=performer_code,
-        mapping=performer_mapping,
-    )
-
-    season_id = resolve_mapping_value(
-        source_code=lot_code,
-        mapping=season_mapping,
+        performer_code, performer_mapping
     )
 
     nextfarm_payload: dict[str, Any] = {
         "name": activity_name,
         "start": performed_at,
         "end": performed_at,
-        "description": build_description(
-            cultivation_log
-        ),
+        "description": build_description(cultivation_log),
         "images": [],
-        "location": location,
-        "assigned_to": assigned_to,
-        "category_task_id": category_task_id,
-        "season_id": season_id,
+        "location": (
+            context.get("plot_id")
+            if context is not None and context.get("plot_id")
+            else location
+        ),
+        "assigned_to": (
+            context.get("user_id")
+            if context is not None and context.get("user_id")
+            else assigned_to
+        ),
+        "category_task_id": (
+            context.get("task_id")
+            if context is not None and context.get("task_id")
+            else category_task_id
+        ),
+        "season_id": (
+            context.get("season_id")
+            if context is not None
+            else None
+        ),
         "metadata": {
-            "schema_version": cultivation_log.get(
-                "schema_version",
-                "1.0",
-            ),
+            "schema_version": cultivation_log.get("schema_version", "1.0"),
             "client_record_id": client_record_id,
-            "source": cultivation_log.get(
-                "source",
-                "voice",
+            "source": cultivation_log.get("source", "voice"),
+            "integration_source": "nextfarm-voicelog",
+            "tenant_id": (
+                context.get("tenant_id")
+                if context is not None
+                else None
             ),
-            "integration_source": (
-                "nextfarm-voicelog"
-            ),
+            "context": dict(context) if context is not None else None,
         },
     }
 

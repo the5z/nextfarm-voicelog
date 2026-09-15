@@ -14,6 +14,13 @@ def build_sync_record(
     return {
         "schema_version": "1.0",
         "client_record_id": client_record_id,
+        "context": {
+            "tenant_id": "tenant-001",
+            "user_id": "user-001",
+            "season_id": "season-2026",
+            "plot_id": "plot-001",
+            "task_id": "task-001",
+        },
         "transcript": "Bón 20 kg NPK cho lô A1",
         "lot_code": "LO_A",
         "activity_code": "BON_PHAN",

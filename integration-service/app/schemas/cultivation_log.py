@@ -2,6 +2,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
+from app.schemas.nextfarm import NextFarmContext
+
 from pydantic import (
     BaseModel,
     Field,
@@ -68,6 +70,10 @@ class CultivationLogInput(BaseModel):
     )
 
     transcript: str | None = None
+
+    # Context NextFarm được lưu riêng, không suy diễn từ lot/activity.
+    # Optional để không phá các record cũ; live submit sẽ yêu cầu đầy đủ.
+    context: NextFarmContext | None = None
 
     lot_code: str = Field(
         min_length=1,

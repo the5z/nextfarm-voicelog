@@ -20,6 +20,13 @@ def build_cultivation_log() -> dict[str, Any]:
         "schema_version": "1.0",
         "client_record_id": "mapper-test-001",
         "transcript": "Bón 20 kg NPK cho lô A1",
+        "context": {
+            "tenant_id": "tenant-001",
+            "user_id": "user-301",
+            "season_id": "season-401",
+            "plot_id": "plot-201",
+            "task_id": "task-101",
+        },
         "lot_code": "LO_A",
         "activity_code": "BON_PHAN",
         "materials": [
@@ -65,19 +72,18 @@ def test_build_description() -> None:
 
 
 def test_map_without_external_mapping() -> None:
-    """
-    Khi chưa có ID NextFarm, mapper giữ nguyên mã nội bộ.
-    """
+    """Context NextFarm phải được map theo đúng semantic field."""
 
     result = map_cultivation_log_to_nextfarm(
         build_cultivation_log()
     )
 
     assert result["name"] == "Bón phân"
-    assert result["location"] == "LO_A"
-    assert result["assigned_to"] == "NV001"
-    assert result["category_task_id"] == "BON_PHAN"
-    assert result["season_id"] == "LO_A"
+    assert result["location"] == "plot-201"
+    assert result["assigned_to"] == "user-301"
+    assert result["category_task_id"] == "task-101"
+    assert result["season_id"] == "season-401"
+    assert result["metadata"]["tenant_id"] == "tenant-001"
 
     assert result["start"] == (
         "2026-08-03T08:00:00+07:00"
@@ -110,15 +116,12 @@ def test_map_with_external_mapping() -> None:
         performer_mapping={
             "NV001": 301,
         },
-        season_mapping={
-            "LO_A": 401,
-        },
     )
 
-    assert result["category_task_id"] == 101
-    assert result["location"] == 201
-    assert result["assigned_to"] == 301
-    assert result["season_id"] == 401
+    assert result["category_task_id"] == "task-101"
+    assert result["location"] == "plot-201"
+    assert result["assigned_to"] == "user-301"
+    assert result["season_id"] == "season-401"
 
 
 def test_map_accepts_datetime() -> None:

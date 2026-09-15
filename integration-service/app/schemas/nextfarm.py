@@ -5,6 +5,21 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
+class NextFarmContext(BaseModel):
+    """Context định danh dùng để liên kết nhật ký với NextFarm.
+
+    Các field này mang semantic riêng biệt: tenant, user, season,
+    plot và task không được suy ra lẫn nhau.
+    """
+
+    tenant_id: str = Field(min_length=1, max_length=100)
+    user_id: str = Field(min_length=1, max_length=100)
+    season_id: str = Field(min_length=1, max_length=100)
+    plot_id: str = Field(min_length=1, max_length=100)
+    task_id: str = Field(min_length=1, max_length=100)
+
+
+
 class NextFarmSubmitResponse(BaseModel):
     """
     Kết quả gửi một nhật ký đã lưu sang NextFarm.

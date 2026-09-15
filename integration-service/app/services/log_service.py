@@ -39,6 +39,24 @@ def serialize_log(
         "schema_version": log.schema_version,
         "client_record_id": log.client_record_id,
         "transcript": log.transcript,
+        "context": {
+            "tenant_id": log.tenant_id,
+            "user_id": log.user_id,
+            "season_id": log.season_id,
+            "plot_id": log.plot_id,
+            "task_id": log.task_id,
+        }
+        if all(
+            value is not None
+            for value in (
+                log.tenant_id,
+                log.user_id,
+                log.season_id,
+                log.plot_id,
+                log.task_id,
+            )
+        )
+        else None,
         "lot_code": log.lot_code,
         "activity_code": log.activity_code,
         "materials": [
@@ -118,6 +136,31 @@ def create_log(
         schema_version=payload.schema_version,
         client_record_id=payload.client_record_id,
         transcript=payload.transcript,
+        tenant_id=(
+            payload.context.tenant_id
+            if payload.context is not None
+            else None
+        ),
+        user_id=(
+            payload.context.user_id
+            if payload.context is not None
+            else None
+        ),
+        season_id=(
+            payload.context.season_id
+            if payload.context is not None
+            else None
+        ),
+        plot_id=(
+            payload.context.plot_id
+            if payload.context is not None
+            else None
+        ),
+        task_id=(
+            payload.context.task_id
+            if payload.context is not None
+            else None
+        ),
         lot_code=payload.lot_code,
         activity_code=payload.activity_code,
         performed_at=payload.performed_at,
@@ -197,6 +240,32 @@ def update_log(
 
     existing_log.transcript = (
         payload.transcript
+    )
+
+    existing_log.tenant_id = (
+        payload.context.tenant_id
+        if payload.context is not None
+        else None
+    )
+    existing_log.user_id = (
+        payload.context.user_id
+        if payload.context is not None
+        else None
+    )
+    existing_log.season_id = (
+        payload.context.season_id
+        if payload.context is not None
+        else None
+    )
+    existing_log.plot_id = (
+        payload.context.plot_id
+        if payload.context is not None
+        else None
+    )
+    existing_log.task_id = (
+        payload.context.task_id
+        if payload.context is not None
+        else None
     )
 
     existing_log.lot_code = (
