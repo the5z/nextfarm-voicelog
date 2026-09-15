@@ -53,6 +53,52 @@ def test_ambiguous_unit_adds_warning():
     assert result.requires_confirmation is True
 
 
+def test_missing_material_quantity_requires_confirmation():
+    data = ActivityData(
+        activity_text="Bón phân",
+        lot_text="Lô A",
+        materials=[
+            MaterialData(
+                material_text="NPK",
+                quantity=None,
+                unit_text="kg",
+            )
+        ],
+        time_text="07:00",
+    )
+
+    result = apply_confidence_rules(data)
+
+    assert (
+        "materials.quantity"
+        in result.missing_fields
+    )
+    assert result.requires_confirmation is True
+
+
+def test_missing_material_unit_requires_confirmation():
+    data = ActivityData(
+        activity_text="Bón phân",
+        lot_text="Lô A",
+        materials=[
+            MaterialData(
+                material_text="NPK",
+                quantity=20,
+                unit_text=None,
+            )
+        ],
+        time_text="07:00",
+    )
+
+    result = apply_confidence_rules(data)
+
+    assert (
+        "materials.unit_text"
+        in result.missing_fields
+    )
+    assert result.requires_confirmation is True
+
+
 def test_complete_record_does_not_require_confirmation():
     data = ActivityData(
         activity_text="Bón phân",

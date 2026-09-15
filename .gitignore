@@ -231,3 +231,23 @@ ai-service/benchmark/results/predictions_noisy_preprocessed.jsonl
 ai-service/benchmark/results/noise_ab_metrics.json
 ai-service/benchmark/results/predictions_clean_confirmation.jsonl
 ai-service/benchmark/results/predictions_clean_confirmation_v2.jsonl
+
+# Whisper model cache
+ai-service/.whisper-cache/
+
+# Local IDE settings
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# AI benchmark generated predictions
+ai-service/benchmark/results/predictions_no_prompt.jsonl
+ai-service/benchmark/results/predictions_short_prompt.jsonl
+ai-service/benchmark/results/predictions_with_prompt.jsonl
+
+# Local voice test files
+test_voice.wav
+test_voice_en.wav

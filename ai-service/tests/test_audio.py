@@ -1,20 +1,76 @@
+import json
 from io import BytesIO
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.schemas.activity import ActivityData, MaterialData
+from app.schemas.dynamic_form import (
+    HarvestResponse,
+    WorkLogResponse,
+)
 
 
 client = TestClient(app)
 
 
-def test_upload_rejects_invalid_file_type() -> None:
-    """
-    Should reject non-audio files.
-    """
+def build_work_log_response() -> WorkLogResponse:
+    return WorkLogResponse(
+        missing_fields=[],
+        warnings=[],
+        field_confidence={
+            "result_status": 1.0,
+            "plot_text": 1.0,
+            "activity_text": 1.0,
+            "performed_time_text": 1.0,
+        },
+        requires_confirmation=False,
+        next_question=None,
+        fields={
+            "result_status": "completed",
+            "plot_text": "A1",
+            "activity_text": "Bón NPK",
+            "performed_time_text": "8 giờ",
+            "materials": [
+                {
+                    "material_text": "NPK",
+                    "quantity": 20,
+                    "unit_text": "kg",
+                }
+            ],
+            "photo_required": None,
+            "material_batch_text": None,
+            "note": None,
+        },
+    )
 
+
+def build_harvest_response() -> HarvestResponse:
+    return HarvestResponse(
+        missing_fields=[],
+        warnings=[],
+        field_confidence={
+            "plot_text": 1.0,
+            "crop_text": 1.0,
+            "quantity": 1.0,
+            "unit_text": 1.0,
+            "harvest_date_text": 1.0,
+        },
+        requires_confirmation=False,
+        next_question=None,
+        fields={
+            "plot_text": "A1",
+            "crop_text": "lúa",
+            "quantity": 120,
+            "unit_text": "kg",
+            "harvest_date_text": "hôm nay",
+            "photo_required": None,
+            "note": None,
+        },
+    )
+
+
+def test_upload_rejects_invalid_file_type() -> None:
     fake_file = BytesIO(b"fake image content")
 
     response = client.post(
@@ -38,13 +94,10 @@ def test_upload_rejects_invalid_file_type() -> None:
         "audio files are allowed."
     )
     assert body["data"] is None
+    assert "request_id" in body
 
 
 def test_upload_requires_file() -> None:
-    """
-    Should return a validation error when the file is missing.
-    """
-
     response = client.post(
         "/api/v1/audio/upload"
     )
@@ -54,21 +107,22 @@ def test_upload_requires_file() -> None:
     body = response.json()
 
     assert body["success"] is False
-    assert body["message"] == "Request validation failed."
+    assert body["message"] == (
+        "Request validation failed."
+    )
     assert "errors" in body["data"]
+    assert "request_id" in body
 
 
 def test_upload_audio_success(mocker) -> None:
-    """
-    Should upload and process an audio file successfully
-    using mocked FFmpeg, Whisper and Gemini results.
-    """
-
     transcript = (
-        "Bón phân lô A 20 ký NPK lúc 7 giờ sáng."
+        "Bón NPK cho lô A1, dùng 20 ký, "
+        "lúc 8 giờ, đã hoàn thành."
     )
 
-    cleaned_path = Path("uploads/cleaned-fertilizing.wav")
+    cleaned_path = Path(
+        "uploads/cleaned-fertilizing.wav"
+    )
 
     mocker.patch(
         "app.routers.audio.reduce_noise",
@@ -80,20 +134,9 @@ def test_upload_audio_success(mocker) -> None:
         return_value=transcript,
     )
 
-    mocker.patch(
-        "app.routers.audio.extract_activity",
-        return_value=ActivityData(
-            activity_text="Bón phân",
-            lot_text="Lô A",
-            materials=[
-                MaterialData(
-                    material_text="NPK",
-                    quantity=20,
-                    unit_text="kg",
-                )
-            ],
-            time_text="07:00",
-        ),
+    mocked_extract = mocker.patch(
+        "app.routers.audio.extract_dynamic_form",
+        return_value=build_work_log_response(),
     )
 
     fake_audio = BytesIO(b"fake audio content")
@@ -114,43 +157,94 @@ def test_upload_audio_success(mocker) -> None:
     body = response.json()
 
     assert body["success"] is True
-    assert body["message"] == "Audio processed successfully."
+    assert body["message"] == (
+        "Audio processed successfully."
+    )
 
     data = body["data"]
 
-    assert data["original_filename"] == "fertilizing.m4a"
-    assert data["stored_filename"].endswith(".m4a")
-    assert data["content_type"] == "audio/x-m4a"
+    assert data["original_filename"] == (
+        "fertilizing.m4a"
+    )
+    assert data["stored_filename"].endswith(
+        ".m4a"
+    )
+    assert data["content_type"] == (
+        "audio/x-m4a"
+    )
+    assert data["operation"] == (
+        "CREATE_WORK_LOG"
+    )
     assert data["transcript"] == transcript
+    assert (
+        data["noise_reduction_applied"]
+        is True
+    )
 
-    structured_data = data["structured_data"]
+    dynamic_form = data["dynamic_form"]
 
-    assert structured_data["activity_text"] == "Bón phân"
-    assert structured_data["lot_text"] == "Lô A"
-    assert structured_data["time_text"] == "07:00"
+    assert dynamic_form["contract_version"] == (
+        "3.1"
+    )
+    assert dynamic_form["operation"] == (
+        "CREATE_WORK_LOG"
+    )
+    assert dynamic_form["template_id"] == (
+        "work_log"
+    )
+    assert dynamic_form["missing_fields"] == []
+    assert (
+        dynamic_form["requires_confirmation"]
+        is False
+    )
 
-    materials = structured_data["materials"]
+    fields = dynamic_form["fields"]
+
+    assert fields["plot_text"] == "A1"
+    assert fields["activity_text"] == (
+        "Bón NPK"
+    )
+    assert fields["result_status"] == (
+        "completed"
+    )
+    assert fields["performed_time_text"] == (
+        "8 giờ"
+    )
+
+    materials = fields["materials"]
 
     assert len(materials) == 1
-    assert materials[0]["material_text"] == "NPK"
+    assert materials[0]["material_text"] == (
+        "NPK"
+    )
     assert materials[0]["quantity"] == 20
     assert materials[0]["unit_text"] == "kg"
 
+    mocked_extract.assert_called_once()
 
-def test_upload_audio_with_watering_activity(mocker) -> None:
-    """
-    Should return structured watering data.
-    """
+    kwargs = mocked_extract.call_args.kwargs
 
+    assert kwargs["operation"] == (
+        "CREATE_WORK_LOG"
+    )
+    assert kwargs["transcript"] == transcript
+    assert kwargs["current_fields"] is None
+    assert kwargs["context"] is None
+
+
+def test_upload_passes_operation_to_dynamic_form(
+    mocker,
+) -> None:
     transcript = (
-        "Tưới cây lô B 100 lít nước lúc 6 giờ sáng."
+        "Thu hoạch lúa ở lô A1 "
+        "được 120 kg hôm nay."
     )
-
-    cleaned_path = Path("uploads/cleaned-watering.wav")
 
     mocker.patch(
         "app.routers.audio.reduce_noise",
-        return_value=cleaned_path,
+        return_value=Path(
+            "uploads/cleaned-harvest.wav"
+        ),
     )
 
     mocker.patch(
@@ -158,64 +252,77 @@ def test_upload_audio_with_watering_activity(mocker) -> None:
         return_value=transcript,
     )
 
-    mocker.patch(
-        "app.routers.audio.extract_activity",
-        return_value=ActivityData(
-            activity_text="Tưới nước",
-            lot_text="Lô B",
-            materials=[
-                MaterialData(
-                    material_text="Nước",
-                    quantity=100,
-                    unit_text="lít",
-                )
-            ],
-            time_text="06:00",
-        ),
+    mocked_extract = mocker.patch(
+        "app.routers.audio.extract_dynamic_form",
+        return_value=build_harvest_response(),
     )
 
-    fake_audio = BytesIO(b"fake audio content")
+    fake_audio = BytesIO(
+        b"fake audio content"
+    )
 
     response = client.post(
         "/api/v1/audio/upload",
+        data={
+            "operation": "CREATE_HARVEST",
+        },
         files={
             "file": (
-                "watering.m4a",
+                "harvest.wav",
                 fake_audio,
-                "audio/x-m4a",
+                "audio/wav",
             )
         },
     )
 
     assert response.status_code == 200
 
-    structured_data = response.json()["data"]["structured_data"]
+    data = response.json()["data"]
 
-    assert structured_data["activity_text"] == "Tưới nước"
-    assert structured_data["lot_text"] == "Lô B"
-    assert structured_data["time_text"] == "06:00"
+    assert data["operation"] == (
+        "CREATE_HARVEST"
+    )
 
-    materials = structured_data["materials"]
+    assert (
+        data["dynamic_form"]["operation"]
+        == "CREATE_HARVEST"
+    )
 
-    assert len(materials) == 1
-    assert materials[0]["material_text"] == "Nước"
-    assert materials[0]["quantity"] == 100
-    assert materials[0]["unit_text"] == "lít"
+    kwargs = mocked_extract.call_args.kwargs
+
+    assert kwargs["operation"] == (
+        "CREATE_HARVEST"
+    )
+    assert kwargs["transcript"] == transcript
 
 
-def test_upload_audio_without_materials(mocker) -> None:
-    """
-    Should return an empty materials list when no material
-    is mentioned in the transcript.
-    """
+def test_upload_passes_current_fields_and_context(
+    mocker,
+) -> None:
+    transcript = "20 ký."
 
-    transcript = "Làm cỏ lô A lúc 8 giờ sáng."
+    current_fields = {
+        "result_status": "completed",
+        "plot_text": "A1",
+        "activity_text": "Bón NPK",
+        "materials": [
+            {
+                "material_text": "NPK",
+                "quantity": None,
+                "unit_text": None,
+            }
+        ],
+    }
 
-    cleaned_path = Path("uploads/cleaned-weeding.wav")
+    context = {
+        "plot_text": "A1",
+    }
 
     mocker.patch(
         "app.routers.audio.reduce_noise",
-        return_value=cleaned_path,
+        return_value=Path(
+            "uploads/cleaned-follow-up.wav"
+        ),
     )
 
     mocker.patch(
@@ -223,86 +330,277 @@ def test_upload_audio_without_materials(mocker) -> None:
         return_value=transcript,
     )
 
-    mocker.patch(
-        "app.routers.audio.extract_activity",
-        return_value=ActivityData(
-            activity_text="Làm cỏ",
-            lot_text="Lô A",
-            materials=[],
-            time_text="08:00",
-        ),
+    mocked_extract = mocker.patch(
+        "app.routers.audio.extract_dynamic_form",
+        return_value=build_work_log_response(),
     )
 
-    fake_audio = BytesIO(b"fake audio content")
+    fake_audio = BytesIO(
+        b"fake audio content"
+    )
 
     response = client.post(
         "/api/v1/audio/upload",
+        data={
+            "operation": "CREATE_WORK_LOG",
+            "current_fields": json.dumps(
+                current_fields
+            ),
+            "context": json.dumps(context),
+        },
         files={
             "file": (
-                "weeding.m4a",
+                "follow-up.wav",
                 fake_audio,
-                "audio/x-m4a",
+                "audio/wav",
             )
         },
     )
 
     assert response.status_code == 200
 
-    structured_data = response.json()["data"]["structured_data"]
+    kwargs = mocked_extract.call_args.kwargs
 
-    assert structured_data["activity_text"] == "Làm cỏ"
-    assert structured_data["lot_text"] == "Lô A"
-    assert structured_data["materials"] == []
-    assert structured_data["time_text"] == "08:00"
+    assert kwargs["current_fields"] == (
+        current_fields
+    )
+    assert kwargs["context"] == context
 
 
-def test_upload_audio_without_lot_or_time(mocker) -> None:
-    """
-    Should allow lot_text and time_text to be null.
-    """
+def test_upload_without_noise_reduction(
+    mocker,
+) -> None:
+    transcript = "Đã hoàn thành."
 
-    transcript = "Thu hoạch xoài."
-
-    cleaned_path = Path("uploads/cleaned-harvesting.wav")
-
-    mocker.patch(
-        "app.routers.audio.reduce_noise",
-        return_value=cleaned_path,
+    mocked_reduce_noise = mocker.patch(
+        "app.routers.audio.reduce_noise"
     )
 
-    mocker.patch(
+    mocked_transcribe = mocker.patch(
         "app.routers.audio.transcribe_audio",
         return_value=transcript,
     )
 
     mocker.patch(
-        "app.routers.audio.extract_activity",
-        return_value=ActivityData(
-            activity_text="Thu hoạch",
-            lot_text=None,
-            materials=[],
-            time_text=None,
-        ),
+        "app.routers.audio.extract_dynamic_form",
+        return_value=build_work_log_response(),
     )
 
-    fake_audio = BytesIO(b"fake audio content")
+    fake_audio = BytesIO(
+        b"fake audio content"
+    )
 
     response = client.post(
         "/api/v1/audio/upload",
+        data={
+            "use_noise_reduction": "false",
+        },
         files={
             "file": (
-                "harvesting.m4a",
+                "work.wav",
                 fake_audio,
-                "audio/x-m4a",
+                "audio/wav",
             )
         },
     )
 
     assert response.status_code == 200
 
-    structured_data = response.json()["data"]["structured_data"]
+    data = response.json()["data"]
 
-    assert structured_data["activity_text"] == "Thu hoạch"
-    assert structured_data["lot_text"] is None
-    assert structured_data["materials"] == []
-    assert structured_data["time_text"] is None
+    assert (
+        data["noise_reduction_applied"]
+        is False
+    )
+
+    mocked_reduce_noise.assert_not_called()
+    mocked_transcribe.assert_called_once()
+
+
+def test_upload_rejects_empty_transcript(
+    mocker,
+) -> None:
+    mocker.patch(
+        "app.routers.audio.reduce_noise",
+        return_value=Path(
+            "uploads/cleaned-empty.wav"
+        ),
+    )
+
+    mocker.patch(
+        "app.routers.audio.transcribe_audio",
+        return_value="   ",
+    )
+
+    mocked_extract = mocker.patch(
+        "app.routers.audio.extract_dynamic_form"
+    )
+
+    fake_audio = BytesIO(
+        b"fake audio content"
+    )
+
+    response = client.post(
+        "/api/v1/audio/upload",
+        files={
+            "file": (
+                "empty.wav",
+                fake_audio,
+                "audio/wav",
+            )
+        },
+    )
+
+    assert response.status_code == 400
+
+    body = response.json()
+
+    assert body["success"] is False
+    assert body["message"] == (
+        "Could not detect speech in the audio."
+    )
+
+    mocked_extract.assert_not_called()
+
+
+def test_upload_rejects_invalid_current_fields_json() -> None:
+    fake_audio = BytesIO(
+        b"fake audio content"
+    )
+
+    response = client.post(
+        "/api/v1/audio/upload",
+        data={
+            "current_fields": "{invalid-json",
+        },
+        files={
+            "file": (
+                "test.wav",
+                fake_audio,
+                "audio/wav",
+            )
+        },
+    )
+
+    assert response.status_code == 400
+
+    body = response.json()
+
+    assert body["success"] is False
+    assert body["message"] == (
+        "current_fields must be valid JSON object."
+    )
+
+
+def test_upload_rejects_non_object_current_fields() -> None:
+    fake_audio = BytesIO(
+        b"fake audio content"
+    )
+
+    response = client.post(
+        "/api/v1/audio/upload",
+        data={
+            "current_fields": "[]",
+        },
+        files={
+            "file": (
+                "test.wav",
+                fake_audio,
+                "audio/wav",
+            )
+        },
+    )
+
+    assert response.status_code == 400
+
+    body = response.json()
+
+    assert body["message"] == (
+        "current_fields must be valid JSON object."
+    )
+
+
+def test_upload_rejects_invalid_context_json() -> None:
+    fake_audio = BytesIO(
+        b"fake audio content"
+    )
+
+    response = client.post(
+        "/api/v1/audio/upload",
+        data={
+            "context": "{invalid-json",
+        },
+        files={
+            "file": (
+                "test.wav",
+                fake_audio,
+                "audio/wav",
+            )
+        },
+    )
+
+    assert response.status_code == 400
+
+    body = response.json()
+
+    assert body["success"] is False
+    assert body["message"] == (
+        "context must be valid JSON object."
+    )
+
+
+def test_upload_rejects_non_object_context() -> None:
+    fake_audio = BytesIO(
+        b"fake audio content"
+    )
+
+    response = client.post(
+        "/api/v1/audio/upload",
+        data={
+            "context": "[]",
+        },
+        files={
+            "file": (
+                "test.wav",
+                fake_audio,
+                "audio/wav",
+            )
+        },
+    )
+
+    assert response.status_code == 400
+
+    body = response.json()
+
+    assert body["message"] == (
+        "context must be valid JSON object."
+    )
+
+
+def test_upload_rejects_invalid_operation() -> None:
+    fake_audio = BytesIO(
+        b"fake audio content"
+    )
+
+    response = client.post(
+        "/api/v1/audio/upload",
+        data={
+            "operation": "INVALID_OPERATION",
+        },
+        files={
+            "file": (
+                "test.wav",
+                fake_audio,
+                "audio/wav",
+            )
+        },
+    )
+
+    assert response.status_code == 422
+
+    body = response.json()
+
+    assert body["success"] is False
+    assert body["message"] == (
+        "Request validation failed."
+    )

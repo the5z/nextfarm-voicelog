@@ -24,6 +24,9 @@ venv/
 # Uploads
 uploads/
 
+# Whisper cache
+.whisper-cache/
+
 # Logs
 *.log
 

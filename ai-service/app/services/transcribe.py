@@ -79,7 +79,7 @@ def transcribe_audio(
 
         task="transcribe",
 
-        initial_prompt=None,
+        initial_prompt=settings.WHISPER_INITIAL_PROMPT,
 
         fp16=False,
 

@@ -170,6 +170,63 @@ STRICT RULES:
 4. Update an existing value only when the new transcript clearly
    provides a correction or replacement.
 
+4A. Treat NEW USER TRANSCRIPT as a continuation of CURRENT FORM DATA
+    when the form is partially filled.
+
+    If the transcript is a short answer that naturally completes a
+    missing or incomplete field, apply it to that field instead of
+    placing it into note.
+
+    Example:
+
+    CURRENT FORM DATA:
+    materials = [
+        {{
+            "material_text": "PK",
+            "quantity": null,
+            "unit_text": null
+        }}
+    ]
+
+    NEW USER TRANSCRIPT:
+    "20 ký"
+
+    Expected interpretation:
+    materials[0].quantity = 20
+    materials[0].unit_text = "kg"
+
+    Do NOT store "20 ký" in note.
+
+4B. For CREATE_WORK_LOG, when exactly one existing material item is
+    missing quantity and/or unit_text, and the NEW USER TRANSCRIPT
+    contains only a quantity and unit, attach those values to the
+    existing material.
+
+    Examples:
+    - "20 ký" -> quantity = 20, unit_text = "kg"
+    - "5 kg" -> quantity = 5, unit_text = "kg"
+    - "2 lít" -> quantity = 2, unit_text = "lít"
+    - "3 bao" -> quantity = 3, unit_text = "bao"
+
+    Do not create a new material item unless the transcript clearly
+    names a different material.
+
+4C. Normalize common Vietnamese spoken measurement variants when
+    their meaning is unambiguous:
+    - "ký" -> "kg"
+    - "kí" -> "kg"
+    - "kilô" -> "kg"
+    - "ki-lô" -> "kg"
+
+    Preserve local or ambiguous units such as:
+    - "bao"
+    - "xị"
+    - "công"
+    - "sào"
+
+    Do not convert those local units unless explicit business context
+    provides an unambiguous conversion.
+
 5. You may use AVAILABLE CONTEXT only when it is clearly relevant.
 
 6. Never invent missing information.
@@ -212,10 +269,26 @@ STRICT RULES:
     path to missing_fields, for example:
     materials[0].unit_text
 
+    If CURRENT FORM DATA already contains a material, preserve that
+    material when processing a short follow-up answer.
+
+    A short follow-up containing only quantity and unit should fill
+    the missing quantity and unit of the existing material rather
+    than being stored as note.
+
 14. For CREATE_WORK_LOG, result_status must be one of:
     - completed
     - partial
     - failed
+
+    Interpret clear Vietnamese status expressions naturally.
+    Examples:
+    - "đã hoàn thành" -> completed
+    - "xong rồi" -> completed
+    - "làm xong" -> completed
+    - "làm dở" -> partial
+    - "chưa xong" -> partial
+    - "thất bại" -> failed
 
 15. For dates and times:
     preserve a clear human-readable interpretation.
@@ -231,8 +304,9 @@ STRICT RULES:
     - or an extracted value clearly needs user confirmation
 
 18. next_question:
-    - ask about only ONE missing required field
-    - prefer the first important missing required field
+    - ask about only ONE logical missing information group
+    - quantity and unit_text of the same material may be asked together
+    - prefer the first important missing field or field group
     - keep the question short and natural in Vietnamese
     - return null if no additional question is required
 

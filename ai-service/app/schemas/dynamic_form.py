@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -12,6 +12,13 @@ OperationType = Literal[
     "CREATE_ISSUE_REPORT",
     "CREATE_HARVEST",
 ]
+
+
+class DynamicFormRequest(BaseModel):
+    operation: OperationType
+    transcript: str
+    current_fields: dict[str, Any] | None = None
+    context: dict[str, Any] | None = None
 
 
 class DynamicFormWarning(BaseModel):

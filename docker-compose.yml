@@ -31,6 +31,7 @@ services:
 
     volumes:
       - ./ai-service/uploads:/app/uploads
+      - ./ai-service/.whisper-cache:/root/.cache/whisper
 
     restart: unless-stopped
 

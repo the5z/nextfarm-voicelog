@@ -105,6 +105,15 @@ def apply_message_to_activity(
             }
         )
 
+    # Only create/update material data when
+    # the expected field is actually a material field.
+    if expected_field not in {
+        "materials.material_text",
+        "materials.quantity",
+        "materials.unit_text",
+    }:
+        return activity
+
     materials = list(
         activity.materials
     )
