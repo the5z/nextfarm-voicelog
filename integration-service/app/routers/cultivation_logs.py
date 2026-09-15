@@ -10,6 +10,13 @@ from app.database import get_db
 from app.schemas.cultivation_log import (
     CultivationLogInput,
 )
+from app.schemas.dynamic_form_bridge import (
+    DynamicWorkLogSaveRequest,
+)
+from app.services.dynamic_form_adapter_service import (
+    DynamicFormCanonicalResolutionError,
+    build_cultivation_log_input,
+)
 from app.schemas.responses import (
     GetLogResponse,
     ListLogsResponse,
@@ -338,6 +345,118 @@ def save_cultivation_log(
 
     return response
 
+@router.post(
+    "/from-dynamic-form",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SaveLogResponse,
+)
+def save_dynamic_work_log(
+    payload: DynamicWorkLogSaveRequest,
+
+    database_session: Session = Depends(
+        get_db
+    ),
+) -> SaveLogResponse:
+    """
+    Bridge:
+    Dynamic Form V3.1
+        -> canonical CultivationLogInput
+        -> existing cultivation-log save flow.
+
+    Integration responsibilities:
+    - resolve *_text -> canonical code
+    - preserve canonical NextFarm context
+    - delegate business validation
+      và confirmation cho save flow hiện có
+
+    Không:
+    - parse transcript
+    - NLP
+    - AI confidence
+    - suy diễn NextFarm IDs
+    """
+
+    try:
+        canonical_payload = (
+            build_cultivation_log_input(
+                payload.dynamic_form,
+                client_record_id=(
+                    payload.client_record_id
+                ),
+                performed_at=(
+                    payload.performed_at
+                ),
+                context=payload.context,
+                confirmed=payload.confirmed,
+            )
+        )
+
+    except (
+        DynamicFormCanonicalResolutionError
+    ) as error:
+        error_detail = {
+            "code":
+                "DYNAMIC_FORM_RESOLUTION_FAILED",
+
+            "field":
+                error.field,
+
+            "reason_code":
+                error.code,
+
+            "message":
+                error.message,
+        }
+
+        create_history(
+            database_session=(
+                database_session
+            ),
+
+            event_type=(
+                "save_dynamic_work_log"
+            ),
+
+            client_record_id=(
+                payload.client_record_id
+            ),
+
+            request_payload=(
+                payload.model_dump(
+                    mode="json"
+                )
+            ),
+
+            response_payload={
+                "detail":
+                    error_detail,
+            },
+
+            status="failed",
+
+            http_status=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+        )
+
+        raise HTTPException(
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+
+            detail=error_detail,
+        )
+
+    # Quan trọng:
+    # Không viết lại business validation,
+    # confirmation gate hoặc persistence.
+    #
+    # Delegate về canonical save flow
+    # hiện có.
+    return save_cultivation_log(
+        payload=canonical_payload,
+        database_session=database_session,
+    )
 @router.put(
     "/{client_record_id}",
     response_model=SaveLogResponse,
