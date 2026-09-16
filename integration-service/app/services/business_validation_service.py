@@ -17,21 +17,8 @@ from app.schemas.cultivation_log import (
 def _known_codes(
     records: list[MasterDataRecord],
 ) -> set[str]:
-    """
-    Tạo tập canonical codes từ master data.
-
-    Ví dụ:
-    ACTIVITIES
-        -> {"BON_PHAN", "TUOI_NUOC", ...}
-
-    MATERIALS
-        -> {"NPK", "URE", "CAM"}
-    """
-
     return {
-        str(
-            item["code"]
-        )
+        str(item["code"])
         .strip()
         .upper()
         for item in records
@@ -42,12 +29,6 @@ def _find_name_by_code(
     records: list[MasterDataRecord],
     code: str,
 ) -> str | None:
-    """
-    Tìm canonical name từ code.
-
-    Dùng chủ yếu để tạo message dễ hiểu hơn.
-    """
-
     normalized_code = (
         str(code or "")
         .strip()
@@ -56,177 +37,91 @@ def _find_name_by_code(
 
     for item in records:
         item_code = (
-            str(
-                item["code"]
-            )
+            str(item["code"])
             .strip()
             .upper()
         )
 
-        if (
-            item_code
-            == normalized_code
-        ):
-            return str(
-                item["name"]
-            )
+        if item_code == normalized_code:
+            return str(item["name"])
 
     return None
 
 
-KNOWN_ACTIVITY_CODES = (
-    _known_codes(
-        ACTIVITIES
-    )
-)
-
-KNOWN_LOT_CODES = (
-    _known_codes(
-        LOTS
-    )
-)
-
-KNOWN_MATERIAL_CODES = (
-    _known_codes(
-        MATERIALS
-    )
-)
-
-KNOWN_UNIT_CODES = (
-    _known_codes(
-        UNITS
-    )
-)
+KNOWN_ACTIVITY_CODES = _known_codes(ACTIVITIES)
+KNOWN_LOT_CODES = _known_codes(LOTS)
+KNOWN_MATERIAL_CODES = _known_codes(MATERIALS)
+KNOWN_UNIT_CODES = _known_codes(UNITS)
 
 
 def validate_business_rules(
     payload: CultivationLogInput,
 ) -> dict[str, object]:
     """
-    Canonical business validation
-    cho cultivation logs.
+    Canonical business validation cho cultivation logs.
 
-    Integration Service là
-    source of truth cho business rules.
-
-    Frontend có thể validate trước
-    để cải thiện UX, nhưng backend
-    vẫn phải validate lại trước khi lưu.
-
-    Không hard-code min/max quantity
-    nếu chưa có rule nghiệp vụ được
-    xác nhận.
+    CREATE_WORK_LOG V3.1 cho phép thiếu activity/plot. Integration chỉ
+    kiểm tra membership khi canonical code thực sự được cung cấp.
     """
 
-    errors: list[
-        dict[str, object]
-    ] = []
-
-    warnings: list[
-        dict[str, object]
-    ] = []
-
-    # =========================================================
-    # NORMALIZE CANONICAL CODES
-    # =========================================================
+    errors: list[dict[str, object]] = []
+    warnings: list[dict[str, object]] = []
 
     activity_code = (
-        str(
-            payload.activity_code
-            or ""
-        )
+        str(payload.activity_code or "")
         .strip()
         .upper()
     )
 
     lot_code = (
-        str(
-            payload.lot_code
-            or ""
-        )
+        str(payload.lot_code or "")
         .strip()
         .upper()
     )
 
-
-    # =========================================================
-    # 1. ACTIVITY CODE
-    # =========================================================
-
+    # Optional theo CREATE_WORK_LOG V3.1: chỉ validate nếu có giá trị.
     if (
         activity_code
-        not in KNOWN_ACTIVITY_CODES
+        and activity_code not in KNOWN_ACTIVITY_CODES
     ):
         errors.append(
             {
-                "field":
-                    "activity_code",
-
-                "code":
-                    "UNKNOWN_ACTIVITY",
-
+                "field": "activity_code",
+                "code": "UNKNOWN_ACTIVITY",
                 "message": (
-                    f"Activity code "
-                    f"'{activity_code}' "
-                    "không tồn tại trong "
-                    "master data hiện tại."
+                    f"Activity code '{activity_code}' "
+                    "không tồn tại trong master data hiện tại."
                 ),
-
-                "requires_confirmation":
-                    False,
+                "requires_confirmation": False,
             }
         )
-
-
-    # =========================================================
-    # 2. LOT CODE
-    # =========================================================
 
     if (
         lot_code
-        not in KNOWN_LOT_CODES
+        and lot_code not in KNOWN_LOT_CODES
     ):
         errors.append(
             {
-                "field":
-                    "lot_code",
-
-                "code":
-                    "UNKNOWN_LOT",
-
+                "field": "lot_code",
+                "code": "UNKNOWN_LOT",
                 "message": (
-                    f"Lot code "
-                    f"'{lot_code}' "
-                    "không tồn tại trong "
-                    "master data hiện tại."
+                    f"Lot code '{lot_code}' "
+                    "không tồn tại trong master data hiện tại."
                 ),
-
-                "requires_confirmation":
-                    False,
+                "requires_confirmation": False,
             }
         )
 
-
-    # =========================================================
-    # 3. ACTIVITY REQUIREMENT MATRIX
-    # =========================================================
-
     requirement = (
-        get_activity_requirement(
-            activity_code
-        )
+        get_activity_requirement(activity_code)
+        if activity_code
+        else None
     )
 
     if (
         requirement is not None
-        and requirement[
-            "rule_status"
-        ]
-        == "review_confirmed"
-        and requirement[
-            "materials_required"
-        ]
-        is True
+        and requirement["rule_status"] == "review_confirmed"
+        and requirement["materials_required"] is True
         and not payload.materials
     ):
         activity_name = (
@@ -239,179 +134,77 @@ def validate_business_rules(
 
         errors.append(
             {
-                "field":
-                    "materials",
-
-                "code":
-                    (
-                        "MATERIAL_REQUIRED_"
-                        "FOR_ACTIVITY"
-                    ),
-
+                "field": "materials",
+                "code": "MATERIAL_REQUIRED_FOR_ACTIVITY",
                 "message": (
-                    f"Hoạt động "
-                    f"'{activity_name}' "
-                    "bắt buộc phải có "
-                    "ít nhất một vật tư "
-                    "theo rule catalog "
-                    "hiện tại."
+                    f"Hoạt động '{activity_name}' "
+                    "bắt buộc phải có ít nhất một vật tư "
+                    "theo rule catalog hiện tại."
                 ),
-
-                "requires_confirmation":
-                    False,
+                "requires_confirmation": False,
             }
         )
 
-
-    # =========================================================
-    # 4. MATERIALS
-    # =========================================================
-
-    for (
-        index,
-        material,
-    ) in enumerate(
-        payload.materials
-    ):
+    for index, material in enumerate(payload.materials):
         material_code = (
-            str(
-                material.material_code
-                or ""
-            )
+            str(material.material_code or "")
             .strip()
             .upper()
         )
 
         unit_code = (
-            str(
-                material.unit_code
-                or ""
-            )
+            str(material.unit_code or "")
             .strip()
             .upper()
         )
 
-
-        # -----------------------------------------------------
-        # MATERIAL CODE
-        # -----------------------------------------------------
-
-        if (
-            material_code
-            not in KNOWN_MATERIAL_CODES
-        ):
+        if material_code not in KNOWN_MATERIAL_CODES:
             errors.append(
                 {
-                    "field": (
-                        f"materials[{index}]."
-                        "material_code"
-                    ),
-
-                    "code":
-                        "UNKNOWN_MATERIAL",
-
+                    "field": f"materials[{index}].material_code",
+                    "code": "UNKNOWN_MATERIAL",
                     "message": (
-                        f"Material code "
-                        f"'{material_code}' "
-                        "không tồn tại trong "
-                        "master data hiện tại."
+                        f"Material code '{material_code}' "
+                        "không tồn tại trong master data hiện tại."
                     ),
-
-                    "requires_confirmation":
-                        False,
+                    "requires_confirmation": False,
                 }
             )
 
-
-        # -----------------------------------------------------
-        # UNIT CODE
-        # -----------------------------------------------------
-
-        if (
-            unit_code
-            not in KNOWN_UNIT_CODES
-        ):
+        if unit_code not in KNOWN_UNIT_CODES:
             errors.append(
                 {
-                    "field": (
-                        f"materials[{index}]."
-                        "unit_code"
-                    ),
-
-                    "code":
-                        "UNKNOWN_UNIT",
-
+                    "field": f"materials[{index}].unit_code",
+                    "code": "UNKNOWN_UNIT",
                     "message": (
-                        f"Unit code "
-                        f"'{unit_code}' "
-                        "không tồn tại trong "
-                        "master data hiện tại."
+                        f"Unit code '{unit_code}' "
+                        "không tồn tại trong master data hiện tại."
                     ),
-
-                    "requires_confirmation":
-                        False,
+                    "requires_confirmation": False,
                 }
             )
-
-
-    # =========================================================
-    # 5. USER CONFIRMATION
-    # =========================================================
 
     if not payload.confirmed:
         warnings.append(
             {
-                "field":
-                    "confirmed",
-
-                "code":
-                    "UNCONFIRMED_RECORD",
-
+                "field": "confirmed",
+                "code": "UNCONFIRMED_RECORD",
                 "message": (
-                    "Nhật ký chưa được "
-                    "người dùng xác nhận."
+                    "Nhật ký chưa được người dùng xác nhận."
                 ),
-
-                "requires_confirmation":
-                    True,
+                "requires_confirmation": True,
             }
         )
 
-
-    # =========================================================
-    # 6. REQUIRES CONFIRMATION
-    # =========================================================
-
-    requires_confirmation = (
-        any(
-            bool(
-                issue.get(
-                    "requires_confirmation"
-                )
-            )
-            for issue
-            in warnings
-        )
+    requires_confirmation = any(
+        bool(issue.get("requires_confirmation"))
+        for issue in warnings
     )
 
-
-    # =========================================================
-    # 7. FINAL RESULT
-    # =========================================================
-
     return {
-        "rule_version":
-            RULE_CATALOG_VERSION,
-
-        "valid":
-            len(errors) == 0,
-
-        "errors":
-            errors,
-
-        "warnings":
-            warnings,
-
-        "requires_confirmation":
-            requires_confirmation,
+        "rule_version": RULE_CATALOG_VERSION,
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+        "requires_confirmation": requires_confirmation,
     }

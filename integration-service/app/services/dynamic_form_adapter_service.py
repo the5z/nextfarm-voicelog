@@ -26,18 +26,8 @@ ResolutionCode = Literal[
 ]
 
 
-class DynamicFormCanonicalResolutionError(
-    ValueError
-):
-    """
-    Lỗi khi Integration không thể chuyển
-    human-readable text (text người đọc được)
-    thành canonical code (mã chuẩn).
-
-    Đây là lỗi của Integration resolution
-    (đối chiếu dữ liệu), không phải AI extraction
-    (trích xuất AI).
-    """
+class DynamicFormCanonicalResolutionError(ValueError):
+    """Lỗi canonical resolution (ánh xạ dữ liệu chuẩn) của Integration."""
 
     def __init__(
         self,
@@ -47,7 +37,6 @@ class DynamicFormCanonicalResolutionError(
         message: str,
     ) -> None:
         super().__init__(message)
-
         self.field = field
         self.code = code
         self.message = message
@@ -59,26 +48,15 @@ def _resolve_required_code(
     value: str | None,
     field: str,
 ) -> str:
-    """
-    Resolve text thành canonical code.
+    """Resolve text bắt buộc thành canonical code (mã chuẩn)."""
 
-    Không đọc transcript.
-    Không tự đoán.
-    Không fallback sang field khác.
-    """
-
-    normalized_value = str(
-        value or ""
-    ).strip()
+    normalized_value = str(value or "").strip()
 
     if not normalized_value:
         raise DynamicFormCanonicalResolutionError(
             field=field,
             code="MISSING_REQUIRED_FIELD",
-            message=(
-                f"Thiếu giá trị bắt buộc "
-                f"cho '{field}'."
-            ),
+            message=f"Thiếu giá trị bắt buộc cho '{field}'.",
         )
 
     result = resolve_master_data(
@@ -86,12 +64,8 @@ def _resolve_required_code(
         normalized_value,
     )
 
-    match_type = result.get(
-        "match_type"
-    )
+    match_type = result.get("match_type")
 
-    # Đơn vị mơ hồ như "xị" không được
-    # tự động chuyển sang một unit code.
     if (
         data_type == "unit"
         and match_type == "ambiguous"
@@ -100,31 +74,18 @@ def _resolve_required_code(
             field=field,
             code="AMBIGUOUS_UNIT",
             message=(
-                f"Đơn vị '{normalized_value}' "
-                "còn mơ hồ và chưa thể "
+                f"Đơn vị '{normalized_value}' còn mơ hồ và chưa thể "
                 "chuyển thành mã chuẩn."
             ),
         )
 
-    matched = bool(
-        result.get("matched")
-    )
+    matched = bool(result.get("matched"))
+    canonical_code = result.get("code")
 
-    canonical_code = result.get(
-        "code"
-    )
-
-    if (
-        not matched
-        or not canonical_code
-    ):
+    if not matched or not canonical_code:
         error_code: ResolutionCode = (
             "NAME_NOT_MATCHED"
-            if data_type
-            in {
-                "activity",
-                "lot",
-            }
+            if data_type in {"activity", "lot"}
             else "UNKNOWN_MASTER_DATA"
         )
 
@@ -132,17 +93,34 @@ def _resolve_required_code(
             field=field,
             code=error_code,
             message=(
-                f"Không thể ánh xạ "
-                f"'{normalized_value}' "
-                f"tại '{field}' "
+                f"Không thể ánh xạ '{normalized_value}' tại '{field}' "
                 "sang mã chuẩn."
             ),
         )
 
-    return (
-        str(canonical_code)
-        .strip()
-        .upper()
+    return str(canonical_code).strip().upper()
+
+
+def _resolve_optional_code(
+    *,
+    data_type: str,
+    value: str | None,
+    field: str,
+) -> str | None:
+    """
+    Resolve field optional (không bắt buộc).
+
+    Nếu không có text thì giữ None; nếu có text thì vẫn phải resolve
+    thành canonical code và không được fallback (tự lấy giá trị khác để bù).
+    """
+
+    if not str(value or "").strip():
+        return None
+
+    return _resolve_required_code(
+        data_type=data_type,
+        value=value,
+        field=field,
     )
 
 
@@ -155,18 +133,14 @@ def build_cultivation_log_input(
     confirmed: bool = False,
 ) -> CultivationLogInput:
     """
-    Chuyển CREATE_WORK_LOG Dynamic Form V3.1
-    sang CultivationLogInput canonical
-    (dữ liệu nhật ký chuẩn).
+    Chuyển CREATE_WORK_LOG Dynamic Form V3.1 sang CultivationLogInput.
 
     Boundary (ranh giới trách nhiệm):
-
     - KHÔNG parse transcript.
     - KHÔNG thực hiện NLP.
     - KHÔNG tính AI confidence.
     - KHÔNG suy diễn NextFarm context.
-    - CHỈ resolve structured *_text
-      sang canonical code.
+    - CHỈ resolve structured *_text sang canonical code.
     """
 
     fields = request.current_fields
@@ -175,76 +149,43 @@ def build_cultivation_log_input(
         raise DynamicFormCanonicalResolutionError(
             field="current_fields",
             code="MISSING_REQUIRED_FIELD",
-            message=(
-                "CREATE_WORK_LOG chưa có "
-                "current_fields."
-            ),
+            message="CREATE_WORK_LOG chưa có current_fields.",
         )
 
-    activity_code = (
-        _resolve_required_code(
-            data_type="activity",
-            value=fields.activity_text,
-            field="activity_text",
-        )
+    activity_code = _resolve_optional_code(
+        data_type="activity",
+        value=fields.activity_text,
+        field="activity_text",
     )
 
-    lot_code = (
-        _resolve_required_code(
-            data_type="lot",
-            value=fields.plot_text,
-            field="plot_text",
-        )
+    lot_code = _resolve_optional_code(
+        data_type="lot",
+        value=fields.plot_text,
+        field="plot_text",
     )
 
-    materials: list[
-        MaterialInput
-    ] = []
+    materials: list[MaterialInput] = []
 
-    for index, material in enumerate(
-        fields.materials
-    ):
-        material_field = (
-            f"materials[{index}]"
-        )
+    for index, material in enumerate(fields.materials):
+        material_field = f"materials[{index}]"
 
-        material_code = (
-            _resolve_required_code(
-                data_type="material",
-                value=material.material_text,
-                field=(
-                    f"{material_field}"
-                    ".material_text"
-                ),
-            )
+        material_code = _resolve_required_code(
+            data_type="material",
+            value=material.material_text,
+            field=f"{material_field}.material_text",
         )
 
         if material.quantity is None:
-            raise (
-                DynamicFormCanonicalResolutionError(
-                    field=(
-                        f"{material_field}"
-                        ".quantity"
-                    ),
-                    code=(
-                        "MISSING_REQUIRED_FIELD"
-                    ),
-                    message=(
-                        "Thiếu quantity tại "
-                        f"{material_field}."
-                    ),
-                )
+            raise DynamicFormCanonicalResolutionError(
+                field=f"{material_field}.quantity",
+                code="MISSING_REQUIRED_FIELD",
+                message=f"Thiếu quantity tại {material_field}.",
             )
 
-        unit_code = (
-            _resolve_required_code(
-                data_type="unit",
-                value=material.unit_text,
-                field=(
-                    f"{material_field}"
-                    ".unit_text"
-                ),
-            )
+        unit_code = _resolve_required_code(
+            data_type="unit",
+            value=material.unit_text,
+            field=f"{material_field}.unit_text",
         )
 
         materials.append(
@@ -257,22 +198,15 @@ def build_cultivation_log_input(
 
     return CultivationLogInput(
         client_record_id=client_record_id,
-
-        # Transcript chỉ được giữ để audit/history
-        # (đối chiếu/lịch sử).
-        # Adapter tuyệt đối không parse nó.
         transcript=request.transcript,
-
-        # NextFarmContext phải do caller truyền
-        # bằng canonical IDs.
-        # Không suy từ DynamicFormContext text.
+        result_status=fields.result_status,
         context=context,
-
         lot_code=lot_code,
         activity_code=activity_code,
         materials=materials,
         performed_at=performed_at,
         performer_code=None,
+        material_batch_text=fields.material_batch_text,
         notes=fields.note,
         source="voice",
         confirmed=confirmed,

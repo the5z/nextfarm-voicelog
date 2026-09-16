@@ -39,6 +39,7 @@ def serialize_log(
         "schema_version": log.schema_version,
         "client_record_id": log.client_record_id,
         "transcript": log.transcript,
+        "result_status": log.result_status,
         "context": {
             "tenant_id": log.tenant_id,
             "user_id": log.user_id,
@@ -71,6 +72,7 @@ def serialize_log(
         ],
         "performed_at": log.performed_at.isoformat(),
         "performer_code": log.performer_code,
+        "material_batch_text": log.material_batch_text,
         "notes": log.notes,
         "source": log.source,
         "confirmed": log.confirmed,
@@ -136,6 +138,7 @@ def create_log(
         schema_version=payload.schema_version,
         client_record_id=payload.client_record_id,
         transcript=payload.transcript,
+        result_status=payload.result_status,
         tenant_id=(
             payload.context.tenant_id
             if payload.context is not None
@@ -165,6 +168,7 @@ def create_log(
         activity_code=payload.activity_code,
         performed_at=payload.performed_at,
         performer_code=payload.performer_code,
+        material_batch_text=payload.material_batch_text,
         notes=payload.notes,
         source=payload.source,
         confirmed=payload.confirmed,
@@ -203,6 +207,7 @@ def create_log(
 
     return serialize_log(new_log), True
 
+
 def update_log(
     database_session: Session,
     client_record_id: str,
@@ -230,16 +235,16 @@ def update_log(
     if existing_log is None:
         return None
 
-    # =========================================================
-    # UPDATE PARENT
-    # =========================================================
-
     existing_log.schema_version = (
         payload.schema_version
     )
 
     existing_log.transcript = (
         payload.transcript
+    )
+
+    existing_log.result_status = (
+        payload.result_status
     )
 
     existing_log.tenant_id = (
@@ -284,6 +289,10 @@ def update_log(
         payload.performer_code
     )
 
+    existing_log.material_batch_text = (
+        payload.material_batch_text
+    )
+
     existing_log.notes = (
         payload.notes
     )
@@ -297,14 +306,6 @@ def update_log(
     )
 
     existing_log.status = "saved"
-
-    # =========================================================
-    # REPLACE MATERIALS
-    # =========================================================
-    #
-    # Không sửa riêng material đầu tiên.
-    # PUT gửi full materials[] nên backend thay toàn bộ child rows.
-    #
 
     database_session.execute(
         delete(
@@ -344,19 +345,6 @@ def update_log(
         database_session.rollback()
         raise
 
-    # =========================================================
-    # RELOAD UPDATED RECORD
-    # =========================================================
-    #
-    # existing_log đã load materials[] trước đó.
-    # Vì phía trên dùng bulk DELETE + INSERT nên relationship
-    # materials có thể vẫn giữ collection cũ trong SQLAlchemy
-    # Session.
-    #
-    # populate_existing=True buộc SQLAlchemy ghi đè lại
-    # object/relationship bằng dữ liệu mới nhất từ database.
-    #
-
     statement = (
         select(CultivationLogModel)
         .options(
@@ -383,6 +371,7 @@ def update_log(
     return serialize_log(
         updated_log
     )
+
 
 def get_all_logs(
     database_session: Session,
@@ -432,6 +421,7 @@ def clear_logs(
     )
 
     database_session.commit()
+
 
 def get_log_by_client_record_id(
     database_session: Session,
