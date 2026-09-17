@@ -203,6 +203,23 @@ def resolve_mapping_value(
     return mapping.get(source_code, source_code)
 
 
+def normalize_optional_code(
+    value: Any,
+) -> str | None:
+    """
+    Chuẩn hóa optional canonical code.
+
+    None phải tiếp tục là None,
+    không được biến thành chuỗi "None".
+    """
+
+    if value is None:
+        return None
+
+    normalized_value = str(value).strip()
+
+    return normalized_value or None
+
 def map_cultivation_log_to_nextfarm(
     cultivation_log: Mapping[str, Any],
     *,
@@ -219,12 +236,12 @@ def map_cultivation_log_to_nextfarm(
     hỗ trợ môi trường mock/test cho tới khi adapter thật có resolver riêng.
     """
 
-    activity_code = str(
-        cultivation_log.get("activity_code", "")
-    ).strip()
-    lot_code = str(
-        cultivation_log.get("lot_code", "")
-    ).strip()
+    activity_code = normalize_optional_code(
+        cultivation_log.get("activity_code")
+    )
+    lot_code = normalize_optional_code(
+        cultivation_log.get("lot_code")
+    )
     performer_value = cultivation_log.get("performer_code")
     performer_code = (
         str(performer_value).strip()
@@ -237,17 +254,17 @@ def map_cultivation_log_to_nextfarm(
 
     if not client_record_id:
         raise ValueError("Thiếu client_record_id")
-    if not activity_code:
-        raise ValueError("Thiếu activity_code")
-    if not lot_code:
-        raise ValueError("Thiếu lot_code")
 
     performed_at = normalize_datetime(
         cultivation_log.get("performed_at")
     )
-    activity_name = ACTIVITY_NAMES.get(
-        activity_code,
-        activity_code.replace("_", " ").title(),
+    activity_name = (
+        ACTIVITY_NAMES.get(
+            activity_code,
+            activity_code.replace("_", " ").title(),
+        )
+        if activity_code
+        else "Nhật ký canh tác"
     )
 
     context = cultivation_log.get("context")

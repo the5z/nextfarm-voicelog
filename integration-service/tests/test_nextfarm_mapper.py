@@ -181,3 +181,74 @@ def test_map_rejects_invalid_performed_at() -> None:
         map_cultivation_log_to_nextfarm(
             cultivation_log
         )
+
+
+def test_map_allows_optional_activity_and_lot_with_context() -> None:
+    """
+    CREATE_WORK_LOG V3.1 cho phép thiếu plot/activity.
+
+    Khi đã có canonical NextFarm context,
+    mapper phải dùng plot_id/task_id.
+    """
+
+    cultivation_log = build_cultivation_log()
+
+    cultivation_log["activity_code"] = None
+    cultivation_log["lot_code"] = None
+
+    result = map_cultivation_log_to_nextfarm(
+        cultivation_log
+    )
+
+    assert (
+        result["name"]
+        == "Nhật ký canh tác"
+    )
+
+    assert (
+        result["location"]
+        == "plot-201"
+    )
+
+    assert (
+        result["category_task_id"]
+        == "task-101"
+    )
+
+    assert (
+        result["location"]
+        != "None"
+    )
+
+    assert (
+        result["category_task_id"]
+        != "None"
+    )
+
+
+def test_map_optional_codes_do_not_become_string_none() -> None:
+    """
+    None không được biến thành canonical code giả "None".
+    """
+
+    cultivation_log = build_cultivation_log()
+
+    cultivation_log["context"] = None
+    cultivation_log["activity_code"] = None
+    cultivation_log["lot_code"] = None
+
+    result = map_cultivation_log_to_nextfarm(
+        cultivation_log
+    )
+
+    assert (
+        result["name"]
+        == "Nhật ký canh tác"
+    )
+
+    assert result["location"] is None
+
+    assert (
+        result["category_task_id"]
+        is None
+    )
