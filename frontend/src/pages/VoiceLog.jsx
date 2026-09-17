@@ -1,4 +1,4 @@
-﻿import {
+import {
   useEffect,
   useState,
 } from "react";
@@ -11,8 +11,9 @@ import Header from "../components/Header";
 import WorkflowStepper from "../components/WorkflowStepper";
 import RecordButton from "../components/RecordButton";
 import TranscriptBox from "../components/TranscriptBox";
-import AIForm from "../components/AIForm";
 import ActionButtons from "../components/ActionButtons";
+import OperationSelector from "../components/OperationSelector";
+import DynamicForm from "../components/DynamicForm";
 
 import { uploadAudio } from "../services/audioService";
 import {
@@ -22,6 +23,12 @@ import {
   updateCultivationLog,
 } from "../services/integrationService";
 import { TEXT } from "../constants/translations";
+import {
+  DEFAULT_OPERATION,
+} from "../constants/dynamicFormOperations";
+import {
+  createEmptyDynamicForm,
+} from "../utils/dynamicFormState";
 
 const createEmptyMaterial = () => ({
   material: "",
@@ -185,6 +192,15 @@ const DEV_WARNING_DATA = {
    * Chỉ dùng trong DEV Test Mode để kiểm tra WARNING nhẹ.
    * Không yêu cầu acknowledgement và KHÔNG phải ngưỡng nghiệp vụ.
    */
+  dynamicFormWarnings: [
+    {
+      field: null,
+      code: "DEV_GLOBAL_WARNING",
+      message:
+        "🧪 Cảnh báo Dynamic Form DEV: warning toàn form.",
+    },
+  ],
+
   simulateWarning: {
     field:
       "materials.0.quantity",
@@ -223,6 +239,26 @@ function VoiceLog({
 
   const isVietnamese =
     language === "vi";
+
+  /* ===========================
+     Dynamic Form Operation
+  =========================== */
+
+  const [
+    operation,
+    setOperation,
+  ] = useState(
+    DEFAULT_OPERATION
+  );
+
+  const [
+    dynamicForm,
+    setDynamicForm,
+  ] = useState(() =>
+    createEmptyDynamicForm(
+      DEFAULT_OPERATION
+    )
+  );
 
   /* ===========================
      Audio
@@ -1298,7 +1334,9 @@ function VoiceLog({
   =========================== */
 
   const resetVoiceLog =
-    () => {
+    (
+      targetOperation = operation
+    ) => {
       if (audioUrl) {
         URL.revokeObjectURL(
           audioUrl
@@ -1313,6 +1351,12 @@ function VoiceLog({
 
       setAiData(
         createEmptyAiData()
+      );
+
+      setDynamicForm(
+        createEmptyDynamicForm(
+          targetOperation
+        )
       );
 
       setCurrentLogId(
@@ -1346,6 +1390,24 @@ function VoiceLog({
 
       setCurrentStep(1);
     };
+
+  const handleOperationChange = (
+    nextOperation
+  ) => {
+    if (
+      !nextOperation ||
+      nextOperation === operation ||
+      isUploading ||
+      isConfirmed
+    ) {
+      return;
+    }
+
+    resetVoiceLog(
+      nextOperation
+    );
+    setOperation(nextOperation);
+  };
 
   const handleDelete =
     () => {
@@ -1424,6 +1486,20 @@ function VoiceLog({
       testData.simulateWarning ||
         null
     );
+
+    if (
+      Array.isArray(
+        testData.dynamicFormWarnings
+      )
+    ) {
+      setDynamicForm(
+        (previous) => ({
+          ...previous,
+          warnings:
+            testData.dynamicFormWarnings,
+        })
+      );
+    }
 
     clearServerValidation();
 
@@ -1523,7 +1599,12 @@ function VoiceLog({
       try {
         const data =
           await uploadAudio(
-            audioBlob
+            audioBlob,
+            {
+              operation,
+              currentFields:
+                dynamicForm.fields,
+            }
           );
 
         setTranscript(
@@ -1531,29 +1612,49 @@ function VoiceLog({
             ""
         );
 
-        const structuredData =
-          data?.structured_data || {};
+        const nextDynamicForm =
+          data?.dynamic_form;
 
-        const materials =
-          normalizeMaterials(
-            structuredData.materials
+        if (!nextDynamicForm) {
+          throw new Error(
+            "AI response is missing dynamic_form."
           );
+        }
 
-        setAiData({
-          lot:
-            structuredData.lot_text ||
-            "",
+        setDynamicForm(
+          nextDynamicForm
+        );
 
-          work:
-            structuredData.activity_text ||
-            "",
+        if (
+          operation ===
+          "CREATE_WORK_LOG"
+        ) {
+          const fields =
+            nextDynamicForm.fields || {};
 
-          materials,
+          const materials =
+            normalizeMaterials(
+              fields.materials
+            );
 
-          time:
-            structuredData.time_text ||
-            "",
-        });
+          setAiData({
+            lot:
+              fields.plot_text ||
+              "",
+
+            work:
+              fields.activity_text ||
+              "",
+
+            materials,
+
+            time:
+              fields.performed_time_text ||
+              "",
+          });
+        }
+
+        setAudioBlob(null);
 
         showMessage(
           "success",
@@ -1597,7 +1698,21 @@ function VoiceLog({
         true
       );
 
+      if (
+        operation !==
+        "CREATE_WORK_LOG"
+      ) {
+        showMessage(
+          "warning",
+          isVietnamese
+            ? "Operation này chưa có endpoint lưu tương ứng trong Integration Service. Dữ liệu Dynamic Form hiện chỉ có thể được xem và chỉnh sửa, chưa thể xác nhận/lưu."
+            : "This operation does not have a corresponding save endpoint in the Integration Service yet. The Dynamic Form can currently be reviewed and edited, but not confirmed/saved."
+        );
 
+        setCurrentStep(3);
+
+        return;
+      }
 
       const currentValidation =
         validateAiData(
@@ -2558,10 +2673,38 @@ function VoiceLog({
       ).trim()
     );
 
+  const hasDynamicFormData =
+    Object.values(
+      dynamicForm?.fields ?? {}
+    ).some((value) => {
+      if (Array.isArray(value)) {
+        return value.some(
+          (item) =>
+            item &&
+            typeof item === "object" &&
+            Object.values(item).some(
+              (nestedValue) =>
+                nestedValue !== null &&
+                nestedValue !== undefined &&
+                String(
+                  nestedValue
+                ).trim() !== ""
+            )
+        );
+      }
+
+      return (
+        value !== null &&
+        value !== undefined &&
+        String(value).trim() !== ""
+      );
+    });
+
   const hasUsableResult =
     Boolean(
       transcript.trim()
     ) ||
+    hasDynamicFormData ||
     hasManualFormData;
   return (
     <main className="workspace">
@@ -2636,6 +2779,27 @@ function VoiceLog({
             </span>
           </div>
         </section>
+
+        {/* Operation Selector */}
+
+        <OperationSelector
+          operation={
+            operation
+          }
+
+          onOperationChange={
+            handleOperationChange
+          }
+
+          language={
+            language
+          }
+
+          disabled={
+            isUploading ||
+            isConfirmed
+          }
+        />
 
         {/* DEV */}
 
@@ -2786,35 +2950,38 @@ function VoiceLog({
 
           <div className="voice-secondary-column">
             <div className="workspace-card ai-data-card">
-              <AIForm
-                aiData={
-                  aiData
+              <DynamicForm
+                operation={
+                  operation
                 }
 
-                onAiDataChange={
-                  setAiData
+                dynamicForm={
+                  dynamicForm
+                }
+
+                onFieldsChange={
+                  (nextFields) => {
+                    setDynamicForm(
+                      (previous) => ({
+                        ...previous,
+                        fields:
+                          nextFields,
+                      })
+                    );
+                  }
                 }
 
                 isConfirmed={
                   isConfirmed
                 }
 
-                text={t}
-
-                language={
-                  language
-                }
-
-                validation={
-                  validation
-                }
 
                 showValidation={
                   hasAttemptedSubmit
                 }
 
-                highlightedField={
-                  highlightedField
+                language={
+                  language
                 }
               />
 

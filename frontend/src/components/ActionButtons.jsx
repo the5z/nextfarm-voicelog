@@ -236,6 +236,31 @@ function ActionButtons({
 
   return (
     <div className="action-buttons">
+      {hasAudio && (
+        <button
+          type="button"
+          className="btn-upload"
+          onClick={onUpload}
+          disabled={isUploading}
+        >
+          <span>
+            {isUploading
+              ? "⏳"
+              : "⬆"}
+          </span>
+
+          <span>
+            {isUploading
+              ? isVietnamese
+                ? "AI đang xử lý..."
+                : "AI is processing..."
+              : isVietnamese
+                ? "Gửi AI"
+                : "Send to AI"}
+          </span>
+        </button>
+      )}
+
       <button
         type="button"
         className="btn-retry"
