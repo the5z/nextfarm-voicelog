@@ -155,7 +155,7 @@ def validate_business_rules(
 
     if (
         activity_code
-        not in KNOWN_ACTIVITY_CODES
+        and activity_code not in KNOWN_ACTIVITY_CODES
     ):
         errors.append(
             {
@@ -184,7 +184,7 @@ def validate_business_rules(
 
     if (
         lot_code
-        not in KNOWN_LOT_CODES
+        and lot_code not in KNOWN_LOT_CODES
     ):
         errors.append(
             {
@@ -215,6 +215,8 @@ def validate_business_rules(
         get_activity_requirement(
             activity_code
         )
+        if activity_code
+        else None
     )
 
     if (

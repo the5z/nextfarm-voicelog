@@ -146,6 +146,22 @@ def _resolve_required_code(
     )
 
 
+def _resolve_optional_code(
+    *,
+    data_type: str,
+    value: str | None,
+    field: str,
+) -> str | None:
+    if not str(value or "").strip():
+        return None
+
+    return _resolve_required_code(
+        data_type=data_type,
+        value=value,
+        field=field,
+    )
+
+
 def build_cultivation_log_input(
     request: DynamicCreateWorkLogRequest,
     *,
@@ -182,7 +198,7 @@ def build_cultivation_log_input(
         )
 
     activity_code = (
-        _resolve_required_code(
+        _resolve_optional_code(
             data_type="activity",
             value=fields.activity_text,
             field="activity_text",
@@ -190,7 +206,7 @@ def build_cultivation_log_input(
     )
 
     lot_code = (
-        _resolve_required_code(
+        _resolve_optional_code(
             data_type="lot",
             value=fields.plot_text,
             field="plot_text",
@@ -263,6 +279,8 @@ def build_cultivation_log_input(
         # Adapter tuyệt đối không parse nó.
         transcript=request.transcript,
 
+        result_status=fields.result_status,
+
         # NextFarmContext phải do caller truyền
         # bằng canonical IDs.
         # Không suy từ DynamicFormContext text.
@@ -273,6 +291,7 @@ def build_cultivation_log_input(
         materials=materials,
         performed_at=performed_at,
         performer_code=None,
+        material_batch_text=fields.material_batch_text,
         notes=fields.note,
         source="voice",
         confirmed=confirmed,

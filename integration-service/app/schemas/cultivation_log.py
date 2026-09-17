@@ -11,6 +11,13 @@ from pydantic import (
 )
 
 
+WorkLogResultStatus = Literal[
+    "completed",
+    "partial",
+    "failed",
+]
+
+
 class MaterialInput(BaseModel):
     material_code: str = Field(
         min_length=1,
@@ -71,16 +78,20 @@ class CultivationLogInput(BaseModel):
 
     transcript: str | None = None
 
+    result_status: WorkLogResultStatus | None = None
+
     # Context NextFarm được lưu riêng, không suy diễn từ lot/activity.
     # Optional để không phá các record cũ; live submit sẽ yêu cầu đầy đủ.
     context: NextFarmContext | None = None
 
-    lot_code: str = Field(
+    lot_code: str | None = Field(
+        default=None,
         min_length=1,
         max_length=50,
     )
 
-    activity_code: str = Field(
+    activity_code: str | None = Field(
+        default=None,
         min_length=1,
         max_length=50,
     )
@@ -94,6 +105,8 @@ class CultivationLogInput(BaseModel):
     performed_at: datetime
 
     performer_code: str | None = None
+
+    material_batch_text: str | None = None
 
     notes: str | None = None
 
