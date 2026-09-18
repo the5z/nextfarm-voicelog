@@ -11,7 +11,9 @@ from app.database import get_db
 from app.main import app
 from app.models.base import Base
 from app.services.log_service import clear_logs
-
+from app.services.issue_report_service import (
+    clear_issue_reports,
+)
 
 TEST_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
@@ -59,17 +61,25 @@ app.dependency_overrides[get_db] = override_get_db
 def reset_test_database() -> Generator[None, None, None]:
     """
     Tự động xóa dữ liệu trước và sau mỗi bài test.
-
-    Fixture này thay thế hoàn toàn setup_function() cũ.
     """
 
     with TestingSessionLocal() as database_session:
-        clear_logs(database_session)
+        clear_issue_reports(
+            database_session
+        )
+        clear_logs(
+            database_session
+        )
 
     yield
 
     with TestingSessionLocal() as database_session:
-        clear_logs(database_session)
+        clear_issue_reports(
+            database_session
+        )
+        clear_logs(
+            database_session
+        )
 
 
 @pytest.fixture
