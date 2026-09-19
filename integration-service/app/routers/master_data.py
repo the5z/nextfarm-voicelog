@@ -1,4 +1,8 @@
-from fastapi import APIRouter
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    status,
+)
 
 from app.data.master_data import (
     ACTIVITIES,
@@ -13,13 +17,22 @@ from app.schemas.master_data import (
     ResolveMasterDataRequest,
     ResolveMasterDataResponse,
 )
+from app.schemas.season_master_data import (
+    ResolveSeasonRequest,
+    ResolveSeasonResponse,
+    SeasonMasterDataItem,
+)
 from app.services.master_data_service import (
     resolve_cultivation_master_data,
 )
 from app.services.normalization_service import (
     resolve_master_data,
 )
-
+from app.services.season_master_data_service import (
+    SeasonMasterDataConfigurationError,
+    load_season_master_data,
+    resolve_season_text,
+)
 
 router = APIRouter(
     prefix="/api/master-data",
@@ -69,6 +82,60 @@ def get_lots() -> list[MasterDataItem]:
 def get_materials() -> list[MasterDataItem]:
     return _build_items(MATERIALS)
 
+
+@router.get(
+    "/seasons",
+    response_model=list[
+        SeasonMasterDataItem
+    ],
+)
+def get_seasons(
+) -> list[SeasonMasterDataItem]:
+    try:
+        return load_season_master_data()
+
+    except (
+        SeasonMasterDataConfigurationError
+    ) as error:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_503_SERVICE_UNAVAILABLE
+            ),
+            detail={
+                "code": (
+                    "SEASON_MASTER_DATA_UNAVAILABLE"
+                ),
+                "message": str(error),
+            },
+        ) from error
+
+
+@router.post(
+    "/resolve-season",
+    response_model=ResolveSeasonResponse,
+)
+def resolve_season_endpoint(
+    request: ResolveSeasonRequest,
+) -> ResolveSeasonResponse:
+    try:
+        return resolve_season_text(
+            request.text
+        )
+
+    except (
+        SeasonMasterDataConfigurationError
+    ) as error:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_503_SERVICE_UNAVAILABLE
+            ),
+            detail={
+                "code": (
+                    "SEASON_MASTER_DATA_UNAVAILABLE"
+                ),
+                "message": str(error),
+            },
+        ) from error
 
 @router.post(
     "/resolve",

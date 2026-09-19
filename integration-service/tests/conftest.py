@@ -14,7 +14,9 @@ from app.services.log_service import clear_logs
 from app.services.issue_report_service import (
     clear_issue_reports,
 )
-
+from app.services.task_service import (
+    clear_tasks,
+)
 TEST_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 
@@ -64,6 +66,9 @@ def reset_test_database() -> Generator[None, None, None]:
     """
 
     with TestingSessionLocal() as database_session:
+        clear_tasks(
+            database_session
+        )
         clear_issue_reports(
             database_session
         )
@@ -74,6 +79,9 @@ def reset_test_database() -> Generator[None, None, None]:
     yield
 
     with TestingSessionLocal() as database_session:
+        clear_tasks(
+            database_session
+        )
         clear_issue_reports(
             database_session
         )
