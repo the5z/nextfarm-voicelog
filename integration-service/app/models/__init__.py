@@ -2,6 +2,7 @@ from app.models.cultivation_log import (
     CultivationLogMaterialModel,
     CultivationLogModel,
 )
+from app.models.harvest import HarvestModel
 from app.models.integration_history import (
     IntegrationHistoryModel,
 )
@@ -13,6 +14,7 @@ from app.models.task import TaskModel
 __all__ = [
     "CultivationLogModel",
     "CultivationLogMaterialModel",
+    "HarvestModel",
     "IntegrationHistoryModel",
     "IssueReportModel",
     "TaskModel",

@@ -17,6 +17,9 @@ from app.services.issue_report_service import (
 from app.services.task_service import (
     clear_tasks,
 )
+from app.services.harvest_service import (
+    clear_harvests,
+)
 TEST_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 
@@ -73,6 +76,9 @@ def reset_test_database() -> Generator[None, None, None]:
             database_session
         )
         clear_logs(
+            database_session
+        )
+        clear_harvests(
             database_session
         )
 
