@@ -12,6 +12,7 @@ from app.models.issue_report import (
 from app.models.task import TaskModel
 from app.models.season import SeasonModel
 from app.models.crop_type import CropTypeModel
+from app.models.plot import PlotModel
 __all__ = [
     "CultivationLogModel",
     "CultivationLogMaterialModel",
@@ -21,4 +22,5 @@ __all__ = [
     "TaskModel",
     "SeasonModel",
     "CropTypeModel",
+    "PlotModel",
 ]

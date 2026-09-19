@@ -31,6 +31,9 @@ from app.routers.seasons import (
 from app.routers.crop_types import (
     router as crop_types_router,
 )
+from app.routers.plots import (
+    router as plots_router,
+)
 app = FastAPI(
     title="NextFarm VoiceLog Integration Service",
     description=(
@@ -84,3 +87,4 @@ app.include_router(tasks_router)
 app.include_router(harvests_router)
 app.include_router(seasons_router)
 app.include_router(crop_types_router)
+app.include_router(plots_router)

@@ -97,7 +97,8 @@ def save_issue_report(
     try:
         canonical_payload = (
             build_issue_report_input(
-                payload
+                payload,
+                database_session,
             )
         )
 
@@ -302,7 +303,8 @@ def update_saved_issue_report(
     try:
         canonical_payload = (
             build_issue_report_input(
-                payload
+                payload,
+                database_session,
             )
         )
 

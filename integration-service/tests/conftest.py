@@ -26,6 +26,9 @@ from app.services.season_service import (
 from app.services.crop_type_service import (
     clear_crop_types,
 )
+from app.services.plot_service import (
+    clear_plots,
+)
 TEST_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 
@@ -91,6 +94,9 @@ def reset_test_database() -> Generator[None, None, None]:
             database_session
         )
         clear_crop_types(
+            database_session
+        )
+        clear_plots(
             database_session
         )
 

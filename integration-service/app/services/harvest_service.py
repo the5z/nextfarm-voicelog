@@ -19,7 +19,9 @@ from app.services.crop_master_data_service import (
 from app.services.normalization_service import (
     resolve_master_data,
 )
-
+from app.services.plot_master_data_service import (
+    resolve_plot_text,
+)
 
 HarvestValidationCode = Literal[
     "UNKNOWN_PLOT",
@@ -54,11 +56,18 @@ def _resolve_standard_code(
     text: str,
     field: str,
     error_code: HarvestValidationCode,
+    database_session: Session | None = None,
 ) -> str:
-    result = resolve_master_data(
-        data_type,
-        text,
-    )
+    if data_type == "lot":
+        result = resolve_plot_text(
+            text,
+            database_session,
+        )
+    else:
+        result = resolve_master_data(
+            data_type,
+            text,
+        )
 
     code = result.get(
         "code"
@@ -104,6 +113,7 @@ def build_harvest_input(
         text=request.plot_text,
         field="plot_text",
         error_code="UNKNOWN_PLOT",
+        database_session=database_session,
     )
 
     crop_result = resolve_crop_text(

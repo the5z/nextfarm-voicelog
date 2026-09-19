@@ -12,7 +12,11 @@ from app.data.master_data import (
 from app.schemas.cultivation_log import (
     CultivationLogInput,
 )
+from sqlalchemy.orm import Session
 
+from app.services.plot_master_data_service import (
+    load_plot_master_data,
+)
 
 def _known_codes(
     records: list[MasterDataRecord],
@@ -101,6 +105,7 @@ KNOWN_UNIT_CODES = (
 
 def validate_business_rules(
     payload: CultivationLogInput,
+    database_session: Session | None = None,
 ) -> dict[str, object]:
     """
     Canonical business validation
@@ -148,6 +153,14 @@ def validate_business_rules(
         .upper()
     )
 
+    known_lot_codes = {
+        str(item["code"])
+        .strip()
+        .upper()
+        for item in load_plot_master_data(
+            database_session
+        )
+    }
 
     # =========================================================
     # 1. ACTIVITY CODE
@@ -184,7 +197,7 @@ def validate_business_rules(
 
     if (
         lot_code
-        and lot_code not in KNOWN_LOT_CODES
+        and lot_code not in known_lot_codes
     ):
         errors.append(
             {

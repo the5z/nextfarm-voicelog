@@ -16,7 +16,11 @@ from app.schemas.nextfarm import (
 from app.services.normalization_service import (
     resolve_master_data,
 )
+from sqlalchemy.orm import Session
 
+from app.services.plot_master_data_service import (
+    resolve_plot_text,
+)
 
 ResolutionCode = Literal[
     "MISSING_REQUIRED_FIELD",
@@ -58,15 +62,8 @@ def _resolve_required_code(
     data_type: str,
     value: str | None,
     field: str,
+    database_session: Session | None = None,
 ) -> str:
-    """
-    Resolve text thành canonical code.
-
-    Không đọc transcript.
-    Không tự đoán.
-    Không fallback sang field khác.
-    """
-
     normalized_value = str(
         value or ""
     ).strip()
@@ -81,17 +78,21 @@ def _resolve_required_code(
             ),
         )
 
-    result = resolve_master_data(
-        data_type,
-        normalized_value,
-    )
+    if data_type == "lot":
+        result = resolve_plot_text(
+            normalized_value,
+            database_session,
+        )
+    else:
+        result = resolve_master_data(
+            data_type,
+            normalized_value,
+        )
 
     match_type = result.get(
         "match_type"
     )
 
-    # Đơn vị mơ hồ như "xị" không được
-    # tự động chuyển sang một unit code.
     if (
         data_type == "unit"
         and match_type == "ambiguous"
@@ -145,12 +146,12 @@ def _resolve_required_code(
         .upper()
     )
 
-
 def _resolve_optional_code(
     *,
     data_type: str,
     value: str | None,
     field: str,
+    database_session: Session | None = None,
 ) -> str | None:
     if not str(value or "").strip():
         return None
@@ -159,8 +160,8 @@ def _resolve_optional_code(
         data_type=data_type,
         value=value,
         field=field,
+        database_session=database_session,
     )
-
 
 def build_cultivation_log_input(
     request: DynamicCreateWorkLogRequest,
@@ -169,6 +170,7 @@ def build_cultivation_log_input(
     performed_at: datetime,
     context: NextFarmContext | None = None,
     confirmed: bool = False,
+    database_session: Session | None = None,
 ) -> CultivationLogInput:
     """
     Chuyển CREATE_WORK_LOG Dynamic Form V3.1
@@ -210,6 +212,7 @@ def build_cultivation_log_input(
             data_type="lot",
             value=fields.plot_text,
             field="plot_text",
+            database_session=database_session,
         )
     )
 

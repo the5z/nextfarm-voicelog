@@ -9,7 +9,11 @@ from app.services.normalization_service import (
     normalize_text,
     resolve_master_data,
 )
+from sqlalchemy.orm import Session
 
+from app.services.plot_master_data_service import (
+    resolve_plot_text,
+)
 
 def _missing_resolution(
     field_name: str,
@@ -31,14 +35,23 @@ def _resolve_optional(
     data_type: MasterDataType,
     text: str | None,
     field_name: str,
+    database_session: Session | None = None,
 ) -> ResolveMasterDataResponse:
     if text is None or not normalize_text(text):
-        return _missing_resolution(field_name)
+        return _missing_resolution(
+            field_name
+        )
 
-    result = resolve_master_data(
-        data_type=data_type,
-        text=text,
-    )
+    if data_type == "lot":
+        result = resolve_plot_text(
+            text,
+            database_session,
+        )
+    else:
+        result = resolve_master_data(
+            data_type=data_type,
+            text=text,
+        )
 
     return ResolveMasterDataResponse.model_validate(
         result
@@ -47,6 +60,7 @@ def _resolve_optional(
 
 def resolve_cultivation_master_data(
     request: ResolveCultivationRequest,
+    database_session: Session | None = None,
 ) -> ResolveCultivationResponse:
     activity = _resolve_optional(
         data_type="activity",
@@ -58,6 +72,7 @@ def resolve_cultivation_master_data(
         data_type="lot",
         text=request.lot_text,
         field_name="lot_text",
+        database_session=database_session,
     )
 
     materials: list[

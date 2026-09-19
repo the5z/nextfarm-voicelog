@@ -65,6 +65,9 @@ def test_cultivation_logs_router() -> dict[str, str]:
 )
 def validate_cultivation_log(
     payload: CultivationLogInput,
+    database_session: Session = Depends(
+        get_db
+    ),
 ) -> ValidationResponse:
     """
     Canonical validation endpoint.
@@ -88,9 +91,9 @@ def validate_cultivation_log(
     """
 
     result = validate_business_rules(
-        payload
+        payload,
+        database_session,
     )
-
     return ValidationResponse(
         valid=bool(
             result["valid"]
@@ -153,7 +156,8 @@ def save_cultivation_log(
 
     validation = (
         validate_business_rules(
-            payload
+            payload,
+            database_session,
         )
     )
 
@@ -388,6 +392,7 @@ def save_dynamic_work_log(
                 ),
                 context=payload.context,
                 confirmed=payload.confirmed,
+                database_session=database_session,
             )
         )
 
@@ -609,7 +614,8 @@ def update_cultivation_log(
 
     validation = (
         validate_business_rules(
-            payload
+            payload,
+            database_session,
         )
     )
 

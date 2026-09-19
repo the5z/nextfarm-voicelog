@@ -16,7 +16,9 @@ from app.schemas.issue_report import (
 from app.services.normalization_service import (
     resolve_master_data,
 )
-
+from app.services.plot_master_data_service import (
+    resolve_plot_text,
+)
 
 IssueReportValidationCode = Literal[
     "UNKNOWN_PLOT",
@@ -67,23 +69,16 @@ class IssueReportValidationError(
 
 def resolve_plot_code(
     plot_text: str,
+    database_session: Session | None = None,
 ) -> str:
-    """
-    Chuyển plot_text thành canonical
-    plot/lot code bằng master data hiện có.
-
-    Không suy diễn.
-    Không fallback sang giá trị khác.
-    """
-
     normalized_text = (
         str(plot_text or "")
         .strip()
     )
 
-    result = resolve_master_data(
-        "lot",
+    result = resolve_plot_text(
         normalized_text,
+        database_session,
     )
 
     matched = bool(
@@ -117,6 +112,7 @@ def resolve_plot_code(
 
 def build_issue_report_input(
     request: IssueReportCreateRequest,
+    database_session: Session | None = None,
 ) -> IssueReportInput:
     """
     Chuyển structured CREATE_ISSUE_REPORT
@@ -159,7 +155,8 @@ def build_issue_report_input(
         )
 
     plot_code = resolve_plot_code(
-        request.plot_text
+        request.plot_text,
+        database_session,
     )
 
     return IssueReportInput(
