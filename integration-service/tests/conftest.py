@@ -23,6 +23,9 @@ from app.services.harvest_service import (
 from app.services.season_service import (
     clear_seasons,
 )
+from app.services.crop_type_service import (
+    clear_crop_types,
+)
 TEST_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 
@@ -85,6 +88,9 @@ def reset_test_database() -> Generator[None, None, None]:
             database_session
         )
         clear_seasons(
+            database_session
+        )
+        clear_crop_types(
             database_session
         )
 

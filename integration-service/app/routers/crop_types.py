@@ -7,22 +7,22 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas.harvest import (
-    HarvestCreateRequest,
-    HarvestGetResponse,
-    HarvestListResponse,
-    HarvestSaveResponse,
+from app.schemas.crop_type import (
+    CropTypeCreateRequest,
+    CropTypeGetResponse,
+    CropTypeListResponse,
+    CropTypeSaveResponse,
 )
 from app.services.crop_master_data_service import (
     CropMasterDataConfigurationError,
 )
-from app.services.harvest_service import (
-    HarvestValidationError,
-    build_harvest_input,
-    create_harvest,
-    get_all_harvests,
-    get_harvest_by_client_record_id,
-    update_harvest,
+from app.services.crop_type_service import (
+    CropTypeValidationError,
+    build_crop_type_input,
+    create_crop_type,
+    get_all_crop_types,
+    get_crop_type_by_client_record_id,
+    update_crop_type,
 )
 from app.services.history_service import (
     create_history,
@@ -30,18 +30,18 @@ from app.services.history_service import (
 
 
 router = APIRouter(
-    prefix="/api/harvests",
-    tags=["Harvests"],
+    prefix="/api/crop-types",
+    tags=["Crop Types"],
 )
 
 
 @router.get("/test")
-def test_harvests_router(
+def test_crop_types_router(
 ) -> dict[str, str]:
     return {
         "status": "ok",
         "message": (
-            "Harvests router is working"
+            "Crop types router is working"
         ),
     }
 
@@ -68,98 +68,91 @@ def _write_failed_history(
     )
 
 
-def _build_canonical_payload(
+def _raise_validation_error(
     *,
-    payload: HarvestCreateRequest,
+    error: CropTypeValidationError,
+    payload: CropTypeCreateRequest,
     database_session: Session,
     event_type: str,
-):
-    request_payload = (
-        payload.model_dump(
-            mode="json"
-        )
+) -> None:
+    detail = {
+        "code": (
+            "CROP_TYPE_VALIDATION_FAILED"
+        ),
+        "field": error.field,
+        "reason_code": error.code,
+        "message": error.message,
+    }
+
+    _write_failed_history(
+        database_session=database_session,
+        event_type=event_type,
+        client_record_id=(
+            payload.client_record_id
+        ),
+        request_payload=(
+            payload.model_dump(
+                mode="json"
+            )
+        ),
+        detail=detail,
+        http_status=400,
     )
 
-    try:
-        return build_harvest_input(
-            payload,
-            database_session,
-        )
+    raise HTTPException(
+        status_code=400,
+        detail=detail,
+    ) from error
 
-    except (
-        CropMasterDataConfigurationError
-    ) as error:
-        detail = {
-            "code": (
-                "CROP_MASTER_DATA_UNAVAILABLE"
-            ),
-            "message": str(error),
-        }
 
-        _write_failed_history(
-            database_session=(
-                database_session
-            ),
-            event_type=event_type,
-            client_record_id=(
-                payload.client_record_id
-            ),
-            request_payload=(
-                request_payload
-            ),
-            detail=detail,
-            http_status=(
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ),
-        )
+def _raise_master_data_error(
+    *,
+    error: CropMasterDataConfigurationError,
+    payload: CropTypeCreateRequest,
+    database_session: Session,
+    event_type: str,
+) -> None:
+    detail = {
+        "code": (
+            "CROP_MASTER_DATA_UNAVAILABLE"
+        ),
+        "message": str(error),
+    }
 
-        raise HTTPException(
-            status_code=503,
-            detail=detail,
-        ) from error
+    _write_failed_history(
+        database_session=database_session,
+        event_type=event_type,
+        client_record_id=(
+            payload.client_record_id
+        ),
+        request_payload=(
+            payload.model_dump(
+                mode="json"
+            )
+        ),
+        detail=detail,
+        http_status=503,
+    )
 
-    except HarvestValidationError as error:
-        detail = {
-            "code": (
-                "HARVEST_VALIDATION_FAILED"
-            ),
-            "field": error.field,
-            "reason_code": error.code,
-            "message": error.message,
-        }
-
-        _write_failed_history(
-            database_session=(
-                database_session
-            ),
-            event_type=event_type,
-            client_record_id=(
-                payload.client_record_id
-            ),
-            request_payload=(
-                request_payload
-            ),
-            detail=detail,
-            http_status=400,
-        )
-
-        raise HTTPException(
-            status_code=400,
-            detail=detail,
-        ) from error
+    raise HTTPException(
+        status_code=503,
+        detail=detail,
+    ) from error
 
 
 @router.post(
     "",
-    status_code=status.HTTP_201_CREATED,
-    response_model=HarvestSaveResponse,
+    status_code=(
+        status.HTTP_201_CREATED
+    ),
+    response_model=CropTypeSaveResponse,
 )
-def save_harvest(
-    payload: HarvestCreateRequest,
+def save_crop_type(
+    payload: CropTypeCreateRequest,
     database_session: Session = Depends(
         get_db
     ),
-) -> HarvestSaveResponse:
+) -> CropTypeSaveResponse:
     request_payload = (
         payload.model_dump(
             mode="json"
@@ -170,22 +163,18 @@ def save_harvest(
         detail = {
             "code": "UNCONFIRMED_RECORD",
             "message": (
-                "Bản ghi thu hoạch chưa "
-                "được người dùng xác nhận."
+                "Loại cây trồng chưa được "
+                "người dùng xác nhận."
             ),
         }
 
         _write_failed_history(
-            database_session=(
-                database_session
-            ),
-            event_type="save_harvest",
+            database_session=database_session,
+            event_type="save_crop_type",
             client_record_id=(
                 payload.client_record_id
             ),
-            request_payload=(
-                request_payload
-            ),
+            request_payload=request_payload,
             detail=detail,
             http_status=400,
         )
@@ -196,21 +185,42 @@ def save_harvest(
         )
 
     canonical_payload = (
-        _build_canonical_payload(
+        build_crop_type_input(
+            payload
+        )
+    )
+
+    try:
+        record, created = (
+            create_crop_type(
+                database_session,
+                canonical_payload,
+            )
+        )
+
+    except (
+        CropMasterDataConfigurationError
+    ) as error:
+        _raise_master_data_error(
+            error=error,
             payload=payload,
             database_session=(
                 database_session
             ),
-            event_type="save_harvest",
+            event_type="save_crop_type",
         )
-    )
 
-    record, created = create_harvest(
-        database_session,
-        canonical_payload,
-    )
+    except CropTypeValidationError as error:
+        _raise_validation_error(
+            error=error,
+            payload=payload,
+            database_session=(
+                database_session
+            ),
+            event_type="save_crop_type",
+        )
 
-    response = HarvestSaveResponse(
+    response = CropTypeSaveResponse(
         success=True,
         status=(
             "saved"
@@ -222,7 +232,7 @@ def save_harvest(
 
     create_history(
         database_session=database_session,
-        event_type="save_harvest",
+        event_type="save_crop_type",
         client_record_id=(
             payload.client_record_id
         ),
@@ -241,15 +251,15 @@ def save_harvest(
 
 @router.put(
     "/{client_record_id}",
-    response_model=HarvestSaveResponse,
+    response_model=CropTypeSaveResponse,
 )
-def update_saved_harvest(
+def update_saved_crop_type(
     client_record_id: str,
-    payload: HarvestCreateRequest,
+    payload: CropTypeCreateRequest,
     database_session: Session = Depends(
         get_db
     ),
-) -> HarvestSaveResponse:
+) -> CropTypeSaveResponse:
     request_payload = (
         payload.model_dump(
             mode="json"
@@ -261,9 +271,8 @@ def update_saved_harvest(
         != payload.client_record_id
     ):
         detail = {
-            "code": (
-                "CLIENT_RECORD_ID_MISMATCH"
-            ),
+            "code":
+                "CLIENT_RECORD_ID_MISMATCH",
             "message": (
                 "client_record_id trong URL "
                 "không khớp với payload."
@@ -271,16 +280,12 @@ def update_saved_harvest(
         }
 
         _write_failed_history(
-            database_session=(
-                database_session
-            ),
-            event_type="update_harvest",
+            database_session=database_session,
+            event_type="update_crop_type",
             client_record_id=(
                 client_record_id
             ),
-            request_payload=(
-                request_payload
-            ),
+            request_payload=request_payload,
             detail=detail,
             http_status=400,
         )
@@ -291,7 +296,7 @@ def update_saved_harvest(
         )
 
     existing = (
-        get_harvest_by_client_record_id(
+        get_crop_type_by_client_record_id(
             database_session,
             client_record_id,
         )
@@ -299,24 +304,20 @@ def update_saved_harvest(
 
     if existing is None:
         detail = {
-            "code": "HARVEST_NOT_FOUND",
+            "code": "CROP_TYPE_NOT_FOUND",
             "message": (
                 "Không tìm thấy "
-                "bản ghi thu hoạch."
+                "loại cây trồng."
             ),
         }
 
         _write_failed_history(
-            database_session=(
-                database_session
-            ),
-            event_type="update_harvest",
+            database_session=database_session,
+            event_type="update_crop_type",
             client_record_id=(
                 client_record_id
             ),
-            request_payload=(
-                request_payload
-            ),
+            request_payload=request_payload,
             detail=detail,
             http_status=404,
         )
@@ -330,22 +331,18 @@ def update_saved_harvest(
         detail = {
             "code": "UNCONFIRMED_RECORD",
             "message": (
-                "Bản ghi thu hoạch chưa "
-                "được người dùng xác nhận."
+                "Loại cây trồng chưa được "
+                "người dùng xác nhận."
             ),
         }
 
         _write_failed_history(
-            database_session=(
-                database_session
-            ),
-            event_type="update_harvest",
+            database_session=database_session,
+            event_type="update_crop_type",
             client_record_id=(
                 client_record_id
             ),
-            request_payload=(
-                request_payload
-            ),
+            request_payload=request_payload,
             detail=detail,
             http_status=400,
         )
@@ -356,35 +353,54 @@ def update_saved_harvest(
         )
 
     canonical_payload = (
-        _build_canonical_payload(
+        build_crop_type_input(
+            payload
+        )
+    )
+
+    try:
+        record = update_crop_type(
+            database_session,
+            client_record_id,
+            canonical_payload,
+        )
+
+    except (
+        CropMasterDataConfigurationError
+    ) as error:
+        _raise_master_data_error(
+            error=error,
             payload=payload,
             database_session=(
                 database_session
             ),
-            event_type="update_harvest",
+            event_type="update_crop_type",
         )
-    )
 
-    record = update_harvest(
-        database_session,
-        client_record_id,
-        canonical_payload,
-    )
+    except CropTypeValidationError as error:
+        _raise_validation_error(
+            error=error,
+            payload=payload,
+            database_session=(
+                database_session
+            ),
+            event_type="update_crop_type",
+        )
 
     if record is None:
         raise HTTPException(
             status_code=404,
             detail={
                 "code":
-                    "HARVEST_NOT_FOUND",
+                    "CROP_TYPE_NOT_FOUND",
                 "message": (
                     "Không tìm thấy "
-                    "bản ghi thu hoạch."
+                    "loại cây trồng."
                 ),
             },
         )
 
-    response = HarvestSaveResponse(
+    response = CropTypeSaveResponse(
         success=True,
         status="updated",
         data=record,
@@ -392,7 +408,7 @@ def update_saved_harvest(
 
     create_history(
         database_session=database_session,
-        event_type="update_harvest",
+        event_type="update_crop_type",
         client_record_id=(
             client_record_id
         ),
@@ -411,16 +427,16 @@ def update_saved_harvest(
 
 @router.get(
     "",
-    response_model=HarvestListResponse,
+    response_model=CropTypeListResponse,
 )
-def list_harvests(
+def list_crop_types(
     database_session: Session = Depends(
         get_db
     ),
-) -> HarvestListResponse:
-    return HarvestListResponse(
+) -> CropTypeListResponse:
+    return CropTypeListResponse(
         success=True,
-        data=get_all_harvests(
+        data=get_all_crop_types(
             database_session
         ),
     )
@@ -428,16 +444,16 @@ def list_harvests(
 
 @router.get(
     "/{client_record_id}",
-    response_model=HarvestGetResponse,
+    response_model=CropTypeGetResponse,
 )
-def get_harvest(
+def get_crop_type(
     client_record_id: str,
     database_session: Session = Depends(
         get_db
     ),
-) -> HarvestGetResponse:
+) -> CropTypeGetResponse:
     record = (
-        get_harvest_by_client_record_id(
+        get_crop_type_by_client_record_id(
             database_session,
             client_record_id,
         )
@@ -448,15 +464,15 @@ def get_harvest(
             status_code=404,
             detail={
                 "code":
-                    "HARVEST_NOT_FOUND",
+                    "CROP_TYPE_NOT_FOUND",
                 "message": (
                     "Không tìm thấy "
-                    "bản ghi thu hoạch."
+                    "loại cây trồng."
                 ),
             },
         )
 
-    return HarvestGetResponse(
+    return CropTypeGetResponse(
         success=True,
         data=record,
     )

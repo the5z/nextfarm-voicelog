@@ -90,6 +90,7 @@ def _resolve_standard_code(
 
 def build_season_input(
     request: SeasonCreateRequest,
+    database_session: Session | None = None,
 ) -> SeasonInput:
     plot_code = _resolve_standard_code(
         data_type="lot",
@@ -99,7 +100,8 @@ def build_season_input(
     )
 
     crop_result = resolve_crop_text(
-        request.crop_text
+        request.crop_text,
+        database_session,
     )
 
     if (

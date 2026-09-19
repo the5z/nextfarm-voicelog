@@ -101,9 +101,14 @@ def get_materials() -> list[MasterDataItem]:
     ],
 )
 def get_crops(
+    database_session: Session = Depends(
+        get_db
+    ),
 ) -> list[CropMasterDataItem]:
     try:
-        return load_crop_master_data()
+        return load_crop_master_data(
+            database_session
+        )
 
     except (
         CropMasterDataConfigurationError
@@ -127,10 +132,14 @@ def get_crops(
 )
 def resolve_crop_endpoint(
     request: ResolveCropRequest,
+    database_session: Session = Depends(
+        get_db
+    ),
 ) -> ResolveCropResponse:
     try:
         return resolve_crop_text(
-            request.text
+            request.text,
+            database_session,
         )
 
     except (

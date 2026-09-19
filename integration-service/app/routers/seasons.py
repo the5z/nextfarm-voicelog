@@ -109,7 +109,8 @@ def _build_canonical_payload(
 ):
     try:
         return build_season_input(
-            payload
+            payload,
+            database_session,
         )
 
     except (

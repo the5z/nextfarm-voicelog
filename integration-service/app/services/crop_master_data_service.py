@@ -4,7 +4,12 @@ import json
 import os
 
 from pydantic import ValidationError
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from app.models.crop_type import (
+    CropTypeModel,
+)
 from app.schemas.crop_master_data import (
     CropMasterDataItem,
     ResolveCropResponse,
@@ -25,79 +30,12 @@ FUZZY_MATCH_THRESHOLD = 0.82
 class CropMasterDataConfigurationError(
     RuntimeError
 ):
-    """
-    Cấu hình nguồn cây trồng canonical
-    không hợp lệ.
-    """
+    pass
 
 
-def load_crop_master_data(
-) -> list[CropMasterDataItem]:
-    """
-    Đọc cây trồng canonical từ biến môi trường.
-
-    Integration không tự sinh crop_id.
-    """
-
-    raw_value = os.getenv(
-        CROP_MASTER_DATA_ENV
-    )
-
-    if (
-        raw_value is None
-        or not raw_value.strip()
-    ):
-        raise CropMasterDataConfigurationError(
-            (
-                "Chưa cấu hình "
-                "NEXTFARM_CROPS_JSON."
-            )
-        )
-
-    try:
-        raw_items = json.loads(
-            raw_value
-        )
-
-    except json.JSONDecodeError as error:
-        raise CropMasterDataConfigurationError(
-            (
-                "NEXTFARM_CROPS_JSON "
-                "không phải JSON hợp lệ."
-            )
-        ) from error
-
-    if not isinstance(
-        raw_items,
-        list,
-    ):
-        raise CropMasterDataConfigurationError(
-            (
-                "NEXTFARM_CROPS_JSON "
-                "phải là một JSON array."
-            )
-        )
-
-    items: list[
-        CropMasterDataItem
-    ] = []
-
-    try:
-        for raw_item in raw_items:
-            items.append(
-                CropMasterDataItem.model_validate(
-                    raw_item
-                )
-            )
-
-    except ValidationError as error:
-        raise CropMasterDataConfigurationError(
-            (
-                "Dữ liệu cây trồng canonical "
-                "không đúng schema."
-            )
-        ) from error
-
+def _validate_unique_items(
+    items: list[CropMasterDataItem],
+) -> None:
     seen_ids: set[str] = set()
 
     seen_terms: dict[
@@ -110,7 +48,7 @@ def load_crop_master_data(
             raise CropMasterDataConfigurationError(
                 (
                     "Trùng crop_id trong "
-                    "NEXTFARM_CROPS_JSON: "
+                    "nguồn dữ liệu cây trồng: "
                     f"{item.crop_id}"
                 )
             )
@@ -154,23 +92,151 @@ def load_crop_master_data(
                 normalized_term
             ] = item.crop_id
 
+
+def load_configured_crop_master_data(
+) -> list[CropMasterDataItem]:
+    """
+    Đọc nguồn cây trồng canonical
+    từ NEXTFARM_CROPS_JSON.
+
+    Không có cấu hình vẫn hợp lệ nếu
+    Integration DB đã có cây trồng.
+    """
+
+    raw_value = os.getenv(
+        CROP_MASTER_DATA_ENV
+    )
+
+    if (
+        raw_value is None
+        or not raw_value.strip()
+    ):
+        return []
+
+    try:
+        raw_items = json.loads(
+            raw_value
+        )
+
+    except json.JSONDecodeError as error:
+        raise CropMasterDataConfigurationError(
+            (
+                "NEXTFARM_CROPS_JSON "
+                "không phải JSON hợp lệ."
+            )
+        ) from error
+
+    if not isinstance(
+        raw_items,
+        list,
+    ):
+        raise CropMasterDataConfigurationError(
+            (
+                "NEXTFARM_CROPS_JSON "
+                "phải là một JSON array."
+            )
+        )
+
+    try:
+        items = [
+            CropMasterDataItem.model_validate(
+                raw_item
+            )
+            for raw_item in raw_items
+        ]
+
+    except ValidationError as error:
+        raise CropMasterDataConfigurationError(
+            (
+                "Dữ liệu cây trồng canonical "
+                "không đúng schema."
+            )
+        ) from error
+
+    _validate_unique_items(
+        items
+    )
+
+    return items
+
+
+def _load_persisted_crops(
+    database_session: Session | None,
+) -> list[CropMasterDataItem]:
+    if database_session is None:
+        return []
+
+    statement = (
+        select(CropTypeModel)
+        .where(
+            CropTypeModel.status
+            == "saved"
+        )
+        .order_by(
+            CropTypeModel.id.asc()
+        )
+    )
+
+    records = (
+        database_session
+        .scalars(statement)
+        .all()
+    )
+
+    return [
+        CropMasterDataItem(
+            crop_id=record.crop_id,
+            name=record.crop_name,
+            aliases=[],
+        )
+        for record in records
+    ]
+
+
+def load_crop_master_data(
+    database_session: Session | None = None,
+) -> list[CropMasterDataItem]:
+    """
+    Trả nguồn cây trồng hợp nhất:
+
+    - NEXTFARM_CROPS_JSON
+    - cây trồng đã lưu trong Integration DB
+    """
+
+    items = [
+        *load_configured_crop_master_data(),
+        *_load_persisted_crops(
+            database_session
+        ),
+    ]
+
+    if not items:
+        raise CropMasterDataConfigurationError(
+            (
+                "Chưa có nguồn dữ liệu cây trồng. "
+                "Hãy cấu hình NEXTFARM_CROPS_JSON "
+                "hoặc tạo cây trồng trong Integration."
+            )
+        )
+
+    _validate_unique_items(
+        items
+    )
+
     return items
 
 
 def resolve_crop_text(
     text: str,
+    database_session: Session | None = None,
 ) -> ResolveCropResponse:
-    """
-    Resolve crop_text sang crop_id canonical.
-
-    Không tự sinh ID khi không tìm thấy.
-    """
-
     normalized_input = normalize_text(
         text
     )
 
-    items = load_crop_master_data()
+    items = load_crop_master_data(
+        database_session
+    )
 
     # 1. Exact name
     for item in items:
@@ -231,12 +297,10 @@ def resolve_crop_text(
     best_score = 0.0
 
     for item in items:
-        candidates = [
+        for candidate in [
             item.name,
             *item.aliases,
-        ]
-
-        for candidate in candidates:
+        ]:
             score = calculate_similarity(
                 text,
                 candidate,
@@ -277,7 +341,6 @@ def resolve_crop_text(
             ),
         )
 
-    # 4. Không tìm thấy
     return ResolveCropResponse(
         matched=False,
         crop_id=None,

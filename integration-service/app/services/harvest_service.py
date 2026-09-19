@@ -86,6 +86,7 @@ def _resolve_standard_code(
 
 def build_harvest_input(
     request: HarvestCreateRequest,
+    database_session: Session | None = None,
 ) -> HarvestInput:
     """
     Chuyển CREATE_HARVEST dạng text
@@ -106,7 +107,8 @@ def build_harvest_input(
     )
 
     crop_result = resolve_crop_text(
-        request.crop_text
+        request.crop_text,
+        database_session,
     )
 
     crop_id = (
