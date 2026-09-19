@@ -10,6 +10,7 @@ from app.models.issue_report import (
     IssueReportModel,
 )
 from app.models.task import TaskModel
+from app.models.season import SeasonModel
 
 __all__ = [
     "CultivationLogModel",
@@ -18,4 +19,5 @@ __all__ = [
     "IntegrationHistoryModel",
     "IssueReportModel",
     "TaskModel",
+    "SeasonModel",
 ]

@@ -4,7 +4,10 @@ import json
 import os
 
 from pydantic import ValidationError
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from app.models.season import SeasonModel
 from app.schemas.season_master_data import (
     ResolveSeasonResponse,
     SeasonMasterDataItem,
@@ -25,88 +28,21 @@ FUZZY_MATCH_THRESHOLD = 0.82
 class SeasonMasterDataConfigurationError(
     RuntimeError
 ):
-    """
-    Cấu hình nguồn mùa vụ canonical không hợp lệ.
-    """
+    pass
 
 
-def load_season_master_data(
-) -> list[SeasonMasterDataItem]:
-    """
-    Đọc danh sách mùa vụ canonical từ biến môi trường.
-
-    Integration không tự sinh season_id.
-    """
-
-    raw_value = os.getenv(
-        SEASON_MASTER_DATA_ENV
-    )
-
-    if (
-        raw_value is None
-        or not raw_value.strip()
-    ):
-        raise SeasonMasterDataConfigurationError(
-            (
-                "Chưa cấu hình "
-                "NEXTFARM_SEASONS_JSON."
-            )
-        )
-
-    try:
-        raw_items = json.loads(
-            raw_value
-        )
-
-    except json.JSONDecodeError as error:
-        raise SeasonMasterDataConfigurationError(
-            (
-                "NEXTFARM_SEASONS_JSON "
-                "không phải JSON hợp lệ."
-            )
-        ) from error
-
-    if not isinstance(raw_items, list):
-        raise SeasonMasterDataConfigurationError(
-            (
-                "NEXTFARM_SEASONS_JSON "
-                "phải là một JSON array."
-            )
-        )
-
-    items: list[
-        SeasonMasterDataItem
-    ] = []
-
-    try:
-        for raw_item in raw_items:
-            items.append(
-                SeasonMasterDataItem.model_validate(
-                    raw_item
-                )
-            )
-
-    except ValidationError as error:
-        raise SeasonMasterDataConfigurationError(
-            (
-                "Dữ liệu mùa vụ canonical "
-                "không đúng schema."
-            )
-        ) from error
-
+def _validate_unique_items(
+    items: list[SeasonMasterDataItem],
+) -> None:
     seen_ids: set[str] = set()
-
-    seen_terms: dict[
-        str,
-        str,
-    ] = {}
+    seen_terms: dict[str, str] = {}
 
     for item in items:
         if item.season_id in seen_ids:
             raise SeasonMasterDataConfigurationError(
                 (
                     "Trùng season_id trong "
-                    "NEXTFARM_SEASONS_JSON: "
+                    "nguồn dữ liệu mùa vụ: "
                     f"{item.season_id}"
                 )
             )
@@ -137,14 +73,11 @@ def load_season_master_data(
                 and previous_owner
                 != item.season_id
             ):
-                raise (
-                    SeasonMasterDataConfigurationError(
-                        (
-                            "Tên/alias mùa vụ "
-                            "bị trùng giữa nhiều "
-                            "season_id: "
-                            f"'{term}'."
-                        )
+                raise SeasonMasterDataConfigurationError(
+                    (
+                        "Tên/alias mùa vụ bị trùng "
+                        "giữa nhiều season_id: "
+                        f"'{term}'."
                     )
                 )
 
@@ -152,23 +85,150 @@ def load_season_master_data(
                 normalized_term
             ] = item.season_id
 
+
+def load_configured_season_master_data(
+) -> list[SeasonMasterDataItem]:
+    """
+    Đọc nguồn canonical được cấu hình.
+
+    Không cấu hình là hợp lệ nếu DB đã có
+    mùa vụ được tạo bởi Integration.
+    """
+
+    raw_value = os.getenv(
+        SEASON_MASTER_DATA_ENV
+    )
+
+    if (
+        raw_value is None
+        or not raw_value.strip()
+    ):
+        return []
+
+    try:
+        raw_items = json.loads(
+            raw_value
+        )
+
+    except json.JSONDecodeError as error:
+        raise SeasonMasterDataConfigurationError(
+            (
+                "NEXTFARM_SEASONS_JSON "
+                "không phải JSON hợp lệ."
+            )
+        ) from error
+
+    if not isinstance(
+        raw_items,
+        list,
+    ):
+        raise SeasonMasterDataConfigurationError(
+            (
+                "NEXTFARM_SEASONS_JSON "
+                "phải là một JSON array."
+            )
+        )
+
+    try:
+        items = [
+            SeasonMasterDataItem.model_validate(
+                raw_item
+            )
+            for raw_item in raw_items
+        ]
+
+    except ValidationError as error:
+        raise SeasonMasterDataConfigurationError(
+            (
+                "Dữ liệu mùa vụ canonical "
+                "không đúng schema."
+            )
+        ) from error
+
+    _validate_unique_items(
+        items
+    )
+
+    return items
+
+
+def _load_persisted_seasons(
+    database_session: Session | None,
+) -> list[SeasonMasterDataItem]:
+    if database_session is None:
+        return []
+
+    statement = (
+        select(SeasonModel)
+        .where(
+            SeasonModel.status
+            == "saved"
+        )
+        .order_by(
+            SeasonModel.id.asc()
+        )
+    )
+
+    records = (
+        database_session
+        .scalars(statement)
+        .all()
+    )
+
+    return [
+        SeasonMasterDataItem(
+            season_id=record.season_id,
+            name=record.season_name,
+            aliases=[],
+        )
+        for record in records
+    ]
+
+
+def load_season_master_data(
+    database_session: Session | None = None,
+) -> list[SeasonMasterDataItem]:
+    """
+    Trả nguồn mùa vụ hợp nhất:
+
+    - cấu hình NEXTFARM_SEASONS_JSON
+    - mùa vụ đã lưu trong Integration DB
+    """
+
+    items = [
+        *load_configured_season_master_data(),
+        *_load_persisted_seasons(
+            database_session
+        ),
+    ]
+
+    if not items:
+        raise SeasonMasterDataConfigurationError(
+            (
+                "Chưa có nguồn dữ liệu mùa vụ. "
+                "Hãy cấu hình NEXTFARM_SEASONS_JSON "
+                "hoặc tạo mùa vụ trong Integration."
+            )
+        )
+
+    _validate_unique_items(
+        items
+    )
+
     return items
 
 
 def resolve_season_text(
     text: str,
+    database_session: Session | None = None,
 ) -> ResolveSeasonResponse:
-    """
-    Resolve season_text sang season_id canonical.
-
-    Không tự sinh ID nếu không tìm thấy.
-    """
-
     normalized_input = normalize_text(
         text
     )
 
-    items = load_season_master_data()
+    items = load_season_master_data(
+        database_session
+    )
 
     for item in items:
         if (
@@ -179,9 +239,7 @@ def resolve_season_text(
         ):
             return ResolveSeasonResponse(
                 matched=True,
-                season_id=(
-                    item.season_id
-                ),
+                season_id=item.season_id,
                 name=item.name,
                 confidence=1.0,
                 match_type="exact",
@@ -203,9 +261,7 @@ def resolve_season_text(
             ):
                 return ResolveSeasonResponse(
                     matched=True,
-                    season_id=(
-                        item.season_id
-                    ),
+                    season_id=item.season_id,
                     name=item.name,
                     confidence=1.0,
                     match_type="alias",
@@ -230,12 +286,10 @@ def resolve_season_text(
     best_score = 0.0
 
     for item in items:
-        candidates = [
+        for candidate in [
             item.name,
             *item.aliases,
-        ]
-
-        for candidate in candidates:
+        ]:
             score = calculate_similarity(
                 text,
                 candidate,
@@ -250,8 +304,7 @@ def resolve_season_text(
 
     if (
         best_item is not None
-        and best_matched_text
-        is not None
+        and best_matched_text is not None
         and best_score
         >= FUZZY_MATCH_THRESHOLD
     ):

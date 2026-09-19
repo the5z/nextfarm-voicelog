@@ -109,7 +109,10 @@ def save_task(
 
     try:
         canonical_payload = (
-            build_task_input(payload)
+            build_task_input(
+                payload,
+                database_session,
+            )
         )
 
     except (
@@ -297,7 +300,10 @@ def update_saved_task(
 
     try:
         canonical_payload = (
-            build_task_input(payload)
+            build_task_input(
+                payload,
+                database_session,
+            )
         )
 
     except (

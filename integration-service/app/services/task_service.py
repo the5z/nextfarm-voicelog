@@ -14,7 +14,7 @@ from app.schemas.task import (
 from app.services.season_master_data_service import (
     resolve_season_text,
 )
-
+from sqlalchemy.orm import Session
 
 TaskValidationCode = Literal[
     "UNKNOWN_SEASON",
@@ -38,6 +38,7 @@ class TaskValidationError(ValueError):
 
 def build_task_input(
     request: TaskCreateRequest,
+    database_session: Session | None = None,
 ) -> TaskInput:
     """
     Chuyển dữ liệu CREATE_TASK đã xác nhận
@@ -51,7 +52,8 @@ def build_task_input(
     """
 
     season_result = resolve_season_text(
-        request.season_text
+        request.season_text,
+        database_session,
     )
 
     season_id = season_result.season_id

@@ -1,9 +1,12 @@
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
     status,
 )
+from sqlalchemy.orm import Session
 
+from app.database import get_db
 from app.data.master_data import (
     ACTIVITIES,
     LOTS,
@@ -153,10 +156,14 @@ def resolve_crop_endpoint(
     ],
 )
 def get_seasons(
+    database_session: Session = Depends(
+        get_db
+    ),
 ) -> list[SeasonMasterDataItem]:
     try:
-        return load_season_master_data()
-
+        return load_season_master_data(
+            database_session
+        )
     except (
         SeasonMasterDataConfigurationError
     ) as error:
@@ -179,10 +186,14 @@ def get_seasons(
 )
 def resolve_season_endpoint(
     request: ResolveSeasonRequest,
+    database_session: Session = Depends(
+        get_db
+    ),
 ) -> ResolveSeasonResponse:
     try:
         return resolve_season_text(
-            request.text
+            request.text,
+            database_session,
         )
 
     except (

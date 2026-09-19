@@ -20,6 +20,9 @@ from app.services.task_service import (
 from app.services.harvest_service import (
     clear_harvests,
 )
+from app.services.season_service import (
+    clear_seasons,
+)
 TEST_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 
@@ -79,6 +82,9 @@ def reset_test_database() -> Generator[None, None, None]:
             database_session
         )
         clear_harvests(
+            database_session
+        )
+        clear_seasons(
             database_session
         )
 
