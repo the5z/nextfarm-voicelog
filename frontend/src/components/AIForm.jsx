@@ -423,9 +423,9 @@ function AIForm({
     };
   };
 
-  const FieldStatus = ({
-    field,
-  }) => {
+  const renderFieldStatus = (
+    field
+  ) => {
     const status =
       getFieldStatus(field);
 
@@ -687,7 +687,7 @@ function AIForm({
             </span>
           </label>
 
-          <FieldStatus field="lot" />
+          {renderFieldStatus("lot")}
         </div>
 
         <input
@@ -749,7 +749,7 @@ function AIForm({
             </span>
           </label>
 
-          <FieldStatus field="work" />
+          {renderFieldStatus("work")}
         </div>
 
         <input
@@ -885,11 +885,9 @@ function AIForm({
                       {text.aiForm.material}
                     </label>
 
-                    <FieldStatus
-                      field={
-                        materialField
-                      }
-                    />
+                    {renderFieldStatus(
+                      materialField
+                    )}
                   </div>
 
                   <input
@@ -978,11 +976,9 @@ function AIForm({
                         }
                       </label>
 
-                      <FieldStatus
-                        field={
-                          quantityField
-                        }
-                      />
+                      {renderFieldStatus(
+                        quantityField
+                      )}
                     </div>
 
                     <input
@@ -1070,11 +1066,9 @@ function AIForm({
                         {text.aiForm.unit}
                       </label>
 
-                      <FieldStatus
-                        field={
-                          unitField
-                        }
-                      />
+                      {renderFieldStatus(
+                        unitField
+                      )}
                     </div>
 
                     <input
@@ -1168,7 +1162,7 @@ function AIForm({
             🕒 {text.aiForm.time}
           </span>
 
-          <FieldStatus field="time" />
+          {renderFieldStatus("time")}
         </div>
 
         <TimePicker

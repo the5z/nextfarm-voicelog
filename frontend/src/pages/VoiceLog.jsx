@@ -290,6 +290,87 @@ function VoiceLog({
     createEmptyAiData
   );
 
+  /* ===========================
+     Workflow
+  =========================== */
+
+  const [
+    isUploading,
+    setIsUploading,
+  ] = useState(false);
+
+  const [
+    isConfirmed,
+    setIsConfirmed,
+  ] = useState(false);
+
+  const [
+    hasAttemptedSubmit,
+    setHasAttemptedSubmit,
+  ] = useState(false);
+
+  /*
+   * Warning phải được người dùng xác nhận đã kiểm tra trước khi lưu.
+   * Giá trị này luôn reset khi dữ liệu form thay đổi.
+   */
+  const [
+    warningAcknowledged,
+    setWarningAcknowledged,
+  ] = useState(false);
+
+  /*
+   * Chỉ dùng cho nút "Dữ liệu cảnh báo" trong DEV Test Mode.
+   * Không phải business threshold production.
+   */
+  const [
+    devWarning,
+    setDevWarning,
+  ] = useState(null);
+
+  /*
+   * Validation trả về từ Integration Service.
+   * Frontend chỉ phản ánh canonical business rules từ backend.
+   */
+  const [
+    serverValidation,
+    setServerValidation,
+  ] = useState({
+    errors: {},
+    warnings: {},
+    requiresConfirmation: false,
+    ruleVersion: null,
+  });
+
+  const [
+    message,
+    setMessage,
+  ] = useState(null);
+
+  const [
+    currentStep,
+    setCurrentStep,
+  ] = useState(1);
+
+
+  const showMessage = (
+    type,
+    text
+  ) => {
+    setMessage({
+      type,
+      text,
+    });
+  };
+
+  const clearServerValidation =
+    () => {
+      setServerValidation({
+        errors: {},
+        warnings: {},
+        requiresConfirmation: false,
+        ruleVersion: null,
+      });
+    };
 
   /* ===========================
      Sync AI data to App
@@ -329,6 +410,8 @@ function VoiceLog({
   ]);
 
   useEffect(() => {
+    // Intentional reset when legacy AI form data changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setWarningAcknowledged(false);
     clearServerValidation();
   }, [
@@ -352,6 +435,8 @@ function VoiceLog({
       return;
     }
 
+    // Intentional prop-to-local-state synchronization for legacy AI edits.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAiData(
       (previous) => {
         const next = {
@@ -480,67 +565,6 @@ function VoiceLog({
   ]);
 
   /* ===========================
-     Workflow
-  =========================== */
-
-  const [
-    isUploading,
-    setIsUploading,
-  ] = useState(false);
-
-  const [
-    isConfirmed,
-    setIsConfirmed,
-  ] = useState(false);
-
-  const [
-    hasAttemptedSubmit,
-    setHasAttemptedSubmit,
-  ] = useState(false);
-
-  /*
-   * Warning phải được người dùng xác nhận đã kiểm tra trước khi lưu.
-   * Giá trị này luôn reset khi dữ liệu form thay đổi.
-   */
-  const [
-    warningAcknowledged,
-    setWarningAcknowledged,
-  ] = useState(false);
-
-  /*
-   * Chỉ dùng cho nút "Dữ liệu cảnh báo" trong DEV Test Mode.
-   * Không phải business threshold production.
-   */
-  const [
-    devWarning,
-    setDevWarning,
-  ] = useState(null);
-
-  /*
-   * Validation trả về từ Integration Service.
-   * Frontend chỉ phản ánh canonical business rules từ backend.
-   */
-  const [
-    serverValidation,
-    setServerValidation,
-  ] = useState({
-    errors: {},
-    warnings: {},
-    requiresConfirmation: false,
-    ruleVersion: null,
-  });
-
-  const [
-    message,
-    setMessage,
-  ] = useState(null);
-
-  const [
-    currentStep,
-    setCurrentStep,
-  ] = useState(1);
-
-  /* ===========================
      Current Log
   =========================== */
 
@@ -571,15 +595,6 @@ function VoiceLog({
      Message
   =========================== */
 
-  const showMessage = (
-    type,
-    text
-  ) => {
-    setMessage({
-      type,
-      text,
-    });
-  };
 
   const getMessageText = () => {
     if (!message) {
@@ -650,15 +665,6 @@ function VoiceLog({
       : "success";
   };
 
-  const clearServerValidation =
-    () => {
-      setServerValidation({
-        errors: {},
-        warnings: {},
-        requiresConfirmation: false,
-        ruleVersion: null,
-      });
-    };
 
   const mapIntegrationFieldToUi = (
     field
@@ -1192,6 +1198,8 @@ function VoiceLog({
       );
     }
 
+    // Intentional one-shot restoration of the selected log into local state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAudioUrl(null);
     setAudioBlob(null);
 
@@ -1327,6 +1335,10 @@ function VoiceLog({
     }
 
     onLogLoaded?.();
+
+    // logToEdit identity intentionally controls this one-shot restore.
+    // Adding local state/callback dependencies can replay the restore.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logToEdit]);
 
   /* ===========================

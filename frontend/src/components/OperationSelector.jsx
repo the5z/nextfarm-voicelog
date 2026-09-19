@@ -40,7 +40,6 @@ function OperationSelector({
 
       <div
         className="operation-selector-grid"
-        role="radiogroup"
         aria-label={
           isVietnamese
             ? "Chọn nghiệp vụ"
@@ -56,8 +55,7 @@ function OperationSelector({
               <button
                 key={item.operation}
                 type="button"
-                role="radio"
-                aria-checked={isSelected}
+                aria-pressed={isSelected}
                 className={`operation-selector-item${
                   isSelected
                     ? " is-selected"

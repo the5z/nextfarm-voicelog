@@ -54,6 +54,22 @@ function App() {
     loadSettings()
   );
   
+  /* ===========================
+     Logs
+  =========================== */
+
+  const [
+    logToEdit,
+    setLogToEdit,
+  ] = useState(null);
+
+  const [
+    logs,
+    setLogs,
+  ] = useState(() =>
+    loadLogs()
+  );
+
   useEffect(() => {
     let cancelled =
       false;
@@ -146,22 +162,6 @@ function App() {
 
   const aiUndoStackRef =
     useRef([]);
-
-  /* ===========================
-     Logs
-  =========================== */
-
-  const [
-    logToEdit,
-    setLogToEdit,
-  ] = useState(null);
-
-  const [
-    logs,
-    setLogs,
-  ] = useState(() =>
-    loadLogs()
-  );
 
   /* ===========================
      Settings persistence

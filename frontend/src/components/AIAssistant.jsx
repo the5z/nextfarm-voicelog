@@ -199,6 +199,8 @@ function AIAssistant({
       );
 
     if (!exists) {
+      // Intentional synchronization when the active conversation disappears.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveConversationId(
         conversations[0]?.id || ""
       );
@@ -223,7 +225,11 @@ function AIAssistant({
     ]);
 
   const messages =
-    activeConversation?.messages || [];
+    useMemo(
+      () =>
+        activeConversation?.messages || [],
+      [activeConversation]
+    );
 
   /* ===========================
      Persist conversations
@@ -273,6 +279,7 @@ function AIAssistant({
     });
   }, [messages, assistantStatus]);
 
+  /* eslint-disable react-hooks/exhaustive-deps -- cleanup intentionally reads latest mutable refs */
   useEffect(() => {
     return () => {
       if (responseTimeoutRef.current) {
@@ -306,6 +313,7 @@ function AIAssistant({
       voiceTranscriptRef.current = "";
     };
   }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   /* ===========================
      Close assistant on outside click / Esc
@@ -389,6 +397,8 @@ function AIAssistant({
         )
       );
 
+    // Intentional pruning when the available audit event set changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedAuditIds(
       (previous) =>
         previous.filter(

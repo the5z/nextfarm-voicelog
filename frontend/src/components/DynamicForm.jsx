@@ -799,11 +799,11 @@ function DynamicForm({
       {operation === "CREATE_PLOT" && (
         <div className="ai-field dynamic-form-map-shell">
           <div className="ai-field-label-row">
-            <label>
+            <span className="ai-field-label">
               {isVietnamese
                 ? "Bản đồ ranh giới thửa đất"
                 : "Plot boundary map"}
-            </label>
+            </span>
           </div>
 
           <div className="confirm-helper warning">

@@ -20,7 +20,6 @@ function ActionButtons({
   onConfirm,
   onCreateNew,
 
-  text,
   language = "vi",
 }) {
   const isVietnamese =
