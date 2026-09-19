@@ -612,8 +612,11 @@ function RecordButton({
 
         recorder.start(250);
 
+        // Timestamp is captured only when recording starts, not during render.
+        /* eslint-disable react-hooks/purity */
         recordingStartedAtRef.current =
           Date.now();
+        /* eslint-enable react-hooks/purity */
 
         elapsedSecondsRef.current =
           0;
@@ -941,6 +944,7 @@ function RecordButton({
     };
   }, []);
 
+  /* eslint-disable react-hooks/exhaustive-deps -- mount/unmount cleanup intentionally uses current recorder helpers */
   useEffect(() => {
     /*
      * IMPORTANT:
@@ -997,6 +1001,7 @@ function RecordButton({
       revokeOwnedAudioUrl();
     };
   }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const buttonLabel =
     isConfirmed

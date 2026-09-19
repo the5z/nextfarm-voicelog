@@ -9,7 +9,6 @@ function Header({
   onLanguageChange,
   text,
 
-  themeMode = "light",
   onThemeChange,
 
   logs = [],
