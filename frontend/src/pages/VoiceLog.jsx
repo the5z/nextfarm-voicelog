@@ -196,6 +196,38 @@ function validateDynamicOperationFields(
   return errors;
 }
 
+function normalizeDynamicFormWarnings(
+  warnings
+) {
+  const mapped = {};
+
+  (
+    Array.isArray(warnings)
+      ? warnings
+      : []
+  ).forEach(
+    (warning, index) => {
+      const message =
+        warning?.message;
+
+      if (!message) {
+        return;
+      }
+
+      const field =
+        warning?.field ||
+        `_general_${index}`;
+
+      mapped[field] =
+        mapped[field]
+          ? `${mapped[field]} ${message}`
+          : message;
+    }
+  );
+
+  return mapped;
+}
+
 const DEV_VALID_DATA = {
   transcript:
     "Hôm nay tôi bón 20 kg phân NPK cho lô A01 lúc 8 giờ 30.",
@@ -488,6 +520,23 @@ function VoiceLog({
     aiData.work,
     aiData.materials,
     aiData.time,
+  ]);
+
+  useEffect(() => {
+    if (
+      operation ===
+      "CREATE_WORK_LOG"
+    ) {
+      return;
+    }
+
+    // Dynamic form edits invalidate previous backend validation.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setWarningAcknowledged(false);
+    clearServerValidation();
+  }, [
+    operation,
+    dynamicForm?.fields,
   ]);
 
   /* ===========================
@@ -1137,9 +1186,49 @@ function VoiceLog({
   };
 
   const localValidation =
-    validateAiData(
-      aiData
-    );
+    operation ===
+      "CREATE_WORK_LOG"
+      ? validateAiData(
+          aiData
+        )
+      : (() => {
+          const errors =
+            validateDynamicOperationFields(
+              operation,
+              dynamicForm?.fields || {},
+              isVietnamese
+            );
+
+          const warnings =
+            normalizeDynamicFormWarnings(
+              dynamicForm?.warnings
+            );
+
+          return {
+            errors,
+            warnings,
+            hasErrors:
+              Object.keys(
+                errors
+              ).length > 0,
+            hasWarnings:
+              Object.keys(
+                warnings
+              ).length > 0,
+            requiresConfirmation:
+              Boolean(
+                dynamicForm
+                  ?.requires_confirmation
+              ) &&
+              Object.keys(
+                warnings
+              ).length > 0,
+            isValid:
+              Object.keys(
+                errors
+              ).length === 0,
+          };
+        })();
 
   const validation = {
     errors: {
@@ -1825,6 +1914,49 @@ function VoiceLog({
             errors:
               dynamicErrors,
             warnings: {},
+          });
+
+          return;
+        }
+
+        const dynamicWarnings =
+          normalizeDynamicFormWarnings(
+            dynamicForm?.warnings
+          );
+
+        if (
+          Boolean(
+            dynamicForm
+              ?.requires_confirmation
+          ) &&
+          Object.keys(
+            dynamicWarnings
+          ).length > 0 &&
+          !warningAcknowledged
+        ) {
+          setServerValidation({
+            errors: {},
+            warnings:
+              dynamicWarnings,
+            requiresConfirmation:
+              true,
+            ruleVersion:
+              null,
+          });
+
+          showMessage(
+            "warning",
+            isVietnamese
+              ? "Có cảnh báo cần kiểm tra. Hãy xác nhận đã xem cảnh báo trước khi lưu."
+              : "There are warnings to review. Acknowledge them before saving."
+          );
+
+          setCurrentStep(3);
+
+          focusFirstValidationIssue({
+            errors: {},
+            warnings:
+              dynamicWarnings,
           });
 
           return;
@@ -3239,11 +3371,50 @@ function VoiceLog({
 
                 onFieldsChange={
                   (nextFields) => {
+                    const template =
+                      getDynamicFormTemplate(
+                        operation
+                      );
+
+                    const missingFields =
+                      template?.fields
+                        ?.filter(
+                          (field) => {
+                            if (
+                              !field.required
+                            ) {
+                              return false;
+                            }
+
+                            const value =
+                              nextFields?.[
+                                field.name
+                              ];
+
+                            return (
+                              typeof value ===
+                                "string"
+                                ? value.trim() ===
+                                  ""
+                                : value ===
+                                    null ||
+                                  value ===
+                                    undefined
+                            );
+                          }
+                        )
+                        .map(
+                          (field) =>
+                            field.name
+                        ) || [];
+
                     setDynamicForm(
                       (previous) => ({
                         ...previous,
                         fields:
                           nextFields,
+                        missing_fields:
+                          missingFields,
                       })
                     );
                   }
