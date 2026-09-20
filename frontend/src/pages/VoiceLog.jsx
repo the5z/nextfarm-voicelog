@@ -21,6 +21,7 @@ import {
   validateCultivationLog,
   saveCultivationLog,
   updateCultivationLog,
+  saveDynamicOperation,
 } from "../services/integrationService";
 import { TEXT } from "../constants/translations";
 import {
@@ -29,6 +30,9 @@ import {
 import {
   createEmptyDynamicForm,
 } from "../utils/dynamicFormState";
+import {
+  getDynamicFormTemplate,
+} from "../constants/dynamicFormTemplates";
 
 const createEmptyMaterial = () => ({
   material: "",
@@ -125,6 +129,71 @@ function buildPerformedAt(
   );
 
   return performedAt.toISOString();
+}
+
+function validateDynamicOperationFields(
+  operation,
+  fields,
+  isVietnamese
+) {
+  const template =
+    getDynamicFormTemplate(
+      operation
+    );
+
+  const errors = {};
+
+  if (!template) {
+    errors._general =
+      isVietnamese
+        ? "Không tìm thấy mẫu biểu cho nghiệp vụ này."
+        : "No form template was found for this operation.";
+
+    return errors;
+  }
+
+  template.fields.forEach(
+    (field) => {
+      const value =
+        fields?.[field.name];
+
+      const hasValue =
+        typeof value === "string"
+          ? value.trim() !== ""
+          : value !== null &&
+            value !== undefined;
+
+      if (
+        field.required &&
+        !hasValue
+      ) {
+        errors[field.name] =
+          isVietnamese
+            ? "Trường bắt buộc còn thiếu."
+            : "Required field is missing.";
+
+        return;
+      }
+
+      if (
+        field.type === "number" &&
+        hasValue &&
+        (
+          !Number.isFinite(
+            Number(value)
+          ) ||
+          Number(value) <= 0
+        )
+      ) {
+        errors[field.name] =
+          isVietnamese
+            ? "Giá trị phải là số lớn hơn 0."
+            : "Value must be a number greater than 0.";
+      }
+    }
+  );
+
+  return errors;
 }
 
 const DEV_VALID_DATA = {
@@ -1714,14 +1783,211 @@ function VoiceLog({
         operation !==
         "CREATE_WORK_LOG"
       ) {
-        showMessage(
-          "warning",
-          isVietnamese
-            ? "Operation này chưa có endpoint lưu tương ứng trong Integration Service. Dữ liệu Dynamic Form hiện chỉ có thể được xem và chỉnh sửa, chưa thể xác nhận/lưu."
-            : "This operation does not have a corresponding save endpoint in the Integration Service yet. The Dynamic Form can currently be reviewed and edited, but not confirmed/saved."
+        const fields =
+          dynamicForm?.fields || {};
+
+        const dynamicErrors =
+          validateDynamicOperationFields(
+            operation,
+            fields,
+            isVietnamese
+          );
+
+        if (
+          Object.keys(
+            dynamicErrors
+          ).length > 0
+        ) {
+          setServerValidation({
+            errors:
+              dynamicErrors,
+            warnings: {},
+            requiresConfirmation:
+              false,
+            ruleVersion:
+              null,
+          });
+
+          setWarningAcknowledged(
+            false
+          );
+
+          showMessage(
+            "error",
+            isVietnamese
+              ? "Chưa thể xác nhận. Hãy bổ sung hoặc sửa các trường được đánh dấu."
+              : "The operation cannot be confirmed yet. Complete or fix the highlighted fields."
+          );
+
+          setCurrentStep(3);
+
+          focusFirstValidationIssue({
+            errors:
+              dynamicErrors,
+            warnings: {},
+          });
+
+          return;
+        }
+
+        if (
+          (
+            operation ===
+              "CREATE_ISSUE_REPORT" ||
+            operation ===
+              "CREATE_HARVEST"
+          ) &&
+          fields.photo_required ===
+            true
+        ) {
+          const photoError = {
+            photo_required:
+              isVietnamese
+                ? "Nghiệp vụ yêu cầu ảnh nhưng frontend hiện chưa có chức năng chọn/tải ảnh theo Contract V3.1."
+                : "This operation requires a photo, but the frontend does not yet support selecting/uploading one under Contract V3.1.",
+          };
+
+          setServerValidation({
+            errors:
+              photoError,
+            warnings: {},
+            requiresConfirmation:
+              false,
+            ruleVersion:
+              null,
+          });
+
+          showMessage(
+            "error",
+            photoError.photo_required
+          );
+
+          setCurrentStep(3);
+
+          focusFirstValidationIssue({
+            errors:
+              photoError,
+            warnings: {},
+          });
+
+          return;
+        }
+
+        const recordId =
+          currentLogId ||
+          generateId();
+
+        setIsUploading(
+          true
         );
 
-        setCurrentStep(3);
+        clearServerValidation();
+
+        showMessage(
+          "success",
+          isVietnamese
+            ? "Đang lưu dữ liệu qua Integration Service..."
+            : "Saving data through the Integration Service..."
+        );
+
+        try {
+          const savedOperation =
+            await saveDynamicOperation(
+              operation,
+              recordId,
+              fields
+            );
+
+          setCurrentLogId(
+            recordId
+          );
+
+          setIsConfirmed(
+            true
+          );
+
+          setWarningAcknowledged(
+            false
+          );
+
+          setCurrentStep(4);
+
+          showMessage(
+            "success",
+            isVietnamese
+              ? "✅ Dữ liệu đã được xác nhận và lưu qua Integration Service."
+              : "✅ The data was confirmed and saved through the Integration Service."
+          );
+
+          console.info(
+            "Dynamic operation saved:",
+            {
+              operation,
+              response:
+                savedOperation,
+            }
+          );
+        } catch (error) {
+          console.error(
+            "Save dynamic operation error:",
+            error
+          );
+
+          const detail =
+            error?.data?.detail;
+
+          const backendField =
+            typeof detail ===
+              "object" &&
+            detail !== null
+              ? detail.field
+              : null;
+
+          const backendMessage =
+            typeof detail ===
+              "string"
+              ? detail
+              : detail?.message ||
+                error?.message ||
+                (
+                  isVietnamese
+                    ? "Không thể lưu dữ liệu qua Integration Service."
+                    : "The data could not be saved through the Integration Service."
+                );
+
+          if (backendField) {
+            setServerValidation({
+              errors: {
+                [backendField]:
+                  backendMessage,
+              },
+              warnings: {},
+              requiresConfirmation:
+                false,
+              ruleVersion:
+                null,
+            });
+
+            focusFirstValidationIssue({
+              errors: {
+                [backendField]:
+                  backendMessage,
+              },
+              warnings: {},
+            });
+          }
+
+          showMessage(
+            "error",
+            backendMessage
+          );
+
+          setCurrentStep(3);
+        } finally {
+          setIsUploading(
+            false
+          );
+        }
 
         return;
       }
