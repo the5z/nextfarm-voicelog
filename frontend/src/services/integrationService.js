@@ -330,6 +330,169 @@ export async function updateCultivationLog(
     }
   );
 }
+const DYNAMIC_OPERATION_SAVE_CONFIG = {
+  CREATE_CROP_TYPE: {
+    path: "/api/crop-types",
+    fields: [
+      "crop_name",
+      "crop_group_text",
+      "crop_code_suggestion",
+      "days_to_harvest",
+    ],
+  },
+
+  CREATE_SEASON: {
+    path: "/api/seasons",
+    fields: [
+      "plot_text",
+      "crop_text",
+      "planting_date_text",
+      "season_name",
+      "expected_harvest_date_text",
+      "plant_count",
+      "expected_yield",
+      "expected_yield_unit_text",
+      "process_template_text",
+    ],
+  },
+
+  CREATE_PLOT: {
+    path: "/api/plots",
+    fields: [
+      "plot_name_or_code",
+      "region_text",
+      "boundary_required",
+      "owner_text",
+      "current_crop_text",
+      "location_hint_text",
+    ],
+  },
+
+  CREATE_TASK: {
+    path: "/api/tasks",
+    fields: [
+      "season_text",
+      "task_name",
+      "task_type_text",
+      "due_time_text",
+      "assignee_text",
+      "photo_required",
+      "note",
+    ],
+  },
+
+  CREATE_ISSUE_REPORT: {
+    path: "/api/issue-reports",
+    fields: [
+      "plot_text",
+      "issue_type_text",
+      "severity_text",
+      "description",
+      "note",
+    ],
+    blocksPhotoRequirement: true,
+  },
+
+  CREATE_HARVEST: {
+    path: "/api/harvests",
+    fields: [
+      "plot_text",
+      "crop_text",
+      "quantity",
+      "unit_text",
+      "harvest_date_text",
+      "note",
+    ],
+    blocksPhotoRequirement: true,
+  },
+};
+
+export async function saveDynamicOperation(
+  operation,
+  clientRecordId,
+  fields
+) {
+  const normalizedOperation =
+    String(operation || "").trim();
+
+  const config =
+    DYNAMIC_OPERATION_SAVE_CONFIG[
+      normalizedOperation
+    ];
+
+  if (!config) {
+    throw new IntegrationServiceError(
+      "Operation does not have a configured Integration save endpoint."
+    );
+  }
+
+  const normalizedId =
+    String(
+      clientRecordId || ""
+    ).trim();
+
+  if (!normalizedId) {
+    throw new IntegrationServiceError(
+      "client_record_id is required."
+    );
+  }
+
+  if (
+    !fields ||
+    typeof fields !== "object"
+  ) {
+    throw new IntegrationServiceError(
+      "Dynamic form fields are required."
+    );
+  }
+
+  if (
+    config.blocksPhotoRequirement &&
+    fields.photo_required === true
+  ) {
+    throw new IntegrationServiceError(
+      "Nghiệp vụ đang yêu cầu ảnh nhưng frontend chưa có payload/API tải ảnh tương ứng."
+    );
+  }
+
+  const payload = {
+    client_record_id:
+      normalizedId,
+    confirmed: true,
+  };
+
+  config.fields.forEach(
+    (fieldName) => {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          fields,
+          fieldName
+        )
+      ) {
+        payload[fieldName] =
+          fields[fieldName];
+      }
+    }
+  );
+
+  return requestJson(
+    `${INTEGRATION_API_BASE_URL}${config.path}`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+
+      body:
+        JSON.stringify(
+          payload
+        ),
+    }
+  );
+}
+
 /**
  * Trả về URL Integration Service hiện tại.
  *
