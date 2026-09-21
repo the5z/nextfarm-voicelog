@@ -493,6 +493,60 @@ export async function saveDynamicOperation(
   );
 }
 
+export async function getCropTypes() {
+  return requestJson(
+    `${INTEGRATION_API_BASE_URL}/api/crop-types`,
+    {
+      method: "GET",
+    }
+  );
+}
+
+export async function getPlots() {
+  return requestJson(
+    `${INTEGRATION_API_BASE_URL}/api/plots`,
+    {
+      method: "GET",
+    }
+  );
+}
+
+export async function getSeasons() {
+  return requestJson(
+    `${INTEGRATION_API_BASE_URL}/api/seasons`,
+    {
+      method: "GET",
+    }
+  );
+}
+
+export async function getTasks() {
+  return requestJson(
+    `${INTEGRATION_API_BASE_URL}/api/tasks`,
+    {
+      method: "GET",
+    }
+  );
+}
+
+export async function getIssueReports() {
+  return requestJson(
+    `${INTEGRATION_API_BASE_URL}/api/issue-reports`,
+    {
+      method: "GET",
+    }
+  );
+}
+
+export async function getHarvests() {
+  return requestJson(
+    `${INTEGRATION_API_BASE_URL}/api/harvests`,
+    {
+      method: "GET",
+    }
+  );
+}
+
 /**
  * Trả về URL Integration Service hiện tại.
  *
