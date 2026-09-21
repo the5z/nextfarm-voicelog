@@ -312,9 +312,16 @@ function Management({
   ]);
 
   const records =
-    recordsByResource[
-      activeResource
-    ] || [];
+    useMemo(
+      () =>
+        recordsByResource[
+          activeResource
+        ] || [],
+      [
+        recordsByResource,
+        activeResource,
+      ]
+    );
 
   const filteredRecords =
     useMemo(() => {
