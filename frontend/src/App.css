@@ -11590,3 +11590,456 @@ body.dark-mode
     font-size: 8px;
   }
 }
+
+
+/* =========================================================
+   DATA MANAGEMENT
+========================================================= */
+
+.management-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  margin-bottom: 18px;
+}
+
+.management-tabs {
+  flex: 1;
+}
+
+.management-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  flex-shrink: 0;
+}
+
+.management-actions .logs-search-wrapper {
+  width: min(
+    300px,
+    42vw
+  );
+}
+
+.management-refresh-btn {
+  min-height: 39px;
+
+  padding: 9px 13px;
+
+  border: 1px solid #bbf7d0;
+  border-radius: 11px;
+
+  background: #ffffff;
+  color: #166534;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.management-refresh-btn:hover:not(:disabled) {
+  border-color: #4ade80;
+
+  background: #f0fdf4;
+}
+
+.management-refresh-btn:disabled {
+  opacity: 0.6;
+
+  cursor: wait;
+}
+
+.management-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  margin-bottom: 18px;
+  padding: 16px 18px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 5px 18px
+    rgba(15, 23, 42, 0.04);
+}
+
+.management-summary > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.management-summary > div > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 42px;
+  height: 42px;
+
+  border-radius: 11px;
+
+  background: #f0fdf4;
+
+  font-size: 20px;
+}
+
+.management-summary div div {
+  display: flex;
+  flex-direction: column;
+}
+
+.management-summary strong {
+  color: #0f172a;
+
+  font-size: 21px;
+}
+
+.management-summary div div span,
+.management-summary p {
+  color: #64748b;
+
+  font-size: 12px;
+}
+
+.management-summary p {
+  margin: 0;
+}
+
+.management-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 16px;
+}
+
+.management-card {
+  min-width: 0;
+
+  padding: 18px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 6px 20px
+    rgba(15, 23, 42, 0.045);
+}
+
+.management-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+
+  margin-bottom: 16px;
+}
+
+.management-card-header > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+
+  min-width: 0;
+}
+
+.management-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  flex-shrink: 0;
+
+  border-radius: 10px;
+
+  background: #f0fdf4;
+
+  font-size: 18px;
+}
+
+.management-card-header h3 {
+  overflow: hidden;
+
+  max-width: 100%;
+  margin: 0 0 5px;
+
+  color: #0f172a;
+
+  font-size: 16px;
+  line-height: 1.35;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.management-card-header code {
+  display: block;
+
+  overflow: hidden;
+
+  max-width: 320px;
+
+  color: #64748b;
+
+  font-size: 10px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.management-status-badge {
+  flex-shrink: 0;
+
+  padding: 5px 8px;
+
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+
+  background: #ecfdf3;
+  color: #166534;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.management-field-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 12px;
+
+  margin: 0;
+}
+
+.management-field-grid > div {
+  min-width: 0;
+
+  padding: 10px 11px;
+
+  border-radius: 10px;
+
+  background: #f8fafc;
+}
+
+.management-field-grid dt {
+  margin-bottom: 4px;
+
+  color: #64748b;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.management-field-grid dd {
+  overflow-wrap: anywhere;
+
+  margin: 0;
+
+  color: #1e293b;
+
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.management-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-top: 16px;
+  padding-top: 12px;
+
+  border-top: 1px solid #edf2f7;
+
+  color: #64748b;
+
+  font-size: 10px;
+}
+
+.management-state-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  min-height: 170px;
+
+  padding: 28px;
+
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+
+  background: #ffffff;
+  color: #64748b;
+
+  text-align: center;
+}
+
+.management-state-card.error {
+  border-color: #fecaca;
+
+  background: #fff7f7;
+  color: #b91c1c;
+}
+
+.management-state-card.error {
+  flex-direction: column;
+}
+
+.management-state-icon {
+  font-size: 24px;
+}
+
+body.dark-mode
+.management-refresh-btn,
+body.dark-mode
+.management-summary,
+body.dark-mode
+.management-card,
+body.dark-mode
+.management-state-card {
+  border-color: #26354a;
+
+  background: #111827;
+}
+
+body.dark-mode
+.management-refresh-btn {
+  color: #86efac;
+}
+
+body.dark-mode
+.management-refresh-btn:hover:not(:disabled) {
+  background: #14351f;
+}
+
+body.dark-mode
+.management-summary strong,
+body.dark-mode
+.management-card-header h3,
+body.dark-mode
+.management-field-grid dd {
+  color: #f8fafc;
+}
+
+body.dark-mode
+.management-summary div div span,
+body.dark-mode
+.management-summary p,
+body.dark-mode
+.management-card-header code,
+body.dark-mode
+.management-field-grid dt,
+body.dark-mode
+.management-card-footer {
+  color: #94a3b8;
+}
+
+body.dark-mode
+.management-summary > div > span,
+body.dark-mode
+.management-card-icon {
+  background: #14351f;
+}
+
+body.dark-mode
+.management-field-grid > div {
+  background: #0f172a;
+}
+
+body.dark-mode
+.management-card-footer {
+  border-top-color: #26354a;
+}
+
+body.dark-mode
+.management-status-badge {
+  border-color: #166534;
+
+  background: #14351f;
+  color: #4ade80;
+}
+
+body.dark-mode
+.management-state-card.error {
+  border-color: #7f1d1d;
+
+  background: #2b1518;
+  color: #fecaca;
+}
+
+@media (max-width: 1100px) {
+  .management-toolbar {
+    flex-direction: column;
+  }
+
+  .management-actions {
+    width: 100%;
+  }
+
+  .management-actions .logs-search-wrapper {
+    width: 100%;
+  }
+
+  .management-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .management-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .management-refresh-btn {
+    width: 100%;
+  }
+
+  .management-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .management-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .management-card-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .management-status-badge {
+    align-self: flex-start;
+  }
+
+  .management-card-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
