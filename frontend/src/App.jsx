@@ -11,6 +11,7 @@ import {
 import VoiceLog from "./pages/VoiceLog";
 import MyLogs from "./pages/MyLogs";
 import Settings from "./pages/Settings";
+import Management from "./pages/Management";
 
 import AppSidebar from "./components/AppSidebar";
 import AIAssistant from "./components/AIAssistant";
@@ -650,6 +651,15 @@ function App() {
 
           onEditLog={
             handleEditLog
+          }
+        />
+      )}
+
+      {activePage ===
+        "management" && (
+        <Management
+          language={
+            language
           }
         />
       )}
