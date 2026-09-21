@@ -75,6 +75,30 @@ function AppSidebar({
           </span>
         </button>
 
+        <button
+          type="button"
+          className={`sidebar-item ${
+            activePage === "management"
+              ? "active"
+              : ""
+          }`}
+          onClick={() =>
+            handleNavigate(
+              "management"
+            )
+          }
+        >
+          <span className="sidebar-item-icon">
+            🗂️
+          </span>
+
+          <span>
+            {isVietnamese
+              ? "Quản lý dữ liệu"
+              : "Data management"}
+          </span>
+        </button>
+
         <div className="sidebar-divider" />
 
         <button
