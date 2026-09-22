@@ -3417,6 +3417,90 @@ function VoiceLog({
                           missingFields,
                       })
                     );
+
+                    /*
+                      CREATE_WORK_LOG vẫn dùng aiData
+                      cho validation + save legacy flow.
+
+                      DynamicForm là UI đang được chỉnh sửa,
+                      nên phải đồng bộ các field tương ứng
+                      về aiData. Nếu không, người dùng sửa
+                      trên form nhưng validation vẫn đọc
+                      giá trị AI cũ và nút xác nhận bị khóa.
+                    */
+                    if (
+                      operation ===
+                      "CREATE_WORK_LOG"
+                    ) {
+                      const nextMaterials =
+                        normalizeMaterials(
+                          nextFields
+                            ?.materials
+                        );
+
+                      setAiData(
+                        (previous) => {
+                          const nextLot =
+                            String(
+                              nextFields
+                                ?.plot_text ??
+                                ""
+                            );
+
+                          const nextWork =
+                            String(
+                              nextFields
+                                ?.activity_text ??
+                                ""
+                            );
+
+                          const nextTime =
+                            String(
+                              nextFields
+                                ?.performed_time_text ??
+                                ""
+                            );
+
+                          const previousMaterials =
+                            normalizeMaterials(
+                              previous
+                                ?.materials
+                            );
+
+                          const materialsChanged =
+                            JSON.stringify(
+                              previousMaterials
+                            ) !==
+                            JSON.stringify(
+                              nextMaterials
+                            );
+
+                          if (
+                            previous?.lot ===
+                              nextLot &&
+                            previous?.work ===
+                              nextWork &&
+                            previous?.time ===
+                              nextTime &&
+                            !materialsChanged
+                          ) {
+                            return previous;
+                          }
+
+                          return {
+                            ...previous,
+                            lot:
+                              nextLot,
+                            work:
+                              nextWork,
+                            materials:
+                              nextMaterials,
+                            time:
+                              nextTime,
+                          };
+                        }
+                      );
+                    }
                   }
                 }
 
