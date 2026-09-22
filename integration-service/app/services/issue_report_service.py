@@ -44,6 +44,25 @@ ALLOWED_SEVERITIES = {
 }
 
 
+def normalize_allowed_value(
+    value: str,
+    allowed_values: set[str],
+) -> str | None:
+    """
+    Match user-provided business values without
+    requiring exact capitalization, while keeping
+    the stored value in canonical form.
+    """
+
+    normalized = str(value or "").strip().casefold()
+
+    for canonical_value in allowed_values:
+        if canonical_value.casefold() == normalized:
+            return canonical_value
+
+    return None
+
+
 class IssueReportValidationError(
     ValueError
 ):
@@ -125,11 +144,12 @@ def build_issue_report_input(
     - tự sinh description
     """
 
-    issue_type = (
-        request.issue_type_text.strip()
+    issue_type = normalize_allowed_value(
+        request.issue_type_text,
+        ALLOWED_ISSUE_TYPES,
     )
 
-    if issue_type not in ALLOWED_ISSUE_TYPES:
+    if issue_type is None:
         raise IssueReportValidationError(
             field="issue_type_text",
             code="INVALID_ISSUE_TYPE",
@@ -140,11 +160,12 @@ def build_issue_report_input(
             ),
         )
 
-    severity = (
-        request.severity_text.strip()
+    severity = normalize_allowed_value(
+        request.severity_text,
+        ALLOWED_SEVERITIES,
     )
 
-    if severity not in ALLOWED_SEVERITIES:
+    if severity is None:
         raise IssueReportValidationError(
             field="severity_text",
             code="INVALID_SEVERITY",
