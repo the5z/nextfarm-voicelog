@@ -81,6 +81,29 @@ def test_create_issue_report(
     assert report["status"] == "saved"
 
 
+def test_create_issue_report_normalizes_business_value_capitalization(
+    client: TestClient,
+) -> None:
+    payload = build_valid_issue_report(
+        "issue-case-insensitive-001"
+    )
+
+    payload["issue_type_text"] = "sâu"
+    payload["severity_text"] = "NGUY CẤP"
+
+    response = client.post(
+        "/api/issue-reports",
+        json=payload,
+    )
+
+    assert response.status_code == 201
+
+    report = response.json()["data"]
+
+    assert report["issue_type"] == "Sâu"
+    assert report["severity"] == "Nguy cấp"
+
+
 def test_create_issue_report_resolves_plot_text(
     client: TestClient,
 ) -> None:
